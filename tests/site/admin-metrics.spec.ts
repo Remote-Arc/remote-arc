@@ -4,14 +4,27 @@ import { monitoringPreview } from "../../apps/ui/src/features/admin/service-heal
 import { sampleServiceMetrics } from "../../apps/ui/src/features/admin/service-metrics-model";
 import { businessHealthFixture } from "./business-analytics-fixture";
 
-async function mount(page: Page, mode: "normal" | "empty" | "unavailable" = "normal") {
+async function mount(
+  page: Page,
+  mode: "normal" | "empty" | "unavailable" = "normal",
+  section: "health" | "overview" | "payments" = "health",
+  overview: Record<string, unknown> = overviewFixture(),
+) {
   const calls = {
     metrics: [] as string[],
     monitoring: [] as string[],
     operations: [] as string[],
+    overview: 0,
     submissions: 0,
     analytics: 0,
   };
+  await page.route(/\/api\/admin\/payments(?:\?|$)/, (route) =>
+    route.fulfill({ json: paymentsFixture() }),
+  );
+  await page.route(/\/api\/admin\/overview(?:\?|$)/, (route) => {
+    calls.overview++;
+    return route.fulfill({ json: overview });
+  });
   await page.route(/\/api\/admin\/metrics(?:\?|$)/, (route) => {
     const url = new URL(route.request().url());
     calls.metrics.push(url.href);
@@ -111,12 +124,83 @@ async function mount(page: Page, mode: "normal" | "empty" | "unavailable" = "nor
     (window as Window & { metricsTestFetch?: typeof fetch }).metricsTestFetch =
       window.fetch.bind(window);
   });
-  await page.goto("/admin-preview?section=health");
+  await page.goto("/admin-preview?section=" + section);
   await expect(page.locator(".adminShell")).toBeVisible();
   await page.addScriptTag({ type: "module", url: "/scripts/admin-console-browser-fixture.tsx" });
   const panel = page.locator("#admin-console-fixture");
-  await expect(panel.locator(".healthIssue")).toHaveCount(4);
+  if (section === "health") await expect(panel.locator(".healthIssue")).toHaveCount(4);
+  else if (section === "overview") await expect(panel.locator(".ovRoot")).toBeVisible();
+  else await expect(panel.locator(".adminPayments")).toBeVisible();
   return { panel, calls };
+}
+
+function paymentsFixture() {
+  return {
+    funding: {
+      managed: 1,
+      enabled: 0,
+      revision: 1,
+      total_micros: 3000000,
+      daily_micros: 500000,
+      spent: 2900000,
+      reserved: 0,
+      dailyUsed: 500000,
+      alert: true,
+      trials: { total: 3, active: 2, startedToday: 0 },
+      usage: [],
+      audit: [],
+    },
+    mode: "live",
+    configured: true,
+    month: "2026-11",
+    revenue: [{ state: "paid", cents: 990, receipts: 1 }],
+    recurring: { customers: 1, cents: 990 },
+    modelCost: { micros: 1000000 },
+    receipts: [
+      {
+        id: "in_paid",
+        email: "buyer@example.test",
+        product_id: "connect-unlimited",
+        state: "refunded",
+        amount_cents: 990,
+        discount_cents: 0,
+        verified_at: "2026-11-05T10:00:00.000Z",
+      },
+    ],
+    issues: [{ invoice_id: "in_failed", email: "late@example.test", amount_due_cents: 990 }],
+    events: [],
+    catalog: {
+      plans: [],
+      topups: [],
+      trial: { id: "arc-trial-v1", days: 14, credits: 200, versionId: "v1", revision: 1 },
+    },
+    versions: [],
+    promotions: [],
+    audit: [],
+  };
+}
+
+function overviewFixture() {
+  const end = Math.floor(Date.now() / 3600000) * 3600000;
+  return {
+    checkedAt: new Date(end + 60000).toISOString(),
+    unavailable: ["revenue"],
+    people: { total: 40, new7d: 5, activeToday: 12, active7d: 25 },
+    usage: {
+      monthlyCalls: 9000,
+      calls24h: 1000,
+      failed24h: 100,
+      callsPrevious24h: 800,
+      failedPrevious24h: 10,
+      hourly: [
+        { hour: new Date(end).toISOString().slice(0, 13), calls: 1000, failed: 100, users: 6 },
+      ],
+    },
+    devices: { total: 10, online: 4, complete: true },
+    revenue: null,
+    teams: { teams: 2, members: 5 },
+    inbox: { newSubmissions: 0, openSupport: 2 },
+  };
 }
 
 test("Metrics have coordinate axes, exact values and keyboard interaction on desktop and mobile", async ({
@@ -287,4 +371,84 @@ test("Independent Admin sections do not reload account history or unrelated cont
   await expect.poll(() => calls.operations.length).toBe(1);
   expect(new URL(calls.operations[0]!).searchParams.get("auditTotals")).toBe("0");
   expect(calls.submissions).toBe(0);
+});
+
+test("The overview reads its own summary, leads with what needs action and keeps loaded numbers when a section fails", async ({
+  page,
+}) => {
+  const { panel, calls } = await mount(page, "normal", "overview");
+  await expect.poll(() => calls.overview).toBe(1);
+  expect(calls.operations, "The overview never waits on the per-account scan").toHaveLength(0);
+  expect(calls.submissions).toBe(0);
+  const attention = panel.locator(".ovAttentionItem");
+  await expect(attention).toHaveCount(2);
+  await expect(attention.nth(0)).toContainText(/Device calls are failing|设备调用失败偏多/);
+  await expect(attention.nth(0)).toContainText("10%");
+  await expect(attention.nth(1)).toContainText(/Customer mail waiting|客户来信待回复/);
+  const kpis = panel.locator(".ovKpi");
+  await expect(kpis.nth(0)).toContainText("12");
+  await expect(kpis.nth(1)).toContainText("1,000");
+  await expect(kpis.nth(1)).toContainText("25%");
+  await expect(kpis.nth(1)).toContainText("90%");
+  await expect(kpis.nth(3).locator("strong")).toHaveText("—");
+  await expect(panel.locator(".adminAlert")).toContainText(/revenue|营收/);
+  await expect(panel.locator(".ovBar")).toHaveCount(24);
+  await attention.nth(1).getByRole("button").click();
+  await expect(panel.locator(".adminBreadcrumb")).toContainText(/Support inbox|客服收件箱/);
+});
+
+test("A clear day says so instead of showing an empty attention list", async ({ page }) => {
+  const clear = overviewFixture();
+  clear.unavailable = [];
+  clear.revenue = {
+    paidCents30d: 0,
+    payments30d: 0,
+    activeSubscriptions: 0,
+    activeTrials: 0,
+  } as never;
+  clear.inbox = { newSubmissions: 0, openSupport: 0 };
+  clear.usage = { ...clear.usage, failed24h: 0 };
+  const { panel } = await mount(page, "normal", "overview", clear);
+  await expect(panel.locator(".ovAllClear.is-clear")).toBeVisible();
+  await expect(panel.locator(".ovAttentionItem")).toHaveCount(0);
+  await expect(panel.locator(".adminAlert")).toHaveCount(0);
+});
+
+test("Service health opens with a verdict and jumps to the error that needs investigation", async ({
+  page,
+}) => {
+  const { panel } = await mount(page);
+  const verdict = panel.locator(".healthVerdict");
+  await expect(verdict).toHaveClass(/is-watch/);
+  const problems = verdict.locator(".healthProblems li");
+  await expect(problems.first()).toBeVisible();
+  // Expected limits are separated from faults instead of inflating the problem list.
+  await expect(verdict.locator(".healthExpected")).toBeVisible();
+  const first = problems.first();
+  const code = (await first.locator("small").textContent())!.split(" · ")[1]!;
+  await first.getByRole("button").click();
+  const issue = panel.locator(".healthIssue").filter({ hasText: code });
+  await expect(issue.locator(".healthIssueSummary")).toHaveAttribute("aria-expanded", "true");
+  await expect(issue).toBeInViewport();
+});
+
+test("Payments lead with what needs action, explain each tab and keep the budget reachable", async ({
+  page,
+}) => {
+  const { panel } = await mount(page, "normal", "payments");
+  const issues = panel.locator(".adminPaymentIssues");
+  await expect(issues.locator("h2")).toContainText("2");
+  await expect(issues).toContainText("late@example.test");
+  await expect(issues).toContainText(/Model budget is paused|模型预算已暂停/);
+  await expect(panel.locator(".adminPaymentState.is-refunded")).toHaveText(/Refunded|已退款/);
+  const purpose = panel.locator(".adminPaymentPurpose");
+  await expect(purpose).toContainText(/who paid|谁付了款/);
+  await issues.getByRole("button", { name: /Open model budget|打开模型预算/ }).click();
+  await expect(panel.getByRole("tab", { name: /Model budget|模型预算/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(purpose).toContainText(/free trials|免费试用/);
+  await panel.getByRole("tab", { name: /Discount codes|优惠码/ }).click();
+  await expect(purpose).toContainText(/discount code|折扣码/);
 });

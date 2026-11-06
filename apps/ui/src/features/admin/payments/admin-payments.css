@@ -279,3 +279,95 @@
   overflow-wrap: anywhere;
   margin-top: 8px;
 }
+
+/* Each tab states its purpose; the Revenue tab leads with what needs action. */
+.adminPaymentPurpose {
+  margin: -4px 0 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.adminPaymentClear {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, #3b9a78 35%, var(--line));
+  border-radius: 9px;
+  background: color-mix(in srgb, #3b9a78 6%, var(--panel));
+  font-size: 12px;
+}
+
+.adminPaymentIssues {
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-left: 4px solid #d0574f;
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.adminPaymentIssues h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 550;
+}
+
+.adminPaymentIssues h2 span {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #d0574f;
+  color: #fff;
+  font-size: 10px;
+}
+
+.adminPaymentIssues ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adminPaymentIssues li strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.adminPaymentIssues li small {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.adminPaymentIssues li button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.adminPaymentState {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 10px;
+}
+
+.adminPaymentState.is-paid {
+  background: color-mix(in srgb, #3b9a78 14%, var(--panel));
+  color: #2f8466;
+}
+
+.adminPaymentState.is-refunded {
+  background: color-mix(in srgb, #d0574f 12%, var(--panel));
+  color: #b8463f;
+}

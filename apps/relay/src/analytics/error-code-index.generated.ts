@@ -1149,6 +1149,7 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
  ],
  "FORBIDDEN": [
   "admin/admin-events.ts",
+  "admin/admin-overview.ts",
   "admin/admin-usage-insights.ts",
   "admin/plan-admin.ts",
   "analytics/business-analytics.ts",
@@ -1380,6 +1381,7 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
  ],
  "METHOD_NOT_ALLOWED": [
   "admin/admin-events.ts",
+  "admin/admin-overview.ts",
   "admin/admin-payments.ts",
   "admin/admin-usage-insights.ts",
   "analytics/business-analytics.ts",
@@ -1682,6 +1684,7 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
   "mcp/mcp-errors.ts"
  ],
  "SERVICE_UNAVAILABLE": [
+  "admin/admin-overview.ts",
   "index.ts"
  ],
  "SESSION_NOT_FOUND": [
@@ -1788,6 +1791,7 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
  ],
  "UNAUTHORIZED": [
   "admin/admin-events.ts",
+  "admin/admin-overview.ts",
   "admin/admin-usage-insights.ts",
   "admin/plan-admin.ts",
   "analytics/business-analytics.ts",

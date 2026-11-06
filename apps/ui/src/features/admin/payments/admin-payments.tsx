@@ -71,6 +71,65 @@ type Payments = {
     created_at: string;
   }>;
 };
+type PaymentTab =
+  "payments" | "trials" | "promotions" | "pricing" | "rewards" | "funding" | "audit";
+// Each tab says what you do there, so the purpose is clear before opening it.
+const PAYMENT_TABS: Array<{ key: PaymentTab; label: [string, string]; purpose: [string, string] }> =
+  [
+    {
+      key: "payments",
+      label: ["Revenue", "收入"],
+      purpose: [
+        "How much came in this month, who paid, and any failed payment you need to handle.",
+        "本月收了多少钱、谁付了款，以及需要处理的失败付款。",
+      ],
+    },
+    {
+      key: "trials",
+      label: ["Trial users", "试用用户"],
+      purpose: [
+        "Who is on a trial and when it ends, so you can follow up before it expires.",
+        "谁在试用、什么时候到期，方便在到期前跟进转化。",
+      ],
+    },
+    {
+      key: "promotions",
+      label: ["Discount codes", "优惠码"],
+      purpose: [
+        "Create a discount code, publish it, or switch one off.",
+        "创建折扣码、发布或停用。",
+      ],
+    },
+    {
+      key: "pricing",
+      label: ["Plans & prices", "套餐与价格"],
+      purpose: [
+        "Change a plan’s price or allowance. Save a draft, check it, then publish. Existing subscribers keep their price.",
+        "修改套餐价格或额度：先存草稿、核对后发布。已订阅用户保留原价。",
+      ],
+    },
+    {
+      key: "rewards",
+      label: ["Feedback rewards", "反馈奖励"],
+      purpose: [
+        "Approve or reject people who earned extra calls by giving feedback.",
+        "审核用户用反馈换取额外调用次数的申请。",
+      ],
+    },
+    {
+      key: "funding",
+      label: ["Model budget", "模型预算"],
+      purpose: [
+        "Cap how much free trials can spend on AI models, so costs cannot run away.",
+        "限制免费试用在 AI 模型上的花费，防止成本失控。",
+      ],
+    },
+    {
+      key: "audit",
+      label: ["Change history", "变更记录"],
+      purpose: ["Who changed a price or discount, and when.", "谁在什么时候修改了价格或优惠。"],
+    },
+  ];
 const money = (cents: number) =>
   new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(cents / 100);
 const date = (value: string) => new Date(value).toLocaleString();
@@ -150,9 +209,7 @@ function previewData(): Payments {
 export function AdminPayments({ preview = false }: { preview?: boolean }) {
   const { tr } = useI18n(),
     [data, setData] = useState<Payments | null>(() => (preview ? previewData() : null)),
-    [tab, setTab] = useState<
-      "payments" | "pricing" | "promotions" | "audit" | "trials" | "rewards"
-    >("payments"),
+    [tab, setTab] = useState<PaymentTab>("payments"),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState(""),
@@ -302,6 +359,7 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
         <button onClick={() => void refresh()}>{tr("Retry", "重试")}</button>
       </section>
     );
+  const productName = (id: string) => configs.find((item) => item.id === id)?.label || id;
   const pending = data.versions.filter((v) => !v.published_at),
     review = draft && { ...JSON.parse(draft.config_json) };
   return (
@@ -358,60 +416,122 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
         role="tablist"
         aria-label={tr("Payment sections", "支付栏目")}
       >
-        {(["payments", "trials", "rewards", "pricing", "promotions", "audit"] as const).map(
-          (item, i) => (
-            <button
-              role="tab"
-              aria-selected={tab === item}
-              className={tab === item ? "isActive" : ""}
-              key={item}
-              onClick={() => setTab(item)}
-            >
-              {
-                [
-                  tr("Payments", "支付看板"),
-                  tr("Trial users", "试用用户"),
-                  tr("Feedback rewards", "反馈奖励"),
-                  tr("Plans & Credits", "套餐与额度"),
-                  tr("Promotions", "优惠管理"),
-                  tr("Release history", "发布记录"),
-                ][i]
-              }
-            </button>
-          ),
-        )}
+        {PAYMENT_TABS.map((item) => (
+          <button
+            role="tab"
+            aria-selected={tab === item.key}
+            className={tab === item.key ? "isActive" : ""}
+            key={item.key}
+            onClick={() => setTab(item.key)}
+          >
+            {tr(...item.label)}
+          </button>
+        ))}
       </div>
+      <p className="adminPaymentPurpose">
+        {tr(...PAYMENT_TABS.find((item) => item.key === tab)!.purpose)}
+      </p>
       {tab === "trials" && <AdminTrials preview={preview} />}
       {tab === "rewards" && <AdminFeedbackRewards preview={preview} />}
+      {tab === "funding" && (
+        <AdminFunding funding={data.funding} busy={busy} preview={preview} mutate={mutate} />
+      )}
       {tab === "payments" && (
         <>
-          <AdminFunding funding={data.funding} busy={busy} preview={preview} mutate={mutate} />
+          {data.issues.length || data.events.length || data.funding?.alert ? (
+            <section className="adminPaymentIssues" aria-labelledby="payment-issues-title">
+              <h2 id="payment-issues-title">
+                {tr("Needs your action", "需要你处理")}{" "}
+                <span>
+                  {data.issues.length + data.events.length + (data.funding?.alert ? 1 : 0)}
+                </span>
+              </h2>
+              <ul>
+                {data.funding?.alert && (
+                  <li>
+                    <strong>
+                      {tr("Model budget is paused or 80% used", "模型预算已暂停或已用到 80%")}
+                    </strong>
+                    <small>
+                      {tr(
+                        "Trial users may stop getting AI answers. Check provider balances, then adjust the budget.",
+                        "试用用户可能无法再获得 AI 回答。请核对供应商余额后调整预算。",
+                      )}{" "}
+                      <button type="button" onClick={() => setTab("funding")}>
+                        {tr("Open model budget", "打开模型预算")} →
+                      </button>
+                    </small>
+                  </li>
+                )}
+                {data.issues.map((issue) => (
+                  <li key={issue.invoice_id}>
+                    <strong>
+                      {tr("Payment failed: ", "付款失败：")}
+                      {issue.email}
+                    </strong>
+                    <small>
+                      {tr("Amount due ", "待付 ")}
+                      {money(issue.amount_due_cents)} ·{" "}
+                      {tr(
+                        "Stripe will retry; contact the customer if it keeps failing.",
+                        "Stripe 会自动重试；如果持续失败请联系客户。",
+                      )}{" "}
+                      · <code>{issue.invoice_id}</code>
+                    </small>
+                  </li>
+                ))}
+                {data.events.map((event) => (
+                  <li key={event.id}>
+                    <strong>
+                      {tr(
+                        "A Stripe notification was not processed",
+                        "有一条 Stripe 支付通知未处理成功",
+                      )}
+                    </strong>
+                    <small>
+                      {tr(
+                        "The customer may have paid without getting access. Check the event in Stripe.",
+                        "客户可能已付款但没有拿到权益，请在 Stripe 中核对该事件。",
+                      )}{" "}
+                      · {event.status} · {event.error_code} · <code>{event.id}</code>
+                    </small>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : (
+            <p className="adminPaymentClear">
+              {tr(
+                "Nothing to handle: no failed payments and no unprocessed Stripe notifications.",
+                "没有需要处理的事项：没有失败付款，也没有未处理的 Stripe 通知。",
+              )}
+            </p>
+          )}
           <div className="adminMetrics adminMetrics--overview">
             {[
               {
-                label: tr("Paid receipts this month", "本月有效实收"),
+                label: tr("Received this month", "本月实收"),
                 value: money(data.revenue.find((r) => r.state === "paid")?.cents || 0),
-                caption: data.month,
+                caption:
+                  data.month +
+                  tr(" · verified payments, refunds excluded", " · 已核实付款，不含退款"),
               },
               {
-                label: tr("Recurring list value / month", "订阅月度标价合计"),
-                value: money(data.recurring.cents),
-                caption: tr(
-                  "Active subscriptions, before one-time discounts and tax",
-                  "有效订阅，不含单次优惠与税",
-                ),
-              },
-              {
-                label: tr("Renewing customers", "续订客户"),
+                label: tr("Paying subscribers", "付费订阅用户"),
                 value: data.recurring.customers,
-                caption: tr("Excludes period-end cancellations", "不含已预约取消"),
+                caption: tr("Will renew; excludes cancellations", "会续订的用户，不含已取消"),
               },
               {
-                label: tr("Rated model cost this month", "本月模型计价成本"),
+                label: tr("Monthly subscription value", "订阅月收入（标价）"),
+                value: money(data.recurring.cents),
+                caption: tr("List price, before discounts and tax", "按标价计，不含优惠和税"),
+              },
+              {
+                label: tr("Model cost this month", "本月模型成本（估算）"),
                 value: money(data.modelCost.micros / 10000),
                 caption: tr(
-                  "Usage estimate; excludes payment and infrastructure fees",
-                  "用量计价，不含支付与基础设施费用",
+                  "Estimated AI model spend; excludes Stripe and hosting fees",
+                  "AI 模型花费估算，不含 Stripe 手续费和服务器费用",
                 ),
               },
             ].map((item) => (
@@ -425,11 +545,11 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
           <section className="adminSurface">
             <div className="adminSectionHeader">
               <div>
-                <h2>{tr("Recent payments", "近期支付")}</h2>
+                <h2>{tr("Recent payments", "最近付款")}</h2>
                 <p>
                   {tr(
-                    "Verified Stripe receipts. Refunded receipts are excluded from paid revenue; a partial refund revokes the receipt’s remaining entitlement.",
-                    "经 Stripe 验证的收据；退款收据不计入有效实收，部分退款也会撤销该收据的剩余权益。",
+                    "Payments Stripe has confirmed. A refunded payment does not count as revenue and removes what it paid for.",
+                    "Stripe 已确认的付款。已退款的不计入收入，并会收回对应权益。",
                   )}
                 </p>
               </div>
@@ -457,10 +577,21 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
                         {r.email}
                         <small>{r.id}</small>
                       </td>
-                      <td>{r.product_id}</td>
+                      <td>
+                        {productName(r.product_id)}
+                        <small>{r.product_id}</small>
+                      </td>
                       <td>{money(r.amount_cents)}</td>
-                      <td>{money(r.discount_cents)}</td>
-                      <td>{r.state}</td>
+                      <td>{r.discount_cents ? money(r.discount_cents) : "—"}</td>
+                      <td>
+                        <span className={"adminPaymentState is-" + r.state}>
+                          {r.state === "paid"
+                            ? tr("Paid", "已付款")
+                            : r.state === "refunded"
+                              ? tr("Refunded", "已退款")
+                              : r.state}
+                        </span>
+                      </td>
                       <td>{date(r.verified_at)}</td>
                     </tr>
                   ))}
@@ -470,27 +601,6 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
                 <p className="adminNoData">{tr("No verified payments yet.", "暂无已确认支付。")}</p>
               )}
             </div>
-          </section>
-          <section className="adminSurface">
-            <h2>{tr("Needs attention", "需要处理")}</h2>
-            {data.issues.map((i) => (
-              <p key={i.invoice_id}>
-                {i.email} · {money(i.amount_due_cents)} · {i.invoice_id}
-              </p>
-            ))}
-            {data.events.map((e) => (
-              <p key={e.id}>
-                {e.id} · {e.status} · {e.error_code}
-              </p>
-            ))}
-            {!data.issues.length && !data.events.length && (
-              <p>
-                {tr(
-                  "No recorded failed payments or unresolved webhooks.",
-                  "暂无已记录的失败付款或未处理支付通知。",
-                )}
-              </p>
-            )}
           </section>
         </>
       )}

@@ -110,7 +110,14 @@
   padding: 0 12px;
 }
 .adminShell .adminSidebar nav {
-  gap: 5px;
+  gap: 18px;
+}
+.adminShell .adminNavGroup {
+  display: grid;
+  gap: 3px;
+}
+.adminShell .adminNavGroup > .adminSidebarKicker {
+  margin-bottom: 4px;
 }
 .adminShell .adminSidebar nav button {
   min-height: 43px;
@@ -730,6 +737,12 @@
     position: static;
     padding: 17px 16px;
     gap: 18px;
+  }
+  .adminShell .adminSidebar nav {
+    gap: 6px;
+  }
+  .adminShell .adminNavGroup {
+    display: contents;
   }
   .adminShell .adminSidebar nav button {
     font-size: 11px;

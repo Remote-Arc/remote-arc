@@ -497,3 +497,156 @@
     gap: 5px;
   }
 }
+
+/* Verdict: the one answer to "is anything wrong, and where?" */
+.healthVerdict {
+  --verdictTone: var(--muted);
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--verdictTone);
+  border-radius: 11px;
+  background: var(--panel);
+}
+
+.healthVerdict.is-ok {
+  --verdictTone: #3b9a78;
+  background: color-mix(in srgb, #3b9a78 5%, var(--panel));
+}
+
+.healthVerdict.is-watch {
+  --verdictTone: #c58a1d;
+}
+
+.healthVerdict.is-broken {
+  --verdictTone: #d0574f;
+  background: color-mix(in srgb, #d0574f 5%, var(--panel));
+}
+
+.healthVerdictHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.healthVerdictLight {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--verdictTone);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--verdictTone) 18%, transparent);
+}
+
+.healthVerdictHead h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.healthVerdictHead p {
+  margin: 5px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.healthVerdictHead small {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.healthProblems {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: problem;
+}
+
+.healthProblems li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  counter-increment: problem;
+}
+
+.healthProblems li::before {
+  content: counter(problem);
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, #c58a1d 16%, var(--panel));
+  color: #a5700f;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.healthProblems li.is-broken::before {
+  background: color-mix(in srgb, #d0574f 16%, var(--panel));
+  color: #c0453d;
+}
+
+.healthProblems strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.healthProblems small {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.healthProblems button {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.healthProblems button:hover {
+  background: var(--surface);
+}
+
+.healthExpected {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.healthIssue,
+.healthSection {
+  scroll-margin-top: 16px;
+}
+
+@media (max-width: 700px) {
+  .healthProblems li {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .healthProblems button {
+    grid-column: 2;
+    justify-self: start;
+  }
+}

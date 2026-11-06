@@ -60,6 +60,7 @@
       ["tsx", "scripts/device-pause-test.ts"],
       ["tsx", "scripts/scalability-guardrails-test.ts"],
       ["tsx", "scripts/admin-operations-test.ts"],
+      ["tsx", "scripts/admin-overview-test.ts"],
       ["tsx", "scripts/admin-query-performance-test.ts"],
       ["tsx", "scripts/admin-user-activation-test.ts"],
       ["tsx", "scripts/admin-usage-insights-test.ts"],

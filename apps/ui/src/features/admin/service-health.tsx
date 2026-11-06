@@ -14,7 +14,67 @@ import {
 import "./service-health.css";
 import { ServiceMetricsPanel } from "./service-metrics-panel.js";
 import { BusinessHealthOverview } from "./business-health-overview.js";
+import { healthVerdict, type Problem, type Verdict } from "./service-health-verdict.js";
 const date = (value: string | null | undefined) => (value ? new Date(value).toLocaleString() : "—");
+const groupId = (group: FailureGroup) =>
+  "health-group-" + [group.domain, group.code, group.category].join("-").replace(/[^\w-]/g, "_");
+
+function VerdictPanel({
+  verdict,
+  scope,
+  loading,
+  open,
+}: {
+  verdict: Verdict;
+  scope: string;
+  loading: boolean;
+  open: (problem: Problem) => void;
+}) {
+  const { tr } = useI18n();
+  return (
+    <section
+      className={"healthVerdict is-" + (loading ? "unknown" : verdict.level)}
+      aria-labelledby="health-verdict-title"
+    >
+      <div className="healthVerdictHead">
+        <span className="healthVerdictLight" aria-hidden="true" />
+        <div>
+          <h2 id="health-verdict-title">
+            {loading ? tr("Checking service health…", "正在检查服务状态…") : verdict.headline}
+          </h2>
+          {!loading && <p>{verdict.summary}</p>}
+          <small>{scope}</small>
+        </div>
+      </div>
+      {!loading && verdict.problems.length > 0 && (
+        <ol className="healthProblems">
+          {verdict.problems.map((problem) => (
+            <li key={problem.key} className={"is-" + problem.level}>
+              <div>
+                <strong>{problem.title}</strong>
+                <small>{problem.detail}</small>
+              </div>
+              <button type="button" onClick={() => open(problem)}>
+                {problem.target === "group"
+                  ? tr("See who and when", "查看用户与时间")
+                  : tr("Open details", "查看详情")}{" "}
+                ↓
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+      {!loading && verdict.expected > 0 && (
+        <p className="healthExpected">
+          {tr(
+            `${verdict.expected.toLocaleString()} more recorded failures are expected product limits (for example a used-up monthly allowance or a missing permission). They are not faults.`,
+            `另有 ${verdict.expected.toLocaleString()} 次记录属于正常的业务限制（例如月度额度用完、缺少授权），不是故障。`,
+          )}
+        </p>
+      )}
+    </section>
+  );
+}
 async function read<T>(path: string): Promise<T> {
   const response = await fetch(path, {
     credentials: "same-origin",
@@ -62,6 +122,7 @@ export function ServiceHealth({
   const [catalog, setCatalog] = useState<ErrorDefinition[] | null>(null),
     [catalogSearch, setCatalogSearch] = useState(""),
     [catalogError, setCatalogError] = useState("");
+  const root = useRef<HTMLElement>(null);
   const generation = useRef(0),
     detailGeneration = useRef(0);
   const params = () => {
@@ -161,8 +222,39 @@ export function ServiceHealth({
   }
   const label = (labels: Record<string, [string, string]>, key: string) =>
     labels[key] ? tr(...labels[key]!) : key;
+  const verdict = healthVerdict(health, data, tr);
+  const scope =
+    tr("Error codes: ", "错误码范围：") +
+    ({ "1": tr("last hour", "最近 1 小时"), "168": tr("last 7 days", "最近 7 天") }[hours] ||
+      tr("last 24 hours", "最近 24 小时")) +
+    (domain ? " · " + label(domainLabels, domain) : "") +
+    tr(" · Server errors and computers: live", " · 服务器错误与电脑状态：实时");
+  // Anchors are looked up inside this component, never by global id, so a
+  // second copy of the console on the page cannot capture the jump.
+  const anchor = (name: string) =>
+    root.current?.querySelector<HTMLElement>(`[data-health-anchor="${name}"]`) || null;
+  function openProblem(problem: Problem) {
+    if (problem.target === "group" && problem.group) {
+      const name = groupId(problem.group);
+      void openGroup(problem.group);
+      requestAnimationFrame(() =>
+        anchor(name)?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      );
+      return;
+    }
+    const section = anchor(problem.target) as HTMLDetailsElement | null;
+    if (!section) return;
+    section.open = true;
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
   return (
-    <section className="serviceHealth" aria-label={tr("Service monitoring", "服务监控")}>
+    <section ref={root} className="serviceHealth" aria-label={tr("Service monitoring", "服务监控")}>
+      <VerdictPanel
+        verdict={verdict}
+        scope={scope}
+        loading={(busy && !data) || (loading && !health)}
+        open={openProblem}
+      />
       <BusinessHealthOverview
         preview={preview}
         revision={metricsRevision}
@@ -387,7 +479,11 @@ export function ServiceHealth({
           )}
           {!busy &&
             data?.groups.map((group) => (
-              <div className="healthIssue" key={group.domain + group.code + group.category}>
+              <div
+                className="healthIssue"
+                data-health-anchor={groupId(group)}
+                key={group.domain + group.code + group.category}
+              >
                 <button
                   className="healthIssueSummary"
                   aria-expanded={
@@ -560,7 +656,7 @@ export function ServiceHealth({
           )}
         </div>
       </div>
-      <details className="healthSection">
+      <details className="healthSection" data-health-anchor="devices">
         <summary>
           <span>{tr("Device execution", "设备执行")}</span>
           <small>
@@ -569,7 +665,7 @@ export function ServiceHealth({
         </summary>
         <DeviceExecutionHealthPanel value={health?.deviceExecution} />
       </details>
-      <details className="healthSection">
+      <details className="healthSection" data-health-anchor="infrastructure">
         <summary>
           <span>{tr("Infrastructure & alert delivery", "基础设施与告警")}</span>
           <small>

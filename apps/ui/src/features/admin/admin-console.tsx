@@ -11,14 +11,12 @@ const AdminFollowups = lazy(() =>
 const AdminSupportInbox = lazy(() =>
   import("./support-inbox.js").then((module) => ({ default: module.AdminSupportInbox })),
 );
-const AdminApiUsage = lazy(() =>
-  import("./admin-api-usage.js").then((module) => ({ default: module.AdminApiUsage })),
-);
 const AdminPayments = lazy(() =>
   import("./payments/admin-payments.js").then((module) => ({ default: module.AdminPayments })),
 );
 import { useI18n } from "../../app/i18n.js";
 import { AdminOperations } from "./admin-operations.js";
+import { AdminOverview, type OverviewData, type OverviewSection } from "./admin-overview.js";
 import { ServiceHealth } from "./service-health.js";
 import type { HealthSnapshot } from "./service-health-model.js";
 import { ProductIcon as Icon, type ProductIconName } from "../../components/product-icon.js";
@@ -48,19 +46,45 @@ type LeadsResponse = {
   pageSize: number;
   counts: Array<{ category: string; count: number }>;
 };
-type Operations = {
-  checkedAt?: string;
-  totals: {
-    users: number;
-    devices: number;
-    online: number;
-    monthlyCalls: number;
-    auditLast7d: number;
-    teams?: number;
-    teamMembers?: number;
+function sectionName(key: OverviewSection, tr: (en: string, zh: string) => string) {
+  return {
+    people: tr("people", "用户"),
+    usage: tr("tool calls", "工具调用"),
+    devices: tr("devices", "设备"),
+    revenue: tr("revenue", "营收"),
+    teams: tr("teams", "团队"),
+    inbox: tr("inboxes", "收件箱"),
+  }[key];
+}
+// Illustrative sample for the design preview only; never shown with live data.
+function previewOverview(): OverviewData {
+  const end = Math.floor(Date.now() / 3600000) * 3600000;
+  return {
+    checkedAt: new Date().toISOString(),
+    unavailable: [],
+    people: { total: 128, new7d: 9, activeToday: 21, active7d: 47 },
+    usage: {
+      monthlyCalls: 18742,
+      calls24h: 4210,
+      failed24h: 260,
+      callsPrevious24h: 3720,
+      failedPrevious24h: 90,
+      hourly: Array.from({ length: 48 }, (_, i) => {
+        const calls = [70, 120, 50, 0, 0, 20, 90, 230, 340, 280, 450, 370][i % 12]!;
+        return {
+          hour: new Date(end - (47 - i) * 3600000).toISOString().slice(0, 13),
+          calls,
+          failed: i % 7 === 0 ? Math.round(calls * 0.2) : Math.round(calls * 0.02),
+          users: 3 + (i % 6),
+        };
+      }),
+    },
+    devices: { total: 46, online: 19, complete: true },
+    revenue: { paidCents30d: 12600, payments30d: 14, activeSubscriptions: 11, activeTrials: 4 },
+    teams: { teams: 8, members: 24 },
+    inbox: { newSubmissions: 3, openSupport: 2 },
   };
-  activity?: Array<{ hour: string; calls: number; users: number }>;
-};
+}
 async function readJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(path, {
     credentials: "same-origin",
@@ -259,286 +283,6 @@ function AdminGlyph({ name }: { name: Section | "arrow" | "refresh" | "shield" |
   };
   return <Icon name={names[name]} />;
 }
-function MiniActivity({ ops }: { ops: Operations | null }) {
-  const { tr } = useI18n();
-  const [windowHours, setWindowHours] = useState<24 | 48>(48);
-  // Fill empty hours with zero rather than visually compressing the timeline.
-  const ending = ops?.checkedAt
-    ? Math.floor(Date.parse(ops.checkedAt) / 3600000) * 3600000
-    : Date.now();
-  const hourly = new Map((ops?.activity || []).map((entry) => [entry.hour.slice(0, 13), entry]));
-  const values = Array.from({ length: windowHours }, (_, index) => {
-    const hour = new Date(ending - (windowHours - 1 - index) * 3600000).toISOString().slice(0, 13);
-    return hourly.get(hour) || { hour, calls: 0, users: 0 };
-  });
-  const max = Math.max(1, ...values.map((x) => x.calls));
-  const calls = values.reduce((total, entry) => total + entry.calls, 0);
-  return (
-    <section className="adminActivityCard">
-      <div className="adminPanelTitle">
-        <div>
-          <span className="adminSmallLabel">{tr("EXECUTION ACTIVITY", "执行活动")}</span>
-          <h2>{tr("Tool calls over time", "工具调用趋势")}</h2>
-          <p>
-            {tr("Hourly audit counts · UTC", "审计记录 · UTC 小时")} ·{" "}
-            {ops ? calls.toLocaleString() : "—"} {tr("calls", "次调用")}
-          </p>
-        </div>
-        <div
-          className="adminRangeControl"
-          role="group"
-          aria-label={tr("Chart time range", "图表时间范围")}
-        >
-          {([24, 48] as const).map((hours) => (
-            <button
-              type="button"
-              key={hours}
-              onClick={() => setWindowHours(hours)}
-              aria-pressed={windowHours === hours}
-            >
-              {hours}h
-            </button>
-          ))}
-        </div>
-      </div>
-      <div
-        className="adminActivityChart"
-        role="img"
-        aria-label={tr(
-          `Hourly tool calls over the last ${windowHours} hours`,
-          `最近 ${windowHours} 小时的工具调用`,
-        )}
-      >
-        {ops ? (
-          values.map((x) => (
-            <div
-              key={x.hour}
-              className={"adminActivityBar" + (x.calls === 0 ? " isQuiet" : "")}
-              title={x.hour + " UTC · " + x.calls + " calls · " + x.users + " users"}
-              style={{
-                height: (x.calls === 0 ? 3 : Math.max(7, Math.round((100 * x.calls) / max))) + "%",
-              }}
-            />
-          ))
-        ) : (
-          <div className="adminEmptyChart">
-            {tr("No activity metrics loaded yet.", "尚未加载活动数据。")}
-          </div>
-        )}
-      </div>
-      <div className="adminChartFooter">
-        <span>
-          {windowHours}h {tr("ago", "前")}
-        </span>
-        <span>{tr("Now", "现在")} · UTC</span>
-      </div>
-    </section>
-  );
-}
-function AdminOverview({
-  ops,
-  health,
-  leadOverview,
-  setSection,
-  preview = false,
-}: {
-  ops: Operations | null;
-  health: HealthSnapshot | null;
-  leadOverview: LeadsResponse | null;
-  setSection: (s: Section) => void;
-  preview?: boolean;
-}) {
-  const { tr } = useI18n();
-  const userCount = ops?.totals.users;
-  const activeCount = ops?.totals.online;
-  const leadsCount = leadOverview?.total;
-  const errors = health?.worker.errors24h;
-  const metrics = [
-    {
-      label: tr("Registered users", "注册用户"),
-      value: userCount,
-      caption: tr("All accounts", "累计账户"),
-      icon: "operations" as const,
-    },
-    {
-      label: tr("Online devices", "在线设备"),
-      value: activeCount,
-      caption: ops
-        ? tr("of ", "共 ") + ops.totals.devices + tr(" registered", " 台已注册")
-        : tr("Verified live connections", "验证过的实时连接"),
-      icon: "pulse" as const,
-    },
-    {
-      label: tr("Team organizations", "团队组织"),
-      value: ops?.totals.teams,
-      caption: tr("Created team workspaces", "已创建的团队工作空间"),
-      icon: "operations" as const,
-    },
-    {
-      label: tr("Team memberships", "团队成员席位"),
-      value: ops?.totals.teamMembers,
-      caption: tr("Active memberships across teams", "团队内活跃成员席位总数"),
-      icon: "shield" as const,
-    },
-    {
-      label: tr("Monthly MCP calls", "本月 MCP 调用"),
-      value: ops?.totals.monthlyCalls,
-      caption: tr("Actual recorded usage", "实际记录的调用量"),
-      icon: "overview" as const,
-    },
-    {
-      label: tr("Customer requests", "用户申请与反馈"),
-      value: leadsCount,
-      caption: tr("Explicitly submitted", "用户主动提交"),
-      icon: "leads" as const,
-    },
-  ];
-  return (
-    <div className="adminOverview">
-      <div className="adminOverviewLead">
-        <div>
-          <span className="adminSmallLabel">{tr("YOUR BUSINESS AT A GLANCE", "业务概况")}</span>
-          <h2>{tr("The numbers that matter.", "从重要数据开始。")}</h2>
-        </div>
-        <span className="adminDataOrigin">
-          <span className="adminDataDot" />
-          {ops?.checkedAt
-            ? tr("Updated ", "更新于 ") + time(ops.checkedAt)
-            : tr("Awaiting data", "等待数据")}
-        </span>
-      </div>
-      <div className="adminMetrics adminMetrics--overview">
-        {metrics.map((m) => (
-          <article className="adminMetricCard" key={m.label}>
-            <div className="adminMetricHead">
-              <span>{m.label}</span>
-              <AdminGlyph name={m.icon} />
-            </div>
-            <strong>{m.value === undefined ? "—" : m.value.toLocaleString()}</strong>
-            <small>{m.caption}</small>
-          </article>
-        ))}
-      </div>
-      <div className="adminDashboardGrid">
-        <MiniActivity ops={ops} />
-        <div className="adminSnapshot">
-          <div className="adminPanelTitle">
-            <span className="adminSmallLabel">{tr("REQUIRES ATTENTION", "重点关注")}</span>
-            <h2>{tr("Today’s pulse", "今日运营状态")}</h2>
-          </div>
-          <div className="adminSnapshotRow">
-            <span
-              className={"adminHealthLight " + (health?.status === "operational" ? "healthy" : "")}
-            >
-              <AdminGlyph name="pulse" />
-            </span>
-            <div>
-              <strong>{tr("Infrastructure", "基础设施")}</strong>
-              <small>
-                {health?.status === "operational"
-                  ? tr("All systems operational", "服务运行正常")
-                  : health?.status === "degraded"
-                    ? tr("Degraded — inspect incidents", "服务异常，需要检查")
-                    : tr("Status unavailable", "暂无健康状态")}
-              </small>
-            </div>
-            <button
-              onClick={() => setSection("health")}
-              aria-label={tr("Open service health", "查看服务健康")}
-            >
-              <AdminGlyph name="arrow" />
-            </button>
-          </div>
-          <div className="adminSnapshotRow">
-            <span className="adminHealthLight">
-              <AdminGlyph name="leads" />
-            </span>
-            <div>
-              <strong>{tr("Early access & feedback", "抢先体验与反馈")}</strong>
-              <small>
-                {leadsCount === undefined ? "—" : leadsCount.toLocaleString()}{" "}
-                {tr("total submissions", "条用户提交")}
-              </small>
-            </div>
-            <button
-              onClick={() => setSection("leads")}
-              aria-label={tr("Open leads and feedback", "查看线索和反馈")}
-            >
-              <AdminGlyph name="arrow" />
-            </button>
-          </div>
-          <div className="adminSnapshotRow">
-            <span className="adminHealthLight">
-              <AdminGlyph name="operations" />
-            </span>
-            <div>
-              <strong>{tr("Device connection rate", "设备在线比例")}</strong>
-              <small>
-                {ops?.totals.devices
-                  ? Math.round((ops.totals.online / ops.totals.devices) * 100) +
-                    "% · " +
-                    ops.totals.online +
-                    "/" +
-                    ops.totals.devices
-                  : tr("No registered devices yet", "尚无已注册设备")}
-              </small>
-            </div>
-            <button
-              onClick={() => setSection("operations")}
-              aria-label={tr("Open devices", "查看设备")}
-            >
-              <AdminGlyph name="arrow" />
-            </button>
-          </div>
-          <div className="adminSnapshotRow">
-            <span className="adminHealthLight">
-              <AdminGlyph name="shield" />
-            </span>
-            <div>
-              <strong>{tr("Worker errors · 24 hours", "Worker 错误 · 24 小时")}</strong>
-              <small>
-                {errors === undefined ? "—" : errors.toLocaleString()}{" "}
-                {tr("recorded errors", "次记录异常")}
-              </small>
-            </div>
-            <button
-              onClick={() => setSection("health")}
-              aria-label={tr("Open incidents", "查看异常记录")}
-            >
-              <AdminGlyph name="arrow" />
-            </button>
-          </div>
-        </div>
-      </div>
-      <Suspense
-        fallback={
-          <WorkspaceLoading
-            label={tr("Loading model usage…", "正在读取模型用量…")}
-            variant="rows"
-          />
-        }
-      >
-        <AdminApiUsage preview={preview} />
-      </Suspense>
-      <section className="adminCommerce">
-        <div className="adminCommerceCopy">
-          <span className="adminSmallLabel">{tr("REVENUE & BILLING", "营收与计费")}</span>
-          <h2>{tr("Payments, pricing and customer offers.", "支付、定价与客户优惠。")}</h2>
-          <p>
-            {tr(
-              "Inspect verified receipts, failed payments, plan versions and promotions in your payment workspace.",
-              "在支付工作区查看已验证收据、失败付款、套餐版本和促销优惠。",
-            )}
-          </p>
-          <button className="adminOutlineBtn" onClick={() => setSection("payments")}>
-            {tr("Open payments", "打开支付看板")} →
-          </button>
-        </div>
-      </section>
-    </div>
-  );
-}
-
 export function AdminConsole({ preview = false }: { preview?: boolean }) {
   const { tr, locale, setLocale } = useI18n();
   const { theme, setTheme } = useTheme();
@@ -569,30 +313,10 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
     window.addEventListener("popstate", restore);
     return () => window.removeEventListener("popstate", restore);
   }, []);
-  const [ops, setOps] = useState<Operations | null>(() =>
-    preview
-      ? {
-          checkedAt: new Date().toISOString(),
-          totals: {
-            users: 128,
-            devices: 46,
-            online: 19,
-            monthlyCalls: 18742,
-            auditLast7d: 4261,
-            teams: 8,
-            teamMembers: 24,
-          },
-          activity: Array.from({ length: 48 }, (_, i) => ({
-            hour: new Date(Date.now() - (47 - i) * 3600000).toISOString().slice(0, 13),
-            calls: [7, 12, 5, 0, 0, 2, 9, 23, 34, 28, 45, 37][i % 12]!,
-            users: 3 + (i % 6),
-          })),
-        }
-      : null,
+  const [overview, setOverview] = useState<OverviewData | null>(() =>
+    preview ? previewOverview() : null,
   );
-  const [leadOverview, setLeadOverview] = useState<LeadsResponse | null>(() =>
-    preview ? { items: [], total: 12, page: 0, pageSize: 20, counts: [] } : null,
-  );
+  const [overviewLoaded, setOverviewLoaded] = useState(preview);
   const [health, setHealth] = useState<HealthSnapshot | null>(() =>
     preview
       ? {
@@ -650,29 +374,36 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
     refreshController.current = controller;
     setLoading(true);
     try {
-      const [a, b, c] = await Promise.allSettled([
+      // The overview reads its own small summary. The Users tab owns the
+      // per-account scan, so the overview never waits on it.
+      const [summary, monitor] = await Promise.allSettled([
         section === "overview"
-          ? readJson<Operations>("/api/admin/operations?page=0&auditTotals=0", controller.signal)
+          ? readJson<OverviewData>("/api/admin/overview", controller.signal)
           : Promise.resolve(null),
         readJson<HealthSnapshot>("/api/monitor", controller.signal),
-        section === "overview"
-          ? readJson<LeadsResponse>("/api/admin/submissions?category=all&page=0", controller.signal)
-          : Promise.resolve(null),
       ]);
       if (controller.signal.aborted) return;
-      if (a.status === "fulfilled" && a.value) setOps(a.value);
-      if (b.status === "fulfilled") setHealth(b.value);
-      if (c.status === "fulfilled" && c.value) setLeadOverview(c.value);
+      if (summary.status === "fulfilled" && summary.value) setOverview(summary.value);
+      if (monitor.status === "fulfilled") setHealth(monitor.value);
+      const missing: string[] = [];
+      if (summary.status === "rejected") missing.push(tr("business summary", "业务汇总"));
+      else for (const key of summary.value?.unavailable || []) missing.push(sectionName(key, tr));
+      if (monitor.status === "rejected") missing.push(tr("service health", "服务健康"));
       setError(
-        a.status === "rejected" || b.status === "rejected" || c.status === "rejected"
-          ? tr(
-              "Some metrics could not be loaded. Your other data is still available.",
-              "部分数据暂时无法加载，其余数据仍然可以查看。",
-            )
+        missing.length
+          ? tr("Could not load: ", "以下数据暂时无法加载：") +
+              missing.join(tr(", ", "、")) +
+              tr(
+                ". Everything else is current. Try Refresh in a moment.",
+                "。其余数据是最新的，可稍后点击刷新重试。",
+              )
           : "",
       );
     } finally {
-      if (!controller.signal.aborted) setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+        setOverviewLoaded(true);
+      }
     }
   }
   // Load when entering a section; subsequent updates are explicitly requested.
@@ -680,16 +411,41 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
     void refresh();
     return () => refreshController.current?.abort();
   }, [preview, section]);
-  const nav: Array<{ key: Section; en: string; zh: string }> = [
-    { key: "overview", en: "Overview", zh: "业务总览" },
-    { key: "leads", en: "Leads & feedback", zh: "线索与反馈" },
-    { key: "support", en: "Support inbox", zh: "客服收件箱" },
-    { key: "followups", en: "User follow-ups", zh: "用户跟进" },
-    { key: "payments", en: "Payments & offers", zh: "支付与优惠" },
-    { key: "events", en: "Business analytics", zh: "经营分析" },
-    { key: "operations", en: "Users & operations", zh: "用户与运营" },
-    { key: "health", en: "Service health", zh: "服务健康" },
+  // Grouped by the question each tab answers: is anything wrong, who needs a
+  // reply, and how is the business doing.
+  const navGroups: Array<{
+    en: string;
+    zh: string;
+    items: Array<{ key: Section; en: string; zh: string }>;
+  }> = [
+    {
+      en: "TODAY",
+      zh: "今日",
+      items: [
+        { key: "overview", en: "Overview", zh: "业务总览" },
+        { key: "health", en: "Service health", zh: "服务健康" },
+      ],
+    },
+    {
+      en: "CUSTOMERS",
+      zh: "客户",
+      items: [
+        { key: "support", en: "Support inbox", zh: "客服收件箱" },
+        { key: "leads", en: "Leads & feedback", zh: "线索与反馈" },
+        { key: "followups", en: "User follow-ups", zh: "用户跟进" },
+        { key: "operations", en: "Users & operations", zh: "用户与运营" },
+      ],
+    },
+    {
+      en: "BUSINESS",
+      zh: "经营",
+      items: [
+        { key: "events", en: "Business analytics", zh: "经营分析" },
+        { key: "payments", en: "Payments & offers", zh: "支付与优惠" },
+      ],
+    },
   ];
+  const nav = navGroups.flatMap((group) => group.items);
   const current = nav.find((x) => x.key === section)!;
   return (
     <div className="adminShell">
@@ -704,19 +460,23 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
           </span>
         </a>
         <div className="adminSidebarGroup">
-          <span className="adminSidebarKicker">{tr("WORKSPACE", "工作空间")}</span>
           <nav aria-label={tr("Admin sections", "管理员菜单")}>
-            {nav.map((n) => (
-              <button
-                type="button"
-                key={n.key}
-                aria-current={section === n.key ? "page" : undefined}
-                onClick={() => setSection(n.key)}
-              >
-                <AdminGlyph name={n.key} />
-                <span>{tr(n.en, n.zh)}</span>
-                <AdminGlyph name="arrow" />
-              </button>
+            {navGroups.map((group) => (
+              <div className="adminNavGroup" key={group.en}>
+                <span className="adminSidebarKicker">{tr(group.en, group.zh)}</span>
+                {group.items.map((n) => (
+                  <button
+                    type="button"
+                    key={n.key}
+                    aria-current={section === n.key ? "page" : undefined}
+                    onClick={() => setSection(n.key)}
+                  >
+                    <AdminGlyph name={n.key} />
+                    <span>{tr(n.en, n.zh)}</span>
+                    <AdminGlyph name="arrow" />
+                  </button>
+                ))}
+              </div>
             ))}
           </nav>
         </div>
@@ -816,8 +576,8 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
                               "管理用户账户、连接设备、用量配额和成本。",
                             )
                           : tr(
-                              "Track registration, conversion, payments and business failures.",
-                              "查看注册、转化、支付和业务异常。",
+                              "Is anything broken, and where? The answer is at the top; details follow.",
+                              "有没有故障、问题在哪里？结论在最上面，明细在下方。",
                             )}
           </p>
         </header>
@@ -883,9 +643,9 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
         {section === "overview" && (
           <AdminOverview
             preview={preview}
-            ops={ops}
+            data={overview}
             health={health}
-            leadOverview={leadOverview}
+            loaded={overviewLoaded}
             setSection={setSection}
           />
         )}

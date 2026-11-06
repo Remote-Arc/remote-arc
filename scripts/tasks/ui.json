@@ -33,6 +33,7 @@
       ["node", "--import", "tsx", "scripts/arc-home-brief-test.mjs"],
       ["node", "--import", "tsx", "scripts/runtime-config-test.ts"],
       ["node", "--import", "tsx", "scripts/admin-events-model-test.ts"],
+      ["node", "--import", "tsx", "scripts/service-health-verdict-test.ts"],
       ["node", "--import", "tsx", "scripts/monitor-reliability-test.tsx"],
       ["pnpm", "test:billing-preview"],
       ["node", "--import", "tsx", "scripts/business-fetch-test.ts"],

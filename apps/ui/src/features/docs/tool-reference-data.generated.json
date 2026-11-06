@@ -1163,7 +1163,7 @@
     {
       "name": "edit_block",
       "title": "Edit text on a remote computer",
-      "description": "Apply a targeted search-and-replace edit to a file on a linked computer. Supported CLI versions create a local-only undo snapshot before the change.",
+      "description": "Apply a targeted search-and-replace edit to a file on a linked computer. Supported CLI versions create a local-only undo snapshot before the change. When writing or changing source code, call read_skill with id agent-playbook once per task and follow the procedure it routes you to.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1205,7 +1205,7 @@
     {
       "name": "find_skills",
       "title": "Find Remote Arc skills for a task",
-      "description": "Search Remote Arc's skill library (built-in, community, workflow and the user's imported skills) for a task, in any language: documents, spreadsheets, slides, PDFs, video, subtitles, images, browser work, data analysis, charts, websites, testing and schedules. Returns the best matches; read one with read_skill and follow its method using the tools you have. A skill is instructions only: it installs nothing and grants no permission.",
+      "description": "Search Remote Arc's skill library (built-in, community, workflow and the user's imported skills) for a task, in any language: coding, documents, spreadsheets, slides, PDFs, video, subtitles, images, browser work, data analysis, charts, websites, testing and schedules. Returns the best matches; read one with read_skill and follow its method using the tools you have. A skill is instructions only: it installs nothing and grants no permission.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -2706,7 +2706,7 @@
     {
       "name": "write_file",
       "title": "Write a file on a remote computer",
-      "description": "Write or append text on a linked computer when the write_file skill is enabled. Supported CLI versions create a local-only undo snapshot before the change.",
+      "description": "Write or append text on a linked computer when the write_file skill is enabled. Supported CLI versions create a local-only undo snapshot before the change. When writing or changing source code, call read_skill with id agent-playbook once per task and follow the procedure it routes you to.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",

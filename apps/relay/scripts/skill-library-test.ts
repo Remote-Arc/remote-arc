@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { SKILL_LIBRARY, skillLibrarySummaries } from "../../../packages/skills/src/library.js";
+import { readCommunityResource } from "../src/arc/arc-community-skills.js";
 import { listArcSkills, readArcSkill } from "../src/arc/arc-skills.js";
 import { findSkills, skillIndex, suggestedSkills } from "../src/skills/skill-index.js";
 import type { ArcEnv } from "../src/arc/arc-chat.js";
@@ -16,12 +17,13 @@ const env = {
   },
 } as unknown as ArcEnv;
 const { skills } = await listArcSkills(env, "owner");
-assert.equal(skills.length, 54);
-assert.equal(new Set(skills.map((s) => s.id)).size, 54);
+assert.equal(skills.length, 55);
+assert.equal(new Set(skills.map((s) => s.id)).size, 55);
 assert.equal(skills[0]!.id, "remotion-video");
 assert.equal(SKILL_LIBRARY[0]!.core, true);
 for (const id of [
   "safe-cleanup",
+  "agent-playbook",
   "media-intelligence",
   "manim-video",
   "blender-mcp",
@@ -61,6 +63,29 @@ assert(
     ),
   "Safe Cleanup ships its plan/execute helper",
 );
+// Agent Playbook routes each task to a procedure that read_skill can open by path.
+const playbook = await readArcSkill(env, "owner", "agent-playbook");
+assert("resources" in playbook);
+const playbookPaths = new Set(playbook.resources.map((file) => file.path));
+const routedPaths = [...playbook.content.matchAll(/`(skills\/[a-z-]+\/SKILL\.md)`/g)].map(
+  (match) => match[1]!,
+);
+assert(routedPaths.length >= 15, "the router lists every procedure");
+for (const path of routedPaths)
+  assert(playbookPaths.has(path), "routed procedure is packaged: " + path);
+assert(playbookPaths.has("LICENSE"), "the MIT notice travels with the procedures");
+let offset: number | null = 0,
+  structure = "";
+while (offset !== null) {
+  const chunk = readCommunityResource("agent-playbook", "skills/structure-code/SKILL.md", offset);
+  structure += chunk.content;
+  offset = chunk.nextOffset;
+}
+assert.match(structure, /Give every cross-cutting rule one source of truth/);
+assert.equal(
+  structure.length,
+  playbook.resources.find((f) => f.path.endsWith("structure-code/SKILL.md"))!.bytes,
+);
 assert.equal(skills.filter((s) => s.id.startsWith("community-nuwa-")).length, 15);
 assert(
   skillLibrarySummaries().every((s) => !("content" in s) && !("resources" in s)),
@@ -90,6 +115,10 @@ for (const [query, id] of [
   ["女娲创建一个思维技能", "community-nuwa"],
   ["费曼", "community-nuwa-feynman"],
   ["MrBeast", "community-nuwa-mrbeast"],
+  ["帮我重构这个前端项目", "agent-playbook"],
+  ["Fix the bug in my React component", "agent-playbook"],
+  ["review this pull request", "agent-playbook"],
+  ["Write unit tests for the parser", "agent-playbook"],
 ])
   assert.equal(findSkills(query, index, 1)[0]?.id, id, query);
 assert(
@@ -105,5 +134,5 @@ assert.deepEqual(
   "Ordinary process checks do not suggest a Nuwa persona from stop words or the AI substring in wait",
 );
 console.log(
-  "PASS: unified 54-skill library, authentic writing guidance, readable resources, 15 Nuwa perspectives, core Remotion ordering and bilingual routing",
+  "PASS: unified 55-skill library, Agent Playbook routing to packaged procedures, authentic writing guidance, readable resources, 15 Nuwa perspectives, core Remotion ordering and bilingual routing",
 );

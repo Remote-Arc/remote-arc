@@ -73,6 +73,40 @@ const safeCleanup = (() => {
     sha256: createHash("sha256").update(content).digest("hex"),
   };
 })();
+// Agent Playbook ships as one Skill: its router plus every procedure installed in
+// .agents/skills, read through read_skill with a path. Only the folders that the
+// AGENTS.md playbook block routes to are packaged, so project-only skills stay out.
+const agentPlaybook = (() => {
+  const agents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8").replace(/\r\n/g, "\n");
+  const block = agents
+    .split("<!-- agent-playbook:start -->")[1]
+    ?.split("<!-- agent-playbook:end -->")[0];
+  if (!block) throw Error("AGENTS.md has no agent-playbook block");
+  const routed = new Set(
+    [...block.matchAll(/`\.agents\/skills\/([a-z0-9-]+)\/SKILL\.md`/g)].map((match) => match[1]),
+  );
+  const base = path.join(root, ".agents/skills");
+  const files = [
+    "AGENT-PLAYBOOK-LICENSE",
+    ...[...routed].flatMap((name) =>
+      fs
+        .readdirSync(path.join(base, name), { recursive: true, withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .map((entry) =>
+          path.relative(base, path.join(entry.parentPath, entry.name)).replace(/\\/g, "/"),
+        ),
+    ),
+  ].sort();
+  return files.map((name) => {
+    const content = fs.readFileSync(path.join(base, name), "utf8").replace(/\r\n/g, "\n");
+    return {
+      path: name === "AGENT-PLAYBOOK-LICENSE" ? "LICENSE" : "skills/" + name,
+      content,
+      bytes: Buffer.byteLength(content),
+      sha256: createHash("sha256").update(content).digest("hex"),
+    };
+  });
+})();
 const resources = Object.fromEntries(
   skills.map((skill) => [
     skill.id,
@@ -88,6 +122,7 @@ const resources = Object.fromEntries(
       ...(skill.id === "blender-mcp" ? blender : []),
       ...(skill.id === "media-intelligence" ? mediaIntelligence : []),
       ...(skill.id === "safe-cleanup" ? [safeCleanup] : []),
+      ...(skill.id === "agent-playbook" ? agentPlaybook : []),
     ],
   ]),
 );

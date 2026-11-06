@@ -12,7 +12,7 @@ import { serveDemoMedia } from "./platform/demo-media.js";
 import { handleAgentDownload } from "./platform/agent-downloads.js";
 import { handleBrowserAuth } from "./browser/browser-auth.js";
 import { handleRunnerRequest } from "./browser/runner-attention.js";
-import { diagnosticError } from "./platform/diagnostics.js";
+import { diagnosticError, isUnavailableD1Error } from "./platform/diagnostics.js";
 import { handleFollowupUnsubscribe } from "./followups/user-followups.js";
 import { runFollowupBatches } from "./followups/followup-batches.js";
 import { runLifecycleEmails } from "./platform/lifecycle-email.js";
@@ -1260,9 +1260,22 @@ export default {
       }
       return response;
     } catch (error) {
+      // A retryable D1 outage is a dependency failure the client can retry,
+      // not a Relay bug: answer 503 with Retry-After instead of 500.
+      const unavailable = isUnavailableD1Error(error);
+      const status = unavailable ? 503 : 500;
+      const body = unavailable
+        ? {
+            error: "SERVICE_UNAVAILABLE",
+            message: "Remote Arc is temporarily unavailable. Retry in a few seconds.",
+          }
+        : {
+            error: "internal_error",
+            message: "Remote Arc encountered an unexpected error.",
+          };
       if (isMcpRequest)
         recordMcpTelemetry(env, {
-          status: 500,
+          status,
           durationMs: Date.now() - started,
           method: request.method,
         });
@@ -1271,7 +1284,7 @@ export default {
         ctx.waitUntil(
           observeProductRequest(
             request,
-            applicationJson({ error: "internal_error" }, { status: 500 }),
+            applicationJson({ error: body.error }, { status }),
             env,
             started,
             observationContext,
@@ -1285,21 +1298,19 @@ export default {
           incidentFromRequest(request, {
             severity: "critical",
             kind: "exception",
-            statusCode: 500,
+            statusCode: status,
             message,
           }),
         ),
       );
-      return applicationJson(
-        {
-          error: "internal_error",
-          message: "Remote Arc encountered an unexpected error.",
+      return applicationJson(body, {
+        status,
+        headers: {
+          "cache-control": "no-store",
+          "x-ra-trace-id": observationContext.traceId,
+          ...(unavailable ? { "retry-after": "5" } : {}),
         },
-        {
-          status: 500,
-          headers: { "cache-control": "no-store", "x-ra-trace-id": observationContext.traceId },
-        },
-      );
+      });
     }
   },
 

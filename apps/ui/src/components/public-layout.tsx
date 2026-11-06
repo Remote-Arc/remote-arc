@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { LanguageSwitcher } from "../app/i18n.js";
 import { useI18n, useMessages } from "../hooks/use-i18n.js";
 import { should } from "../lib/ui-access.js";
-import { isWebsite, localizedWebsiteHref } from "../lib/marketing-paths.js";
+import { isWebsite, localizedWebsiteHref, pageForLanguage } from "../lib/marketing-paths.js";
 import { BrandWordmark } from "./brand-wordmark.js";
 import { useTheme } from "../hooks/use-theme.js";
 import { APP_ORIGIN, MARKETING_ORIGIN, dashboardHref } from "../config/app-config.js";
@@ -338,7 +338,7 @@ export function PublicLayout({
   children: React.ReactNode;
   user?: User | null;
 }) {
-  const { tr } = useI18n();
+  const { locale, tr } = useI18n();
   return (
     <main className="landing publicPage">
       <PublicHeader user={user} />
@@ -355,20 +355,14 @@ export function PublicLayout({
           <a href="/install/gemini">Gemini</a>
           <a href="/docs/mcp">{tr("components.publicLayout.mcpDocs")}</a>
           <a href="/security-model">{tr("components.publicLayout.security")}</a>
-          <a href={tr("components.publicLayout.arc")}>{tr("components.publicLayout.arc2")}</a>
-          <a href={tr("components.publicLayout.roadmap")}>
-            {tr("components.publicLayout.roadmap2")}
+          <a href={pageForLanguage("/arc", locale)}>{tr("components.publicLayout.arc")}</a>
+          <a href={pageForLanguage("/roadmap", locale)}>{tr("components.publicLayout.roadmap")}</a>
+          <a href={pageForLanguage("/feedback", locale)}>
+            {tr("components.publicLayout.feedback")}
           </a>
-          <a href={tr("components.publicLayout.feedback")}>
-            {tr("components.publicLayout.feedback2")}
-          </a>
-          <a href={tr("components.publicLayout.support")}>
-            {tr("components.publicLayout.support2")}
-          </a>
-          <a href={tr("components.publicLayout.privacy")}>
-            {tr("components.publicLayout.privacy2")}
-          </a>
-          <a href={tr("components.publicLayout.terms")}>{tr("components.publicLayout.terms2")}</a>
+          <a href={pageForLanguage("/support", locale)}>{tr("components.publicLayout.support")}</a>
+          <a href={pageForLanguage("/privacy", locale)}>{tr("components.publicLayout.privacy")}</a>
+          <a href={pageForLanguage("/terms", locale)}>{tr("components.publicLayout.terms")}</a>
         </nav>
         <div className="publicFooterMeta">
           <span>© 2026 Remote Arc · {tr("components.publicLayout.proprietary")}</span>

@@ -45,6 +45,14 @@ for (const route of publicRoutes) {
       )
       .toBeLessThanOrEqual(2);
     await expect(page.locator("main").first()).toBeVisible();
+    if (route === "/") {
+      const footer = page.locator(".publicFooterLinks");
+      await expect(footer.locator('a[href="/remote-mcp"]')).toBeVisible();
+      const prefix = localized ? "/zh" : "";
+      for (const path of ["/support", "/privacy", "/terms"]) {
+        await expect(footer.locator('a[href="' + prefix + path + '"]')).toBeVisible();
+      }
+    }
     const destinations = await page.locator("a[href]").evaluateAll((links) =>
       links
         .map((link) => new URL((link as HTMLAnchorElement).href, location.href))

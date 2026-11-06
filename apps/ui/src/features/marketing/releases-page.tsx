@@ -1,5 +1,5 @@
-import { useI18n } from "../../app/i18n.js";
-import { releaseChinese } from "./release-locales.js";
+import { useI18n } from "../../hooks/use-i18n.js";
+import { releaseNotes } from "../../locales/locale-catalog.js";
 import { type User } from "../../types/app-types.js";
 import { PublicLayout } from "../../components/public-layout.js";
 
@@ -232,21 +232,16 @@ export function ReleasesPage({ user }: { user?: User | null }) {
     <PublicLayout user={user}>
       <main className="releasesPage">
         <header className="articleHeader releaseHeader">
-          <span className="eyebrow">{tr("RELEASES", "版本发布")}</span>
-          <h1>{tr("Remote Arc release history", "Remote Arc 版本历史")}</h1>
-          <p>
-            {tr(
-              "A version-by-version record of how Remote Arc evolved from a one-command remote MCP prototype into a persistent, policy-aware execution and agent control plane.",
-              "按版本记录 Remote Arc 如何从一条命令即可连接的 Remote MCP 原型，演进为具备持久任务、权限策略与 Agent 控制面的产品。",
-            )}
-          </p>
+          <span className="eyebrow">{tr("marketing.releasesPage.releases")}</span>
+          <h1>{tr("marketing.releasesPage.remoteArcReleaseHistory")}</h1>
+          <p>{tr("marketing.releasesPage.aVersionByVersionRecordOf")}</p>
           <div className="releaseLatestLine">
-            <span>{tr("LATEST CLI", "最新 CLI")}</span>
+            <span>{tr("marketing.releasesPage.latestCli")}</span>
             <strong>v{latest.version}</strong>
             <em>
               {latest.status === "release-candidate"
-                ? tr("Release candidate", "候选发布")
-                : tr("Published", "已发布")}
+                ? tr("marketing.releasesPage.releaseCandidate")
+                : tr("marketing.releasesPage.published")}
             </em>
             <time>{latest.date}</time>
           </div>
@@ -254,21 +249,15 @@ export function ReleasesPage({ user }: { user?: User | null }) {
 
         <section className="releaseIntro">
           <div>
-            <strong>{tr("One product history", "一条完整产品历史")}</strong>
-            <p>
-              {tr(
-                "This page stays on remotearc.app and combines CLI, relay, dashboard, security and product-surface milestones into the version in which they became part of the product.",
-                "本页保留在 remotearc.app 内，把 CLI、Relay、Dashboard、安全能力和产品界面的重要升级归入真正形成产品能力的对应版本。",
-              )}
-            </p>
+            <strong>{tr("marketing.releasesPage.oneProductHistory")}</strong>
+            <p>{tr("marketing.releasesPage.thisPageStaysOnRemotearcApp")}</p>
           </div>
           <div>
-            <strong>{tr("Release status", "版本状态")}</strong>
+            <strong>{tr("marketing.releasesPage.releaseStatus")}</strong>
             <p>
-              {tr(
-                `The latest published CLI is remotelink ${latest.version}. Task availability also depends on your plan, relay configuration and device permissions; a website preview does not execute work.`,
-                `最新已发布的 CLI 是 remotelink ${latest.version}。任务可用性还取决于套餐、Relay 配置与设备权限；网站预览不会执行任务。`,
-              )}
+              {tr("marketing.releasesPage.theLatestPublishedCliIsRemotelink", {
+                version: latest.version,
+              })}
             </p>
           </div>
         </section>
@@ -286,26 +275,24 @@ export function ReleasesPage({ user }: { user?: User | null }) {
                 <time>{release.date}</time>
                 <span className={"releaseState " + (release.status || "released")}>
                   {release.status === "release-candidate"
-                    ? tr("Release candidate", "候选版本")
-                    : tr("Released", "已发布")}
+                    ? tr("marketing.releasesPage.releaseCandidate2")
+                    : tr("marketing.releasesPage.released")}
                 </span>
               </aside>
               <div className="releaseBody">
                 <h2>
                   {locale === "zh"
-                    ? (releaseChinese[release.version]?.title ?? release.title)
+                    ? (releaseNotes(locale, release.version)?.title ?? release.title)
                     : release.title}
                 </h2>
                 <p className="releaseSummary">
                   {locale === "zh"
-                    ? (releaseChinese[release.version]?.summary ?? release.summary)
+                    ? (releaseNotes(locale, release.version)?.summary ?? release.summary)
                     : release.summary}
                 </p>
                 {locale === "zh" ? (
                   <details className="releaseOriginalNotes">
-                    <summary>
-                      {tr("Original technical change notes", "展开英文原始技术变更明细")}
-                    </summary>
+                    <summary>{tr("marketing.releasesPage.originalTechnicalChangeNotes")}</summary>
                     <ul>
                       {release.changes.map((change) => (
                         <li key={change}>{change}</li>

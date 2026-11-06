@@ -1,12 +1,7 @@
+import type { Translate } from "../locales/locale-catalog.js";
 import { useEffect, useState } from "react";
 
-export function OverviewGreeting({
-  name,
-  tr,
-}: {
-  name: string | null;
-  tr: (en: string, zh: string) => string;
-}) {
+export function OverviewGreeting({ name, tr }: { name: string | null; tr: Translate }) {
   const [hour, setHour] = useState(() => new Date().getHours());
   useEffect(() => {
     const refresh = () => setHour(new Date().getHours());
@@ -19,10 +14,10 @@ export function OverviewGreeting({
   }, []);
   const greeting =
     hour < 5 || hour >= 18
-      ? tr("Good evening", "晚上好")
+      ? tr("components.overviewGreeting.goodEvening")
       : hour < 12
-        ? tr("Good morning", "早上好")
-        : tr("Good afternoon", "下午好");
+        ? tr("components.overviewGreeting.goodMorning")
+        : tr("components.overviewGreeting.goodAfternoon");
   const firstName = name?.trim().split(/\s+/)[0];
   return (
     <h1 className="overviewGreeting">

@@ -7,7 +7,7 @@ import {
   cursorMcpInstallUrl,
 } from "../../../config/app-config.js";
 import { CopyButton, aiClients } from "../../../components/public-layout.js";
-import type { DashboardModel } from "../hooks/use-dashboard-model.js";
+import type { DashboardModel } from "../../../hooks/dashboard/use-dashboard-model.js";
 
 const clientIcons = new Map(aiClients.map((client) => [client.slug, client.icon] as const));
 
@@ -18,18 +18,13 @@ export function ConnectView({ m }: { m: DashboardModel }) {
     <>
       <section className="overviewTopbar connectPageHeader">
         <div>
-          <span className="eyebrow">{tr("CONNECT AI", "连接 AI")}</span>
-          <h1>{tr("AI connections", "AI 连接")}</h1>
-          <p>
-            {tr(
-              "Connect supported AI clients to your Remote Arc MCP endpoint.",
-              "把支持的 AI 客户端连接到 Remote Arc MCP 地址。",
-            )}
-          </p>
+          <span className="eyebrow">{tr("dashboard.views.connectView.connectAi")}</span>
+          <h1>{tr("dashboard.views.connectView.aiConnections")}</h1>
+          <p>{tr("dashboard.views.connectView.connectSupportedAiClientsToYour")}</p>
         </div>
         <div className="connectReadyPill">
           <i />
-          {tr("Remote MCP ready", "Remote MCP 已就绪")}
+          {tr("dashboard.views.connectView.remoteMcpReady")}
         </div>
       </section>
 
@@ -38,44 +33,42 @@ export function ConnectView({ m }: { m: DashboardModel }) {
           <div className="connectPanelHeader">
             <div>
               <span className="eyebrow">
-                {tr("YOUR REMOTE MCP ENDPOINT", "你的 REMOTE MCP 地址")}
+                {tr("dashboard.views.connectView.yourRemoteMcpEndpoint")}
               </span>
-              <h2>{tr("Remote MCP endpoint", "Remote MCP 地址")}</h2>
-              <p>
-                {tr(
-                  "Your AI connects here. Remote Arc handles OAuth, device discovery and routing behind it.",
-                  "AI 只需要连接这个地址；OAuth、设备发现和请求路由都由 Remote Arc 处理。",
-                )}
-              </p>
+              <h2>{tr("dashboard.views.connectView.remoteMcpEndpoint")}</h2>
+              <p>{tr("dashboard.views.connectView.yourAiConnectsHereRemoteArc")}</p>
             </div>
             <span className="connectSecurityBadge">OAuth 2.1 + PKCE</span>
           </div>
           <div className="connectEndpointBox">
             <code>{mcpEndpoint}</code>
-            <CopyButton value={mcpEndpoint} label={tr("Copy endpoint", "复制地址")} />
+            <CopyButton
+              value={mcpEndpoint}
+              label={tr("dashboard.views.connectView.copyEndpoint")}
+            />
           </div>
         </article>
 
         <aside className="connectHealthPanel">
-          <span className="eyebrow">{tr("CONNECTION STATUS", "连接状态")}</span>
+          <span className="eyebrow">{tr("dashboard.views.connectView.connectionStatus")}</span>
           <div className="connectHealthRow">
             <span>
               <i className="healthDot good" />
               Remote MCP
             </span>
-            <strong>{tr("Ready", "就绪")}</strong>
+            <strong>{tr("dashboard.views.connectView.ready")}</strong>
           </div>
           <div className="connectHealthRow">
             <span>
               <i className="healthDot good" />
               OAuth
             </span>
-            <strong>{tr("Enabled", "已启用")}</strong>
+            <strong>{tr("dashboard.views.connectView.enabled")}</strong>
           </div>
           <div className="connectHealthRow">
             <span>
               <i className={"healthDot " + (devices.length ? "good" : "idle")} />
-              {tr("Paired devices", "已配对设备")}
+              {tr("dashboard.views.connectView.pairedDevices")}
             </span>
             <strong>{devices.length}</strong>
           </div>
@@ -83,7 +76,7 @@ export function ConnectView({ m }: { m: DashboardModel }) {
             className="ghostButton connectDevicesButton"
             onClick={() => navigateTab("devices")}
           >
-            {tr("Manage devices", "管理设备")}
+            {tr("dashboard.views.connectView.manageDevices")}
           </button>
         </aside>
       </section>
@@ -91,15 +84,10 @@ export function ConnectView({ m }: { m: DashboardModel }) {
       <section className="connectClientSection">
         <div className="connectSectionHeading">
           <div>
-            <span className="eyebrow">{tr("AI CLIENTS", "AI 客户端")}</span>
-            <h2>{tr("Clients", "客户端")}</h2>
+            <span className="eyebrow">{tr("dashboard.views.connectView.aiClients")}</span>
+            <h2>{tr("dashboard.views.connectView.clients")}</h2>
           </div>
-          <p>
-            {tr(
-              "ChatGPT is the recommended path. Other Remote MCP clients can use the same production endpoint.",
-              "推荐优先使用 ChatGPT；其他支持 Remote MCP 的客户端也可以使用同一个生产地址。",
-            )}
-          </p>
+          <p>{tr("dashboard.views.connectView.chatgptIsTheRecommendedPathOther")}</p>
         </div>
 
         <div className="connectClientGrid connectAgentLaunchers">
@@ -112,14 +100,11 @@ export function ConnectView({ m }: { m: DashboardModel }) {
                   <h3>ChatGPT</h3>
                 </div>
               </div>
-              <span className="clientState recommended">{tr("Plugins", "Plugins")}</span>
+              <span className="clientState recommended">
+                {tr("dashboard.views.connectView.plugins")}
+              </span>
             </div>
-            <p>
-              {tr(
-                "Install the published Remote Arc plugin, connect the same account as your paired computer, then choose Try in chat. Custom MCP is an optional alternative in the setup guide.",
-                "安装已上架的 Remote Arc 插件，连接与配对电脑相同的账号，再选择 Try in chat。安装指南中仍保留 Custom MCP 作为可选替代方式。",
-              )}
-            </p>
+            <p>{tr("dashboard.views.connectView.installThePublishedRemoteArcPlugin")}</p>
             <div className="connectClientActions">
               <a
                 className="connectAgentAction"
@@ -127,7 +112,7 @@ export function ConnectView({ m }: { m: DashboardModel }) {
                 target="_blank"
                 rel="noreferrer"
               >
-                <span>{tr("Open official plugin", "打开官方插件")}</span>
+                <span>{tr("dashboard.views.connectView.openOfficialPlugin")}</span>
                 <b>↗</b>
               </a>
               <a
@@ -137,7 +122,7 @@ export function ConnectView({ m }: { m: DashboardModel }) {
                 rel="noreferrer"
               >
                 <ProductIcon name="book" size={14} />
-                <span>{tr("Remote Arc setup guide", "Remote Arc 官方安装指南")}</span>
+                <span>{tr("dashboard.views.connectView.remoteArcSetupGuide")}</span>
                 <span aria-hidden="true">↗</span>
               </a>
             </div>
@@ -152,14 +137,9 @@ export function ConnectView({ m }: { m: DashboardModel }) {
                   <h3>Claude</h3>
                 </div>
               </div>
-              <span className="clientState">{tr("Connectors", "Connectors")}</span>
+              <span className="clientState">{tr("dashboard.views.connectView.connectors")}</span>
             </div>
-            <p>
-              {tr(
-                "Open Claude Connectors. The Remote Arc endpoint is copied automatically so you can add it as a Remote MCP connector.",
-                "打开 Claude Connectors；Remote Arc Endpoint 会自动复制，可直接添加为 Remote MCP Connector。",
-              )}
-            </p>
+            <p>{tr("dashboard.views.connectView.openClaudeConnectorsTheRemoteArc")}</p>
             <div className="connectClientActions">
               <a
                 className="connectAgentAction"
@@ -170,7 +150,7 @@ export function ConnectView({ m }: { m: DashboardModel }) {
                   void navigator.clipboard?.writeText(mcpEndpoint).catch(() => undefined)
                 }
               >
-                <span>{tr("Open Claude Connectors", "打开 Claude Connectors")}</span>
+                <span>{tr("dashboard.views.connectView.openClaudeConnectors")}</span>
                 <b>↗</b>
               </a>
               <a
@@ -180,7 +160,7 @@ export function ConnectView({ m }: { m: DashboardModel }) {
                 rel="noreferrer"
               >
                 <ProductIcon name="book" size={14} />
-                <span>{tr("Remote Arc setup guide", "Remote Arc 官方安装指南")}</span>
+                <span>{tr("dashboard.views.connectView.remoteArcSetupGuide")}</span>
                 <span aria-hidden="true">↗</span>
               </a>
             </div>
@@ -195,17 +175,12 @@ export function ConnectView({ m }: { m: DashboardModel }) {
                   <h3>Cursor</h3>
                 </div>
               </div>
-              <span className="clientState">{tr("One-click MCP", "一键 MCP")}</span>
+              <span className="clientState">{tr("dashboard.views.connectView.oneClickMcp")}</span>
             </div>
-            <p>
-              {tr(
-                "Use Cursor's MCP install deeplink. Cursor reviews the Remote Arc configuration before installation and then completes OAuth.",
-                "使用 Cursor 官方 MCP 安装 Deeplink；Cursor 会先确认 Remote Arc 配置，再完成 OAuth。",
-              )}
-            </p>
+            <p>{tr("dashboard.views.connectView.useCursorSMcpInstallDeeplink")}</p>
             <div className="connectClientActions">
               <a className="connectAgentAction" href={cursorMcpInstallUrl()}>
-                <span>{tr("Add to Cursor", "添加到 Cursor")}</span>
+                <span>{tr("dashboard.views.connectView.addToCursor")}</span>
                 <b>↗</b>
               </a>
               <a
@@ -215,7 +190,7 @@ export function ConnectView({ m }: { m: DashboardModel }) {
                 rel="noreferrer"
               >
                 <ProductIcon name="book" size={14} />
-                <span>{tr("Remote Arc setup guide", "Remote Arc 官方安装指南")}</span>
+                <span>{tr("dashboard.views.connectView.remoteArcSetupGuide")}</span>
                 <span aria-hidden="true">↗</span>
               </a>
             </div>
@@ -227,17 +202,12 @@ export function ConnectView({ m }: { m: DashboardModel }) {
                 <span className="protocolMark large">M</span>
                 <div>
                   <span className="eyebrow">REMOTE MCP</span>
-                  <h3>{tr("Other MCP client", "其他 MCP 客户端")}</h3>
+                  <h3>{tr("dashboard.views.connectView.otherMcpClient")}</h3>
                 </div>
               </div>
-              <span className="clientState">{tr("Manual", "手动")}</span>
+              <span className="clientState">{tr("dashboard.views.connectView.manual")}</span>
             </div>
-            <p>
-              {tr(
-                "Copy the production endpoint and open the Remote MCP reference for any compatible client.",
-                "复制生产 Endpoint，并打开 Remote MCP 参考文档用于其他兼容客户端。",
-              )}
-            </p>
+            <p>{tr("dashboard.views.connectView.copyTheProductionEndpointAndOpen")}</p>
             <div className="connectClientActions">
               <a
                 className="connectAgentAction"
@@ -248,7 +218,7 @@ export function ConnectView({ m }: { m: DashboardModel }) {
                   void navigator.clipboard?.writeText(mcpEndpoint).catch(() => undefined)
                 }
               >
-                <span>{tr("Copy endpoint & open docs", "复制地址并打开文档")}</span>
+                <span>{tr("dashboard.views.connectView.copyEndpointOpenDocs")}</span>
                 <b>↗</b>
               </a>
               <a
@@ -258,7 +228,7 @@ export function ConnectView({ m }: { m: DashboardModel }) {
                 rel="noreferrer"
               >
                 <ProductIcon name="book" size={14} />
-                <span>{tr("Remote Arc setup guide", "Remote Arc 官方安装指南")}</span>
+                <span>{tr("dashboard.views.connectView.remoteArcSetupGuide")}</span>
                 <span aria-hidden="true">↗</span>
               </a>
             </div>
@@ -269,45 +239,30 @@ export function ConnectView({ m }: { m: DashboardModel }) {
       <section className="connectGuide">
         <div className="connectSectionHeading compact">
           <div>
-            <span className="eyebrow">{tr("SETUP", "配置")}</span>
-            <h2>{tr("Connection flow", "连接流程")}</h2>
+            <span className="eyebrow">{tr("dashboard.views.connectView.setup")}</span>
+            <h2>{tr("dashboard.views.connectView.connectionFlow")}</h2>
           </div>
         </div>
         <div className="connectTimeline">
           <article>
             <span className="timelineNumber">01</span>
             <div>
-              <strong>{tr("Add Remote Arc", "添加 Remote Arc")}</strong>
-              <p>
-                {tr(
-                  "Choose your AI client above, follow its setup instructions and add the Remote MCP endpoint if needed.",
-                  "选择上方的 AI 客户端，按对应指南配置，必要时添加 Remote MCP 地址。",
-                )}
-              </p>
+              <strong>{tr("dashboard.views.connectView.addRemoteArc")}</strong>
+              <p>{tr("dashboard.views.connectView.chooseYourAiClientAboveFollow")}</p>
             </div>
           </article>
           <article>
             <span className="timelineNumber">02</span>
             <div>
-              <strong>{tr("Authorize your account", "授权你的账户")}</strong>
-              <p>
-                {tr(
-                  "Remote Arc opens OAuth once. Your AI receives scoped access to the account you approve.",
-                  "Remote Arc 会打开一次 OAuth 授权；AI 只获得你批准账户范围内的权限。",
-                )}
-              </p>
+              <strong>{tr("dashboard.views.connectView.authorizeYourAccount")}</strong>
+              <p>{tr("dashboard.views.connectView.remoteArcOpensOauthOnceYour")}</p>
             </div>
           </article>
           <article>
             <span className="timelineNumber">03</span>
             <div>
-              <strong>{tr("Talk to a device by name", "直接说设备名称")}</strong>
-              <p>
-                {tr(
-                  "Remote Arc discovers your paired devices and enforces each device's tool policy before routing a request.",
-                  "Remote Arc 会发现已配对设备，并在路由请求前执行每台设备自己的工具权限策略。",
-                )}
-              </p>
+              <strong>{tr("dashboard.views.connectView.talkToADeviceByName")}</strong>
+              <p>{tr("dashboard.views.connectView.remoteArcDiscoversYourPairedDevices")}</p>
             </div>
           </article>
         </div>
@@ -315,23 +270,18 @@ export function ConnectView({ m }: { m: DashboardModel }) {
 
       <section className="connectTryPanel">
         <div className="connectTryCopy">
-          <span className="eyebrow">{tr("EXAMPLES", "示例")}</span>
-          <h2>{tr("Example prompts", "示例指令")}</h2>
-          <p>
-            {tr(
-              "Once connected, refer to the device and the task. Remote Arc handles MCP routing.",
-              "连接后只需要说明设备和任务，MCP 路由由 Remote Arc 处理。",
-            )}
-          </p>
+          <span className="eyebrow">{tr("dashboard.views.connectView.examples")}</span>
+          <h2>{tr("dashboard.views.connectView.examplePrompts")}</h2>
+          <p>{tr("dashboard.views.connectView.onceConnectedReferToTheDevice")}</p>
         </div>
         <div className="connectPromptGrid">
           {[
-            tr("Show me my connected computers.", "看看我已连接的电脑。"),
-            tr("Which of my devices are online?", "哪些设备现在在线？"),
-            tr("List the projects on my Mac.", "列出我 Mac 上的项目。"),
-            tr("Read package.json on my desktop.", "读取我桌面电脑上的 package.json。"),
-            tr("Run the tests on my desktop.", "在我的桌面电脑上运行测试。"),
-            tr("Show me the processes running on my computer.", "看看我电脑上正在运行哪些进程。"),
+            tr("dashboard.views.connectView.showMeMyConnectedComputers"),
+            tr("dashboard.views.connectView.whichOfMyDevicesAreOnline"),
+            tr("dashboard.views.connectView.listTheProjectsOnMyMac"),
+            tr("dashboard.views.connectView.readPackageJsonOnMyDesktop"),
+            tr("dashboard.views.connectView.runTheTestsOnMyDesktop"),
+            tr("dashboard.views.connectView.showMeTheProcessesRunningOn"),
           ].map((prompt) => (
             <code key={prompt}>{prompt}</code>
           ))}

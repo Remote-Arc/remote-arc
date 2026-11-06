@@ -1,3 +1,4 @@
+import type { Translate } from "../../locales/locale-catalog.js";
 import { useState } from "react";
 import { ElementsShell, type ElementsSummary } from "./checkout-elements-shell.js";
 import {
@@ -5,7 +6,7 @@ import {
   billingFailureMessage,
   type NativePaymentSession,
 } from "./arc-billing-client.js";
-type Tr = (en: string, zh: string) => string;
+type Tr = Translate;
 export function PaymentPreview({
   session,
   tr,
@@ -31,22 +32,17 @@ export function PaymentPreview({
   return (
     <section className="arcPaymentPreview">
       <span className="eyebrow">PAYMENT PREVIEW</span>
-      <h3>{tr("A secure way to pay", "安全完成付款")}</h3>
-      <p>
-        {tr(
-          "Interactive demo. No real payment or card information is used.",
-          "交互演示，不会真实付款，也不收集银行卡信息。",
-        )}
-      </p>
+      <h3>{tr("billing.stripePaymentPreview.aSecureWayToPay")}</h3>
+      <p>{tr("billing.stripePaymentPreview.interactiveDemoNoRealPaymentOr")}</p>
       <fieldset disabled>
-        <legend>{tr("Card details — display only", "银行卡信息——仅作展示")}</legend>
+        <legend>{tr("billing.stripePaymentPreview.cardDetailsDisplayOnly")}</legend>
         <label>
-          {tr("Card number", "卡号")}
+          {tr("billing.stripePaymentPreview.cardNumber")}
           <input placeholder="4242 4242 4242 4242" autoComplete="off" />
         </label>
         <div>
           <label>
-            {tr("Expiry date", "有效期")}
+            {tr("billing.stripePaymentPreview.expiryDate")}
             <input placeholder="MM / YY" autoComplete="off" />
           </label>
           <label>
@@ -56,10 +52,7 @@ export function PaymentPreview({
         </div>
       </fieldset>
       <p className="arcCheckoutQuiet">
-        {tr(
-          "In live checkout, Stripe displays the payment form and eligible wallets such as Apple Pay and Link.",
-          "正式结账时，由 Stripe 展示付款表单及符合条件的 Apple Pay、Link 等钱包。",
-        )}
+        {tr("billing.stripePaymentPreview.inLiveCheckoutStripeDisplaysThe")}
       </p>
       {error && <p role="alert">{error}</p>}
       <button
@@ -68,7 +61,9 @@ export function PaymentPreview({
         disabled={busy}
         onClick={() => void complete()}
       >
-        {busy ? tr("Simulating…", "模拟中…") : tr("Simulate completed payment", "模拟完成付款")}
+        {busy
+          ? tr("billing.stripePaymentPreview.simulating")
+          : tr("billing.stripePaymentPreview.simulateCompletedPayment")}
       </button>
     </section>
   );
@@ -101,10 +96,7 @@ export function ElementsPreview({
   return (
     <section className="arcPaymentPreview arcPaymentPreviewElements">
       <p className="arcCheckoutQuiet">
-        {tr(
-          "Interactive demo. No real payment or card information is used.",
-          "交互演示，不会真实付款，也不收集银行卡信息。",
-        )}
+        {tr("billing.stripePaymentPreview.interactiveDemoNoRealPaymentOr")}
       </p>
       <ElementsShell
         tr={tr}
@@ -114,35 +106,25 @@ export function ElementsPreview({
         error={error}
         express={
           <p className="arcElementsStripeSlot">
-            {tr(
-              "In live checkout, Stripe shows Apple Pay, Google Pay and Link buttons here when the device supports them.",
-              "正式结账时，Stripe 会在这里按设备显示 Apple Pay、Google Pay 和 Link 一键支付按钮。",
-            )}
+            {tr("billing.stripePaymentPreview.inLiveCheckoutStripeShowsApple")}
           </p>
         }
-        submitLabel={tr("Simulate completed payment", "模拟完成付款")}
+        submitLabel={tr("billing.stripePaymentPreview.simulateCompletedPayment")}
         onSubmit={(event) => {
           event.preventDefault();
           void complete();
         }}
-        footer={
-          <small>
-            {tr(
-              "In live checkout these fields are Stripe’s secure, themed card form.",
-              "正式结账时，这些字段由 Stripe 提供，并使用本站样式。",
-            )}
-          </small>
-        }
+        footer={<small>{tr("billing.stripePaymentPreview.inLiveCheckoutTheseFieldsAre")}</small>}
         fields={
           <fieldset className="arcElementsField arcElementsPreviewFields" disabled>
-            <legend>{tr("Card details — display only", "银行卡信息——仅作展示")}</legend>
+            <legend>{tr("billing.stripePaymentPreview.cardDetailsDisplayOnly")}</legend>
             <label>
-              {tr("Card number", "卡号")}
+              {tr("billing.stripePaymentPreview.cardNumber")}
               <input placeholder="4242 4242 4242 4242" autoComplete="off" />
             </label>
             <div>
               <label>
-                {tr("Expiry date", "有效期")}
+                {tr("billing.stripePaymentPreview.expiryDate")}
                 <input placeholder="MM / YY" autoComplete="off" />
               </label>
               <label>
@@ -182,17 +164,12 @@ export function MethodPreview({
   }
   return (
     <section className="raBillingMethodForm">
-      <h3>{tr("Payment method preview", "付款方式预览")}</h3>
-      <p>
-        {tr(
-          "This only changes a simulated card. No bank or Stripe account is contacted.",
-          "此操作只更换模拟卡片，不连接银行或 Stripe 账户。",
-        )}
-      </p>
+      <h3>{tr("billing.stripePaymentPreview.paymentMethodPreview")}</h3>
+      <p>{tr("billing.stripePaymentPreview.thisOnlyChangesASimulatedCard")}</p>
       {error && <p role="alert">{error}</p>}
       <footer>
         <button type="button" className="raSettingsButton" disabled={busy} onClick={onClose}>
-          {tr("Close", "关闭")}
+          {tr("billing.stripePaymentPreview.close")}
         </button>
         <button
           type="button"
@@ -200,7 +177,7 @@ export function MethodPreview({
           disabled={busy}
           onClick={() => void save()}
         >
-          {tr("Simulate saving a new card", "模拟保存新卡")}
+          {tr("billing.stripePaymentPreview.simulateSavingANewCard")}
         </button>
       </footer>
     </section>

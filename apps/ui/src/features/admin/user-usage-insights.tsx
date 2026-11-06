@@ -1,7 +1,7 @@
 import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
 import React, { useEffect, useMemo, useState } from "react";
-import { useI18n } from "../../app/i18n.js";
-import "./user-usage-insights.css";
+import { useI18n } from "../../hooks/use-i18n.js";
+import "../../styles/admin/user-usage-insights.css";
 
 type Insight = {
   month: string;
@@ -93,33 +93,29 @@ export function AdminUserUsageInsights({
     });
   }, [data]);
   return (
-    <section className="usageInsight" aria-label={tr("Usage diagnostics", "调用诊断")}>
+    <section className="usageInsight" aria-label={tr("admin.userUsageInsights.usageDiagnostics")}>
       <div className="usageInsightTop">
         <div>
           <span className="usageInsightEyebrow">
-            {tr("USAGE INTELLIGENCE", "用量洞察")} · {data?.month || tr("Current month", "本月")}
+            {tr("admin.userUsageInsights.usageIntelligence")} ·{" "}
+            {data?.month || tr("admin.userUsageInsights.currentMonth")}
           </span>
-          <h3>{tr("Where the calls went", "调用消耗在哪里")}</h3>
-          <p>
-            {tr(
-              "Privacy-safe metadata only. No device files, conversation text, or tool arguments.",
-              "只统计脱敏元数据，不读取设备文件、对话内容或工具参数。",
-            )}
-          </p>
+          <h3>{tr("admin.userUsageInsights.whereTheCallsWent")}</h3>
+          <p>{tr("admin.userUsageInsights.privacySafeMetadataOnlyNoDevice")}</p>
         </div>
         <div className="usageInsightTopActions">
           {data?.preview && (
-            <span className="usageInsightPreview">{tr("Sample data", "示例数据")}</span>
+            <span className="usageInsightPreview">{tr("admin.userUsageInsights.sampleData")}</span>
           )}
           {allowance !== null && (
             <span
               className={"usageInsightStatus " + (pct >= 100 ? "isMax" : pct >= 80 ? "isHigh" : "")}
             >
               {pct >= 100
-                ? tr("Limit reached", "额度已满")
+                ? tr("admin.userUsageInsights.limitReached")
                 : pct >= 80
-                  ? tr("Near limit", "接近上限")
-                  : tr("Within budget", "额度正常")}
+                  ? tr("admin.userUsageInsights.nearLimit")
+                  : tr("admin.userUsageInsights.withinBudget")}
             </span>
           )}
           <button
@@ -127,7 +123,7 @@ export function AdminUserUsageInsights({
             disabled={loading}
             onClick={() => setRevision((value) => value + 1)}
           >
-            {tr("Refresh diagnostics", "刷新诊断")}
+            {tr("admin.userUsageInsights.refreshDiagnostics")}
           </button>
         </div>
       </div>
@@ -135,32 +131,27 @@ export function AdminUserUsageInsights({
         <div className="usageQualityGrid">
           {data.preview && (
             <p className="usageQualityPreviewNote">
-              {tr(
-                "Preview with sample data — these figures do not describe a real customer.",
-                "示例数据预览 · 以下数字不代表任何真实用户。",
-              )}
+              {tr("admin.userUsageInsights.previewWithSampleDataTheseFigures")}
             </p>
           )}
-          <section className="usageQualityPane" aria-label={tr("Work delivered", "有效工作量")}>
+          <section
+            className="usageQualityPane"
+            aria-label={tr("admin.userUsageInsights.workDelivered")}
+          >
             <header>
-              <h4>{tr("Work delivered", "有效工作量")}</h4>
-              <span>{tr("Recorded outcomes", "已记录结果")}</span>
+              <h4>{tr("admin.userUsageInsights.workDelivered")}</h4>
+              <span>{tr("admin.userUsageInsights.recordedOutcomes")}</span>
             </header>
             <div className="usageQualityHeadline">
               <strong>
                 {data.work ? fmt(data.work.deviceOperations + data.work.apps.succeeded) : "—"}
               </strong>
-              <span>{tr("successful operations", "次成功业务操作")}</span>
+              <span>{tr("admin.userUsageInsights.successfulOperations")}</span>
             </div>
-            <p>
-              {tr(
-                "Successful device and App operations, excluding status/wait tools.",
-                "设备与 App 成功操作，排除状态／等待类工具。",
-              )}
-            </p>
+            <p>{tr("admin.userUsageInsights.successfulDeviceAndAppOperationsExcluding")}</p>
             <dl>
               <div>
-                <dt>{tr("Device / App successes", "设备 / App 成功")}</dt>
+                <dt>{tr("admin.userUsageInsights.deviceAppSuccesses")}</dt>
                 <dd>
                   {data.work
                     ? fmt(data.work.deviceOperations) + " / " + fmt(data.work.apps.succeeded)
@@ -168,50 +159,50 @@ export function AdminUserUsageInsights({
                 </dd>
               </div>
               <div>
-                <dt>{tr("Successful Arc runs", "成功 Arc 运行")}</dt>
+                <dt>{tr("admin.userUsageInsights.successfulArcRuns")}</dt>
                 <dd>
                   {data.work ? fmt(data.work.arc.succeeded) : "—"}
                   <small>
                     {data.work
-                      ? tr(
-                          "of " + fmt(data.work.arc.total) + " started",
-                          "共发起 " + fmt(data.work.arc.total) + " 次",
-                        )
+                      ? tr("admin.userUsageInsights.ofStarted", { total: fmt(data.work.arc.total) })
                       : ""}
                   </small>
                 </dd>
               </div>
               <div>
-                <dt>{tr("Status / wait calls", "状态／等待类调用")}</dt>
+                <dt>{tr("admin.userUsageInsights.statusWaitCalls")}</dt>
                 <dd>
                   {data.work ? fmt(data.work.stateChecks) : "—"}
                   <small>
                     {data.work && data.audited.total
                       ? ((data.work.stateChecks / data.audited.total) * 100).toFixed(1) +
                         "% " +
-                        tr("of audited device calls", "审计内设备调用")
+                        tr("admin.userUsageInsights.ofAuditedDeviceCalls")
                       : ""}
                   </small>
                 </dd>
               </div>
               <div>
-                <dt>{tr("Failed dispatches / App calls", "设备派发 / App 失败")}</dt>
+                <dt>{tr("admin.userUsageInsights.failedDispatchesAppCalls")}</dt>
                 <dd>
                   {data.work ? fmt(data.audited.failed) + " / " + fmt(data.work.apps.failed) : "—"}
                 </dd>
               </div>
               <div>
-                <dt>{tr("Retries / completed user goals", "重复重试 / 用户目标完成")}</dt>
+                <dt>{tr("admin.userUsageInsights.retriesCompletedUserGoals")}</dt>
                 <dd className="usageQualityUnknown">
-                  {tr("Not tracked reliably", "尚未可靠追踪")}
+                  {tr("admin.userUsageInsights.notTrackedReliably")}
                 </dd>
               </div>
             </dl>
           </section>
-          <section className="usageQualityPane" aria-label={tr("Cost visibility", "成本归因")}>
+          <section
+            className="usageQualityPane"
+            aria-label={tr("admin.userUsageInsights.costVisibility")}
+          >
             <header>
-              <h4>{tr("Cost visibility", "成本归因")}</h4>
-              <span>{tr("USD · partial", "USD · 部分成本")}</span>
+              <h4>{tr("admin.userUsageInsights.costVisibility")}</h4>
+              <span>{tr("admin.userUsageInsights.usdPartial")}</span>
             </header>
             <div className="usageQualityHeadline">
               <strong>
@@ -224,37 +215,34 @@ export function AdminUserUsageInsights({
                       maximumFractionDigits: 4,
                     }).format(data.cost.modelCostMicros / 1_000_000)}
               </strong>
-              <span>{tr("recorded Arc model cost", "已记录 Arc 模型成本")}</span>
+              <span>{tr("admin.userUsageInsights.recordedArcModelCost")}</span>
             </div>
-            <p>
-              {tr(
-                "Calculated from recorded usage and model prices; not a cloud invoice.",
-                "按已记录用量与模型单价核算，不等于云服务账单。",
-              )}
-            </p>
+            <p>{tr("admin.userUsageInsights.calculatedFromRecordedUsageAndModel")}</p>
             <dl>
               <div>
-                <dt>{tr("Settled model requests", "已有成本核算的模型请求")}</dt>
+                <dt>{tr("admin.userUsageInsights.settledModelRequests")}</dt>
                 <dd>{data.cost ? fmt(data.cost.settledRequests) : "—"}</dd>
               </div>
               <div>
-                <dt>{tr("Unresolved model requests", "成本待确认的模型请求")}</dt>
+                <dt>{tr("admin.userUsageInsights.unresolvedModelRequests")}</dt>
                 <dd>{data.cost ? fmt(data.cost.unresolvedRequests) : "—"}</dd>
               </div>
               <div>
                 <dt>Workers / D1 / R2 / Relay</dt>
                 <dd className="usageQualityUnknown">
-                  {tr("Not attributed per user", "尚未按用户归因")}
+                  {tr("admin.userUsageInsights.notAttributedPerUser")}
                 </dd>
               </div>
               <div>
-                <dt>{tr("External AI client cost", "外部 AI 客户端成本")}</dt>
-                <dd className="usageQualityUnknown">{tr("Outside this ledger", "不在本账本内")}</dd>
+                <dt>{tr("admin.userUsageInsights.externalAiClientCost")}</dt>
+                <dd className="usageQualityUnknown">
+                  {tr("admin.userUsageInsights.outsideThisLedger")}
+                </dd>
               </div>
               <div>
-                <dt>{tr("Total cost / margin", "总成本 / 毛利")}</dt>
+                <dt>{tr("admin.userUsageInsights.totalCostMargin")}</dt>
                 <dd className="usageQualityUnknown">
-                  {tr("Incomplete coverage", "覆盖不足，暂不计算")}
+                  {tr("admin.userUsageInsights.incompleteCoverage")}
                 </dd>
               </div>
             </dl>
@@ -263,56 +251,52 @@ export function AdminUserUsageInsights({
       )}
       <div className="usageInsightStats">
         <div>
-          <span>{tr("Metered Connect calls", "本月计入额度的调用")}</span>
+          <span>{tr("admin.userUsageInsights.meteredConnectCalls")}</span>
           <strong>{fmt(used)}</strong>
           <small>
             {allowance === null
-              ? tr("Unlimited allowance", "无固定上限")
-              : tr("of ", "总额度 ") + fmt(allowance)}
-            {extra > 0 ? " · +" + fmt(extra) + " " + tr("granted", "赠送") : ""}
+              ? tr("admin.userUsageInsights.unlimitedAllowance")
+              : tr("admin.userUsageInsights.of") + fmt(allowance)}
+            {extra > 0 ? " · +" + fmt(extra) + " " + tr("admin.userUsageInsights.granted") : ""}
           </small>
         </div>
         <div>
-          <span>{tr("Audited device calls", "有审计记录的设备调用")}</span>
+          <span>{tr("admin.userUsageInsights.auditedDeviceCalls")}</span>
           <strong>{data ? fmt(data.audited.total) : "—"}</strong>
-          <small>{tr("Subset of all charged calls", "仅涵盖部分已计费调用")}</small>
+          <small>{tr("admin.userUsageInsights.subsetOfAllChargedCalls")}</small>
         </div>
         <div>
-          <span>{tr("Dispatch failures", "设备派发失败")}</span>
+          <span>{tr("admin.userUsageInsights.dispatchFailures")}</span>
           <strong>{data ? fmt(data.audited.failed) : "—"}</strong>
-          <small>{tr("Not a task-failure rate", "不是任务失败率")}</small>
+          <small>{tr("admin.userUsageInsights.notATaskFailureRate")}</small>
         </div>
       </div>
       {loading && (
         <div className="usageInsightEmpty" role="status">
-          {tr("Loading usage metadata…", "正在读取调用元数据…")}
+          {tr("admin.userUsageInsights.loadingUsageMetadata")}
         </div>
       )}
       {error && (
         <div className="usageInsightEmpty" role="alert">
-          {tr(
-            "Diagnostics unavailable. Account quota is still shown above.",
-            "诊断暂不可用，上方仍显示账户额度。",
-          )}{" "}
-          · {error}
+          {tr("admin.userUsageInsights.diagnosticsUnavailableAccountQuotaIsStill")} · {error}
         </div>
       )}
       {data && (
         <div className="usageInsightBody">
           <div className="usageInsightPane">
             <div className="usageInsightPaneTitle">
-              <strong>{tr("Daily device dispatches", "每日设备派发")}</strong>
-              <small>{tr("UTC · current month", "UTC · 本月")}</small>
+              <strong>{tr("admin.userUsageInsights.dailyDeviceDispatches")}</strong>
+              <small>{tr("admin.userUsageInsights.utcCurrentMonth")}</small>
             </div>
             {data.audited.total === 0 ? (
               <p className="usageInsightEmpty">
-                {tr("No device dispatch audit rows this month.", "本月没有设备派发审计记录。")}
+                {tr("admin.userUsageInsights.noDeviceDispatchAuditRowsThis")}
               </p>
             ) : (
               <div
                 className="usageInsightChart"
                 role="img"
-                aria-label={tr("Daily audited device calls chart", "每日设备调用量图")}
+                aria-label={tr("admin.userUsageInsights.dailyAuditedDeviceCallsChart")}
               >
                 {days.map((day) => (
                   <div
@@ -323,11 +307,11 @@ export function AdminUserUsageInsights({
                       " · " +
                       day.calls +
                       " " +
-                      tr("calls", "次") +
+                      tr("admin.userUsageInsights.calls") +
                       " · " +
                       day.failures +
                       " " +
-                      tr("failed", "失败")
+                      tr("admin.userUsageInsights.failed")
                     }
                   >
                     <div
@@ -348,18 +332,18 @@ export function AdminUserUsageInsights({
             <div className="usageInsightLegend">
               <span>
                 <i />
-                {tr("Audited device calls", "设备调用")}
+                {tr("admin.userUsageInsights.auditedDeviceCalls2")}
               </span>
-              <span>{tr("A call ≠ a completed task", "一次调用 ≠ 一个完成任务")}</span>
+              <span>{tr("admin.userUsageInsights.aCallACompletedTask")}</span>
             </div>
           </div>
           <div className="usageInsightPane">
             <div className="usageInsightPaneTitle">
-              <strong>{tr("Most-used device tools", "高频设备工具")}</strong>
-              <small>{tr("Top 12", "前 12 项")}</small>
+              <strong>{tr("admin.userUsageInsights.mostUsedDeviceTools")}</strong>
+              <small>{tr("admin.userUsageInsights.top")}</small>
             </div>
             {data.tools.length === 0 ? (
-              <p className="usageInsightEmpty">{tr("No tool metadata.", "暂无工具调用记录。")}</p>
+              <p className="usageInsightEmpty">{tr("admin.userUsageInsights.noToolMetadata")}</p>
             ) : (
               <div className="usageInsightTools">
                 {data.tools.slice(0, 8).map((tool) => (
@@ -373,7 +357,7 @@ export function AdminUserUsageInsights({
                     </div>
                     {tool.failures > 0 && (
                       <small>
-                        {fmt(tool.failures)} {tr("failed dispatches", "次派发失败")}
+                        {fmt(tool.failures)} {tr("admin.userUsageInsights.failedDispatches")}
                       </small>
                     )}
                   </div>
@@ -384,11 +368,8 @@ export function AdminUserUsageInsights({
         </div>
       )}
       <p className="usageInsightFoot">
-        <strong>{tr("Measurement boundary", "指标边界")}</strong> ·{" "}
-        {tr(
-          "Recorded operations and successful Arc runs do not prove an entire user goal was completed. Status/wait calls are a tool category, not proof of waste or retries. Summaries cover records started this UTC month and their current state; retained metadata may be incomplete. Missing cost is unknown, not zero.",
-          "成功操作或 Arc 运行不代表整个用户目标已完成。状态／等待是工具分类，不等于浪费或重试。按本 UTC 月发起的记录及当前状态统计，保留的元数据可能不完整。缺失成本表示未知，不是零。",
-        )}
+        <strong>{tr("admin.userUsageInsights.measurementBoundary")}</strong> ·{" "}
+        {tr("admin.userUsageInsights.recordedOperationsAndSuccessfulArcRuns")}
       </p>
     </section>
   );

@@ -1,3 +1,4 @@
+import { createTranslator, loadLocale } from "../src/locales/locale-catalog.js";
 import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -17,6 +18,7 @@ const originalWindow = (globalThis as any).window;
 (globalThis as any).window = { location: (globalThis as any).location };
 
 try {
+  await loadLocale("en", "dashboard");
   const task = {
     id: "task-1",
     status: "running",
@@ -30,7 +32,7 @@ try {
   };
   const render = () =>
     renderToStaticMarkup(
-      <I18nProvider>
+      <I18nProvider initialLanguage="en">
         <TaskResults task={task} />
       </I18nProvider>,
     );
@@ -72,7 +74,7 @@ try {
     console.error = () => {}; // React reports the expected caught exception.
     await act(async () => {
       root = create(
-        <ConnectTasksErrorBoundary tr={(en) => en}>
+        <ConnectTasksErrorBoundary tr={createTranslator("en")}>
           <Broken />
         </ConnectTasksErrorBoundary>,
       );

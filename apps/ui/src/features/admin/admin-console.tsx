@@ -1,3 +1,4 @@
+import type { Translate } from "../../locales/locale-catalog.js";
 import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import { BrandWordmark } from "../../components/brand-wordmark.js";
@@ -14,19 +15,26 @@ const AdminSupportInbox = lazy(() =>
 const AdminPayments = lazy(() =>
   import("./payments/admin-payments.js").then((module) => ({ default: module.AdminPayments })),
 );
-import { useI18n } from "../../app/i18n.js";
+import { useI18n, useMessages } from "../../hooks/use-i18n.js";
 import { AdminOperations } from "./admin-operations.js";
 import { AdminOverview, type OverviewData, type OverviewSection } from "./admin-overview.js";
 import { ServiceHealth } from "./service-health.js";
 import type { HealthSnapshot } from "./service-health-model.js";
 import { ProductIcon as Icon, type ProductIconName } from "../../components/product-icon.js";
 import { ProductInstall } from "../../app/product-pwa.js";
-import { useTheme } from "../../app/theme.js";
-import "./admin-console.css";
-import "./admin-design.css";
+import { useTheme } from "../../hooks/use-theme.js";
+import "../../styles/admin/admin-console.css";
+import "../../styles/admin/admin-design.css";
 
 type Section =
   "overview" | "leads" | "operations" | "health" | "followups" | "support" | "payments" | "events";
+// Grouped by the questions operators need to answer.
+const navGroups = [
+  { key: "today", items: ["overview", "health"] },
+  { key: "customers", items: ["support", "leads", "followups", "operations"] },
+  { key: "business", items: ["events", "payments"] },
+] as const satisfies readonly { key: string; items: readonly Section[] }[];
+
 type Submission = {
   id: string;
   category: "early_access" | "feedback";
@@ -46,14 +54,14 @@ type LeadsResponse = {
   pageSize: number;
   counts: Array<{ category: string; count: number }>;
 };
-function sectionName(key: OverviewSection, tr: (en: string, zh: string) => string) {
+function sectionName(key: OverviewSection, tr: Translate) {
   return {
-    people: tr("people", "用户"),
-    usage: tr("tool calls", "工具调用"),
-    devices: tr("devices", "设备"),
-    revenue: tr("revenue", "营收"),
-    teams: tr("teams", "团队"),
-    inbox: tr("inboxes", "收件箱"),
+    people: tr("admin.adminConsole.people"),
+    usage: tr("admin.adminConsole.toolCalls"),
+    devices: tr("admin.adminConsole.devices"),
+    revenue: tr("admin.adminConsole.revenue"),
+    teams: tr("admin.adminConsole.teams"),
+    inbox: tr("admin.adminConsole.inboxes"),
   }[key];
 }
 // Illustrative sample for the design preview only; never shown with live data.
@@ -112,14 +120,7 @@ function LeadsPanel() {
         ),
       );
     } catch (e) {
-      setError(
-        tr(
-          "Could not load saved submissions. Check migrations and admin access.",
-          "无法读取提交记录，请检查迁移和管理员权限。",
-        ) +
-          " " +
-          String(e),
-      );
+      setError(tr("admin.adminConsole.couldNotLoadSavedSubmissionsCheck") + " " + String(e));
     }
   }
   useEffect(() => {
@@ -137,16 +138,13 @@ function LeadsPanel() {
       if (!res.ok) throw Error(String(res.status));
       await refresh();
     } catch {
-      setError(tr("Could not update submission.", "无法修改记录。"));
+      setError(tr("admin.adminConsole.couldNotUpdateSubmission"));
     } finally {
       setBusy("");
     }
   }
   async function remove(item: Submission) {
-    if (
-      !window.confirm(tr("Permanently remove this contact submission?", "永久删除这条联系记录？"))
-    )
-      return;
+    if (!window.confirm(tr("admin.adminConsole.permanentlyRemoveThisContactSubmission"))) return;
     setBusy(item.id);
     try {
       const res = await fetch("/api/admin/submissions/" + item.id, {
@@ -157,7 +155,7 @@ function LeadsPanel() {
       if (!res.ok) throw Error(String(res.status));
       await refresh();
     } catch {
-      setError(tr("Could not delete submission.", "无法删除记录。"));
+      setError(tr("admin.adminConsole.couldNotDeleteSubmission"));
     } finally {
       setBusy("");
     }
@@ -166,18 +164,17 @@ function LeadsPanel() {
     <section className="adminSurface">
       <div className="adminSectionHeader">
         <div>
-          <p>
-            {tr(
-              "Explicitly submitted contact requests only. No private device content or conversations.",
-              "仅展示用户主动提交的联系信息，不采集设备文件或私人对话内容。",
-            )}
-          </p>
+          <p>{tr("admin.adminConsole.explicitlySubmittedContactRequestsOnlyNo")}</p>
         </div>
         <button type="button" className="adminOutlineBtn" onClick={() => void refresh()}>
-          {tr("Refresh", "刷新")} ↻
+          {tr("admin.adminConsole.refresh")} ↻
         </button>
       </div>
-      <div className="adminFilterRow" role="group" aria-label={tr("Submission type", "提交类型")}>
+      <div
+        className="adminFilterRow"
+        role="group"
+        aria-label={tr("admin.adminConsole.submissionType")}
+      >
         {(["all", "early_access", "feedback"] as const).map((kind) => (
           <button
             key={kind}
@@ -190,14 +187,14 @@ function LeadsPanel() {
             }}
           >
             {kind === "all"
-              ? tr("All", "全部")
+              ? tr("admin.adminConsole.all")
               : kind === "early_access"
-                ? tr("Early access", "抢先体验")
-                : tr("Feedback", "反馈")}
+                ? tr("admin.adminConsole.earlyAccess")
+                : tr("admin.adminConsole.feedback")}
           </button>
         ))}
         <span>
-          {data?.total ?? "—"} {tr("submissions", "条记录")}
+          {data?.total ?? "—"} {tr("admin.adminConsole.submissions")}
         </span>
       </div>
       {error && (
@@ -228,38 +225,38 @@ function LeadsPanel() {
             <p>{item.message}</p>
             <div className="adminLeadActions">
               <label>
-                {tr("Status", "状态")}{" "}
+                {tr("admin.adminConsole.status")}{" "}
                 <select
                   value={item.status}
                   disabled={busy === item.id}
                   onChange={(e) => void change(item, e.target.value)}
                 >
-                  <option value="new">{tr("New", "新提交")}</option>
-                  <option value="reviewed">{tr("Reviewed", "已查看")}</option>
-                  <option value="contacted">{tr("Contacted", "已联系")}</option>
-                  <option value="archived">{tr("Archived", "已归档")}</option>
+                  <option value="new">{tr("admin.adminConsole.new")}</option>
+                  <option value="reviewed">{tr("admin.adminConsole.reviewed")}</option>
+                  <option value="contacted">{tr("admin.adminConsole.contacted")}</option>
+                  <option value="archived">{tr("admin.adminConsole.archived")}</option>
                 </select>
               </label>
               <button type="button" disabled={busy === item.id} onClick={() => void remove(item)}>
-                {tr("Delete", "删除")}
+                {tr("admin.adminConsole.delete")}
               </button>
             </div>
           </article>
         ))}
         {data && data.items.length === 0 && (
-          <div className="adminNoData">{tr("No submissions yet.", "暂无提交记录。")}</div>
+          <div className="adminNoData">{tr("admin.adminConsole.noSubmissionsYet")}</div>
         )}
       </div>
       <div className="adminPager">
         <button disabled={page === 0} onClick={() => setPage((v) => Math.max(0, v - 1))}>
-          {tr("Previous", "上一页")}
+          {tr("admin.adminConsole.previous")}
         </button>
         <span>{page + 1}</span>
         <button
           disabled={!data || data.items.length < data.pageSize}
           onClick={() => setPage((v) => v + 1)}
         >
-          {tr("Next", "下一页")}
+          {tr("admin.adminConsole.next")}
         </button>
       </div>
     </section>
@@ -285,6 +282,7 @@ function AdminGlyph({ name }: { name: Section | "arrow" | "refresh" | "shield" |
 }
 export function AdminConsole({ preview = false }: { preview?: boolean }) {
   const { tr, locale, setLocale } = useI18n();
+  const labels = useMessages("admin");
   const { theme, setTheme } = useTheme();
   const readSection = () => {
     const value = new URLSearchParams(location.search).get("section");
@@ -386,17 +384,14 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
       if (summary.status === "fulfilled" && summary.value) setOverview(summary.value);
       if (monitor.status === "fulfilled") setHealth(monitor.value);
       const missing: string[] = [];
-      if (summary.status === "rejected") missing.push(tr("business summary", "业务汇总"));
+      if (summary.status === "rejected") missing.push(tr("admin.adminConsole.businessSummary"));
       else for (const key of summary.value?.unavailable || []) missing.push(sectionName(key, tr));
-      if (monitor.status === "rejected") missing.push(tr("service health", "服务健康"));
+      if (monitor.status === "rejected") missing.push(tr("admin.adminConsole.serviceHealth"));
       setError(
         missing.length
-          ? tr("Could not load: ", "以下数据暂时无法加载：") +
-              missing.join(tr(", ", "、")) +
-              tr(
-                ". Everything else is current. Try Refresh in a moment.",
-                "。其余数据是最新的，可稍后点击刷新重试。",
-              )
+          ? tr("admin.adminConsole.couldNotLoad") +
+              missing.join(tr("admin.adminConsole.label")) +
+              tr("admin.adminConsole.everythingElseIsCurrentTryRefresh")
           : "",
       );
     } finally {
@@ -411,42 +406,6 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
     void refresh();
     return () => refreshController.current?.abort();
   }, [preview, section]);
-  // Grouped by the question each tab answers: is anything wrong, who needs a
-  // reply, and how is the business doing.
-  const navGroups: Array<{
-    en: string;
-    zh: string;
-    items: Array<{ key: Section; en: string; zh: string }>;
-  }> = [
-    {
-      en: "TODAY",
-      zh: "今日",
-      items: [
-        { key: "overview", en: "Overview", zh: "业务总览" },
-        { key: "health", en: "Service health", zh: "服务健康" },
-      ],
-    },
-    {
-      en: "CUSTOMERS",
-      zh: "客户",
-      items: [
-        { key: "support", en: "Support inbox", zh: "客服收件箱" },
-        { key: "leads", en: "Leads & feedback", zh: "线索与反馈" },
-        { key: "followups", en: "User follow-ups", zh: "用户跟进" },
-        { key: "operations", en: "Users & operations", zh: "用户与运营" },
-      ],
-    },
-    {
-      en: "BUSINESS",
-      zh: "经营",
-      items: [
-        { key: "events", en: "Business analytics", zh: "经营分析" },
-        { key: "payments", en: "Payments & offers", zh: "支付与优惠" },
-      ],
-    },
-  ];
-  const nav = navGroups.flatMap((group) => group.items);
-  const current = nav.find((x) => x.key === section)!;
   return (
     <div className="adminShell">
       <aside className="adminSidebar">
@@ -460,19 +419,19 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
           </span>
         </a>
         <div className="adminSidebarGroup">
-          <nav aria-label={tr("Admin sections", "管理员菜单")}>
+          <nav aria-label={labels.navigation}>
             {navGroups.map((group) => (
-              <div className="adminNavGroup" key={group.en}>
-                <span className="adminSidebarKicker">{tr(group.en, group.zh)}</span>
-                {group.items.map((n) => (
+              <div className="adminNavGroup" key={group.key}>
+                <span className="adminSidebarKicker">{labels.groups[group.key]}</span>
+                {group.items.map((key) => (
                   <button
                     type="button"
-                    key={n.key}
-                    aria-current={section === n.key ? "page" : undefined}
-                    onClick={() => setSection(n.key)}
+                    key={key}
+                    aria-current={section === key ? "page" : undefined}
+                    onClick={() => setSection(key)}
                   >
-                    <AdminGlyph name={n.key} />
-                    <span>{tr(n.en, n.zh)}</span>
+                    <AdminGlyph name={key} />
+                    <span>{labels.sections[key]}</span>
                     <AdminGlyph name="arrow" />
                   </button>
                 ))}
@@ -483,19 +442,19 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
         <div className="adminSidebarBottom">
           <div className="adminPreferenceRow">
             <label>
-              <span className="arcSrOnly">{tr("Theme", "主题")}</span>
+              <span className="arcSrOnly">{labels.theme}</span>
               <select
-                aria-label={tr("Admin theme", "后台主题")}
+                aria-label={labels.themeSetting}
                 value={theme}
                 onChange={(e) => setTheme(e.target.value as "light" | "dark" | "system")}
               >
-                <option value="light">{tr("Light", "浅色")}</option>
-                <option value="dark">{tr("Dark", "深色")}</option>
-                <option value="system">{tr("System", "跟随系统")}</option>
+                <option value="light">{labels.light}</option>
+                <option value="dark">{labels.dark}</option>
+                <option value="system">{labels.system}</option>
               </select>
             </label>
             <button type="button" onClick={() => setLocale(locale === "en" ? "zh" : "en")}>
-              {locale === "en" ? "中文" : "EN"}
+              {tr("admin.adminConsole.switchLanguage")}
             </button>
           </div>
           <ProductInstall admin />
@@ -504,15 +463,15 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
             href="https://agent.remotearc.app/dashboard/connect/overview"
           >
             <Icon name="arrowUpRight" size={15} />
-            {tr("Open workspace", "打开工作空间")}
+            {labels.openWorkspace}
           </a>
           <div className="adminOwnerChip">
             <span>
               <AdminGlyph name="shield" />
             </span>
             <div>
-              <strong>{tr("Administrator", "管理员工作区")}</strong>
-              <small>{tr("Protected access", "受保护的访问")}</small>
+              <strong>{tr("admin.adminConsole.administrator")}</strong>
+              <small>{tr("admin.adminConsole.protectedAccess")}</small>
             </div>
           </div>
         </div>
@@ -521,72 +480,45 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
         <div className="adminTopbar">
           <div className="adminBreadcrumb">
             Remote Arc <span>/</span> Admin <span>/</span>{" "}
-            <strong>{tr(current.en, current.zh)}</strong>
+            <strong>{labels.sections[section]}</strong>
           </div>
           <div className="adminTopActions">
             <span className="adminTopPrivate">
               <AdminGlyph name="shield" />
-              {tr("Private console", "私有后台")}
+              {tr("admin.adminConsole.privateConsole")}
             </span>
             {section === "overview" && (
               <button type="button" onClick={() => void refresh()} disabled={loading || preview}>
                 <AdminGlyph name="refresh" />
-                {loading ? tr("Refreshing", "刷新中") : tr("Refresh", "刷新数据")}
+                {loading ? tr("admin.adminConsole.refreshing") : tr("admin.adminConsole.refresh2")}
               </button>
             )}
           </div>
         </div>
         <header className="adminHeading">
-          <span className="adminSmallLabel">{tr("OPERATIONS CENTER", "运营工作台")}</span>
-          <h1>{tr(current.en, current.zh)}</h1>
+          <span className="adminSmallLabel">{tr("admin.adminConsole.operationsCenter")}</span>
+          <h1>{labels.sections[section]}</h1>
           <p>
             {section === "overview"
-              ? tr(
-                  "Product adoption, real activity and service health. One clear view.",
-                  "产品增长、真实使用与服务状态，一目了然。",
-                )
+              ? tr("admin.adminConsole.productAdoptionRealActivityAndService")
               : section === "leads"
-                ? tr(
-                    "Follow up on the people who actually reached out.",
-                    "了解并跟进每一条用户主动提交的申请与反馈。",
-                  )
+                ? tr("admin.adminConsole.followUpOnThePeopleWho")
                 : section === "followups"
-                  ? tr(
-                      "Help people get started, learn from feedback and keep track of each follow-up.",
-                      "帮助用户上手、收集真实反馈，并跟进每一次联系。",
-                    )
+                  ? tr("admin.adminConsole.helpPeopleGetStartedLearnFrom")
                   : section === "support"
-                    ? tr(
-                        "Read customer mail, review Apps applications and keep replies clear.",
-                        "查看客户来信、处理 Apps 内测申请，并跟进每一次回复。",
-                      )
+                    ? tr("admin.adminConsole.readCustomerMailReviewAppsApplications")
                     : section === "events"
-                      ? tr(
-                          "Growth, conversion and retention across real customer journeys.",
-                          "看增长、转化、留存，掌握关键业务流程的成功率。",
-                        )
+                      ? tr("admin.adminConsole.growthConversionAndRetentionAcrossReal")
                       : section === "payments"
-                        ? tr(
-                            "Verified payments, versioned plans and offers with clear limits.",
-                            "核实支付、管理套餐版本，并发布规则清晰的优惠。",
-                          )
+                        ? tr("admin.adminConsole.verifiedPaymentsVersionedPlansAndOffers")
                         : section === "operations"
-                          ? tr(
-                              "Manage accounts, connected devices, capacity and costs.",
-                              "管理用户账户、连接设备、用量配额和成本。",
-                            )
-                          : tr(
-                              "Is anything broken, and where? The answer is at the top; details follow.",
-                              "有没有故障、问题在哪里？结论在最上面，明细在下方。",
-                            )}
+                          ? tr("admin.adminConsole.manageAccountsConnectedDevicesCapacityAnd")
+                          : tr("admin.adminConsole.isAnythingBrokenAndWhereThe")}
           </p>
         </header>
         {preview && (
           <div className="adminPreviewNote" role="status">
-            {tr(
-              "Design preview · illustrative sample metrics. No customer or billing data is connected here.",
-              "设计预览 · 指标均为示例，不连接真实客户与账单数据。",
-            )}
+            {tr("admin.adminConsole.designPreviewIllustrativeSampleMetricsNo")}
           </div>
         )}
         {error && (
@@ -598,7 +530,7 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
           <Suspense
             fallback={
               <WorkspaceLoading
-                label={tr("Loading support inbox…", "正在加载客服收件箱…")}
+                label={tr("admin.adminConsole.loadingSupportInbox")}
                 variant="rows"
               />
             }
@@ -610,10 +542,7 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
         {section === "followups" && (
           <Suspense
             fallback={
-              <WorkspaceLoading
-                label={tr("Loading follow-ups…", "正在加载跟进信息…")}
-                variant="rows"
-              />
+              <WorkspaceLoading label={tr("admin.adminConsole.loadingFollowUps")} variant="rows" />
             }
           >
             <AdminFollowups />
@@ -623,7 +552,7 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
           <Suspense
             fallback={
               <WorkspaceLoading
-                label={tr("Loading business analytics…", "正在读取经营数据…")}
+                label={tr("admin.adminConsole.loadingBusinessAnalytics")}
                 variant="rows"
               />
             }
@@ -634,7 +563,7 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
         {section === "payments" && (
           <Suspense
             fallback={
-              <WorkspaceLoading label={tr("Loading payments…", "正在读取支付…")} variant="rows" />
+              <WorkspaceLoading label={tr("admin.adminConsole.loadingPayments")} variant="rows" />
             }
           >
             <AdminPayments preview={preview} />
@@ -652,10 +581,7 @@ export function AdminConsole({ preview = false }: { preview?: boolean }) {
         {section === "leads" &&
           (preview ? (
             <div className="adminNoData">
-              {tr(
-                "Preview mode: private submissions are not loaded.",
-                "预览环境不加载真实反馈记录。",
-              )}
+              {tr("admin.adminConsole.previewModePrivateSubmissionsAreNot")}
             </div>
           ) : (
             <LeadsPanel />

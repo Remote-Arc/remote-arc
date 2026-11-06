@@ -1,13 +1,14 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { canonicalErrorEnvelope } from "../../../../../../packages/protocol/src/error-codes.js";
 import { useEffect, useRef, useState } from "react";
 import type { ArcAppConnectionRequest } from "@remotearc/protocol";
-import { arcRequest } from "./use-arc-chat.js";
+import { arcRequest } from "../../../hooks/arc/use-arc-chat.js";
 import { AppCredentialForm, type AppCredentialInput } from "../../apps/apps-auth-form.js";
 import { UI_PREVIEW } from "../../../preview/preview-mode.js";
-import "./arc-app-connection-card.css";
+import "../../../styles/arc/chat/arc-app-connection-card.css";
 import { GoogleDataNotice } from "../../apps/google-app-beta.js";
 
-type Tr = (en: string, zh: string) => string;
+type Tr = Translate;
 async function appsRequest(path: string, body: unknown) {
   const response = await fetch("/api/apps/" + path, {
     method: "POST",
@@ -33,10 +34,7 @@ export function ArcAppConnectionCard({
     [error, setError] = useState(() =>
       typeof window !== "undefined" &&
       new URLSearchParams(window.location.search).get("connection") === "retry"
-        ? tr(
-            "Connection was not completed. You can try again here.",
-            "连接尚未完成，你可以在这里重试。",
-          )
+        ? tr("arc.chat.arcAppConnectionCard.connectionWasNotCompletedYouCan")
         : "",
     ),
     [credentials, setCredentials] = useState(false),
@@ -114,9 +112,7 @@ export function ArcAppConnectionCard({
       window.location.assign(destination.href);
     } catch {
       if (live.current)
-        setError(
-          tr("Connection could not start. Please try again.", "暂时无法开始连接，请再试一次。"),
-        );
+        setError(tr("arc.chat.arcAppConnectionCard.connectionCouldNotStartPleaseTry"));
     } finally {
       lock.current = false;
       if (live.current) setBusy(false);
@@ -133,12 +129,7 @@ export function ArcAppConnectionCard({
       return true;
     } catch {
       if (live.current)
-        setError(
-          tr(
-            "Connection could not finish. Check the details and try again.",
-            "连接未完成，请核对连接信息后重试。",
-          ),
-        );
+        setError(tr("arc.chat.arcAppConnectionCard.connectionCouldNotFinishCheckThe"));
       return false;
     } finally {
       lock.current = false;
@@ -160,7 +151,7 @@ export function ArcAppConnectionCard({
         await onChanged();
       }
     } catch {
-      if (live.current) setError(tr("Please try again.", "请再试一次。"));
+      if (live.current) setError(tr("arc.chat.arcAppConnectionCard.pleaseTryAgain"));
     } finally {
       lock.current = false;
       if (live.current) setBusy(false);
@@ -171,7 +162,7 @@ export function ArcAppConnectionCard({
     <section
       className="arcAppConnectionCard"
       data-status={current.status}
-      aria-label={tr("Connect " + current.name, "连接 " + current.name)}
+      aria-label={tr("arc.chat.arcAppConnectionCard.connect", { name: current.name })}
     >
       <header>
         <span className="arcAppConnectionBrand">
@@ -180,25 +171,19 @@ export function ArcAppConnectionCard({
         <div>
           <strong>
             {current.status === "resumed"
-              ? tr(current.name + " connected", current.name + " 已连接")
-              : tr("Connect " + current.name, "连接 " + current.name)}
+              ? tr("arc.chat.arcAppConnectionCard.connected", { name: current.name })
+              : tr("arc.chat.arcAppConnectionCard.connect", { name: current.name })}
           </strong>
           <p>
             {current.status === "resumed"
-              ? tr("Ready to use in this conversation.", "可以在此对话中直接使用。")
+              ? tr("arc.chat.arcAppConnectionCard.readyToUseInThisConversation")
               : closed
                 ? current.status === "expired"
-                  ? tr("This connection request has expired.", "此连接请求已过期。")
-                  : tr("Connection cancelled.", "已取消连接。")
+                  ? tr("arc.chat.arcAppConnectionCard.thisConnectionRequestHasExpired")
+                  : tr("arc.chat.arcAppConnectionCard.connectionCancelled")
                 : current.configured
-                  ? tr(
-                      "Connect once and I’ll continue your task here.",
-                      "连接后，我会在这里继续处理你的任务。",
-                    )
-                  : tr(
-                      "This app is temporarily unavailable. Your task is saved.",
-                      "此应用暂时无法连接，你的任务已保留。",
-                    )}
+                  ? tr("arc.chat.arcAppConnectionCard.connectOnceAndILlContinue")
+                  : tr("arc.chat.arcAppConnectionCard.thisAppIsTemporarilyUnavailableYour")}
           </p>
         </div>
       </header>
@@ -206,17 +191,12 @@ export function ArcAppConnectionCard({
         <>
           {current.requiresBetaApproval ? (
             <div className="arcAppConnectionActions">
-              <p>
-                {tr(
-                  "Google Apps are in limited Beta. Apply first; this task will wait for access.",
-                  "Google Apps 正在小范围内测，请先申请；当前任务会等待开通。",
-                )}
-              </p>
+              <p>{tr("arc.chat.arcAppConnectionCard.googleAppsAreInLimitedBeta")}</p>
               <a href={"/apps?apply=" + encodeURIComponent(current.provider)}>
-                {tr("Apply for Beta", "申请加入内测")}
+                {tr("arc.chat.arcAppConnectionCard.applyForBeta")}
               </a>
               <button type="button" disabled={busy} onClick={() => void onChanged()}>
-                {tr("Refresh access", "刷新开通状态")}
+                {tr("arc.chat.arcAppConnectionCard.refreshAccess")}
               </button>
             </div>
           ) : credentials ? (
@@ -241,7 +221,7 @@ export function ArcAppConnectionCard({
               <div className="arcAppConnectionActions">
                 {current.provider === "shopify" && (
                   <label>
-                    {tr("Store address", "店铺地址")}
+                    {tr("arc.chat.arcAppConnectionCard.storeAddress")}
                     <input
                       type="text"
                       value={shop}
@@ -264,8 +244,8 @@ export function ArcAppConnectionCard({
                   onClick={() => void connect()}
                 >
                   {busy
-                    ? tr("Connecting…", "正在连接…")
-                    : tr("Connect " + current.name, "连接 " + current.name)}
+                    ? tr("arc.chat.arcAppConnectionCard.connecting")
+                    : tr("arc.chat.arcAppConnectionCard.connect", { name: current.name })}
                 </button>
                 <button
                   type="button"
@@ -273,12 +253,12 @@ export function ArcAppConnectionCard({
                   disabled={busy}
                   onClick={() => void cancel()}
                 >
-                  {tr("Not now", "暂不连接")}
+                  {tr("arc.chat.arcAppConnectionCard.notNow")}
                 </button>
               </div>
             </>
           )}
-          <small>{tr("Your sign-in details stay private.", "登录信息不会进入对话。")}</small>
+          <small>{tr("arc.chat.arcAppConnectionCard.yourSignInDetailsStayPrivate")}</small>
         </>
       )}
       {current.status === "pending" && !current.configured && (
@@ -289,7 +269,7 @@ export function ArcAppConnectionCard({
             disabled={busy}
             onClick={() => void cancel()}
           >
-            {tr("Not now", "暂不连接")}
+            {tr("arc.chat.arcAppConnectionCard.notNow")}
           </button>
         </div>
       )}

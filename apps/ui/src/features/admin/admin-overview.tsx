@@ -1,9 +1,10 @@
+import type { Translate } from "../../locales/locale-catalog.js";
 import { lazy, Suspense, useState } from "react";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import { ProductIcon as Icon, type ProductIconName } from "../../components/product-icon.js";
 import type { HealthSnapshot } from "./service-health-model.js";
-import "./admin-overview.css";
+import "../../styles/admin/admin-overview.css";
 
 const AdminApiUsage = lazy(() =>
   import("./admin-api-usage.js").then((module) => ({ default: module.AdminApiUsage })),
@@ -64,21 +65,21 @@ type Attention = {
 function attentionItems(
   data: OverviewData | null,
   health: HealthSnapshot | null,
-  tr: (en: string, zh: string) => string,
+  tr: Translate,
 ): Attention[] {
   const items: Attention[] = [];
   if (health && health.status !== "operational" && health.status !== "healthy") {
     items.push({
       key: "health",
       tone: health.status === "degraded" ? "warning" : "critical",
-      title: tr("Service is degraded", "服务状态异常"),
+      title: tr("admin.adminOverview.serviceIsDegraded"),
       detail:
-        tr("Errors in the last 15 minutes: ", "最近 15 分钟错误：") +
+        tr("admin.adminOverview.errorsInTheLastMinutes") +
         number(health.worker?.errors15m) +
-        tr(" · 24 hours: ", " · 24 小时：") +
+        tr("admin.adminOverview.hours") +
         number(health.worker?.errors24h),
       target: "health",
-      action: tr("Inspect", "查看"),
+      action: tr("admin.adminOverview.inspect"),
     });
   }
   const usage = data?.usage;
@@ -86,34 +87,34 @@ function attentionItems(
     items.push({
       key: "failures",
       tone: "warning",
-      title: tr("Device calls are failing", "设备调用失败偏多"),
+      title: tr("admin.adminOverview.deviceCallsAreFailing"),
       detail:
         percent(usage.failed24h / usage.calls24h) +
-        tr(" of tool calls failed in 24 hours (", " 的工具调用在 24 小时内失败（") +
+        tr("admin.adminOverview.ofToolCallsFailedInHours") +
         number(usage.failed24h) +
-        tr(")", " 次）"),
+        tr("admin.adminOverview.label"),
       target: "health",
-      action: tr("Inspect", "查看"),
+      action: tr("admin.adminOverview.inspect"),
     });
   }
   if (data?.inbox?.openSupport) {
     items.push({
       key: "support",
       tone: "info",
-      title: tr("Customer mail waiting", "客户来信待回复"),
-      detail: number(data.inbox.openSupport) + tr(" open conversations", " 个未处理会话"),
+      title: tr("admin.adminOverview.customerMailWaiting"),
+      detail: number(data.inbox.openSupport) + tr("admin.adminOverview.openConversations"),
       target: "support",
-      action: tr("Reply", "回复"),
+      action: tr("admin.adminOverview.reply"),
     });
   }
   if (data?.inbox?.newSubmissions) {
     items.push({
       key: "leads",
       tone: "info",
-      title: tr("New sign-up requests and feedback", "新的申请与反馈"),
-      detail: number(data.inbox.newSubmissions) + tr(" not reviewed yet", " 条尚未查看"),
+      title: tr("admin.adminOverview.newSignUpRequestsAndFeedback"),
+      detail: number(data.inbox.newSubmissions) + tr("admin.adminOverview.notReviewedYet"),
       target: "leads",
-      action: tr("Review", "查看"),
+      action: tr("admin.adminOverview.review"),
     });
   }
   return items;
@@ -136,7 +137,7 @@ function AttentionList({
   return (
     <section className="ovAttention" aria-labelledby="ov-attention-title">
       <div className="ovSectionTitle">
-        <h2 id="ov-attention-title">{tr("Needs your attention", "需要处理")}</h2>
+        <h2 id="ov-attention-title">{tr("admin.adminOverview.needsYourAttention")}</h2>
         {items.length > 0 && <span className="ovCount">{items.length}</span>}
       </div>
       {items.length > 0 ? (
@@ -158,16 +159,10 @@ function AttentionList({
       ) : (
         <p className={"ovAllClear" + (loaded && !unknown ? " is-clear" : "")}>
           {!loaded
-            ? tr("Checking…", "正在检查…")
+            ? tr("admin.adminOverview.checking")
             : unknown
-              ? tr(
-                  "Nothing flagged in the data that loaded. Some checks could not run.",
-                  "已加载的数据中没有需要处理的事项，但部分检查未能完成。",
-                )
-              : tr(
-                  "Nothing needs you right now. Service, device calls and inboxes are clear.",
-                  "目前没有需要处理的事项：服务、设备调用和收件箱都正常。",
-                )}
+              ? tr("admin.adminOverview.nothingFlaggedInTheDataThat")
+              : tr("admin.adminOverview.nothingNeedsYouRightNowService")}
         </p>
       )}
     </section>
@@ -238,19 +233,23 @@ function ActivityChart({ data }: { data: OverviewData | null }) {
     <section className="ovPanel ovChart">
       <div className="ovPanelHead">
         <div>
-          <h2>{tr("Tool calls", "工具调用")}</h2>
+          <h2>{tr("admin.adminOverview.toolCalls")}</h2>
           <p>
             {usage
               ? number(calls) +
-                tr(" calls · ", " 次调用 · ") +
+                tr("admin.adminOverview.calls") +
                 number(failed) +
-                tr(" failed · up to ", " 次失败 · 单小时最多 ") +
+                tr("admin.adminOverview.failedUpTo") +
                 peakUsers +
-                tr(" people in an hour", " 人在用")
-              : tr("Activity could not be loaded.", "调用数据暂时无法加载。")}
+                tr("admin.adminOverview.peopleInAnHour")
+              : tr("admin.adminOverview.activityCouldNotBeLoaded")}
           </p>
         </div>
-        <div className="adminRangeControl" role="group" aria-label={tr("Chart range", "图表范围")}>
+        <div
+          className="adminRangeControl"
+          role="group"
+          aria-label={tr("admin.adminOverview.chartRange")}
+        >
           {([24, 48] as const).map((value) => (
             <button
               type="button"
@@ -266,10 +265,7 @@ function ActivityChart({ data }: { data: OverviewData | null }) {
       <div
         className="ovBars"
         role="img"
-        aria-label={tr(
-          `Hourly tool calls and failures over the last ${hours} hours`,
-          `最近 ${hours} 小时每小时的工具调用与失败`,
-        )}
+        aria-label={tr("admin.adminOverview.hourlyToolCallsAndFailuresOver", { hours })}
       >
         {usage ? (
           rows.map((row) => (
@@ -280,11 +276,11 @@ function ActivityChart({ data }: { data: OverviewData | null }) {
                 row.hour +
                 ":00 UTC · " +
                 row.calls +
-                tr(" calls · ", " 次调用 · ") +
+                tr("admin.adminOverview.calls") +
                 row.failed +
-                tr(" failed · ", " 次失败 · ") +
+                tr("admin.adminOverview.failed") +
                 row.users +
-                tr(" people", " 人")
+                tr("admin.adminOverview.people")
               }
               style={{ height: (row.calls ? Math.max(4, (100 * row.calls) / max) : 1.5) + "%" }}
             >
@@ -294,18 +290,18 @@ function ActivityChart({ data }: { data: OverviewData | null }) {
             </div>
           ))
         ) : (
-          <div className="adminEmptyChart">{tr("No data", "暂无数据")}</div>
+          <div className="adminEmptyChart">{tr("admin.adminOverview.noData")}</div>
         )}
       </div>
       <div className="ovChartFoot">
         <span>
-          {hours}h {tr("ago", "前")}
+          {hours}h {tr("admin.adminOverview.ago")}
         </span>
         <span className="ovLegend">
-          <i className="is-calls" /> {tr("Calls", "调用")} <i className="is-failed" />{" "}
-          {tr("Failed", "失败")}
+          <i className="is-calls" /> {tr("admin.adminOverview.calls2")} <i className="is-failed" />{" "}
+          {tr("admin.adminOverview.failed2")}
         </span>
-        <span>{tr("Now · UTC", "现在 · UTC")}</span>
+        <span>{tr("admin.adminOverview.nowUtc")}</span>
       </div>
     </section>
   );
@@ -326,40 +322,40 @@ function Vitals({
     target: AdminSectionKey;
   }> = [
     {
-      label: tr("Devices online", "在线设备"),
+      label: tr("admin.adminOverview.devicesOnline"),
       value: data?.devices ? number(data.devices.online) + " / " + number(data.devices.total) : "—",
       detail: !data?.devices
-        ? tr("Unavailable", "暂时无法读取")
+        ? tr("admin.adminOverview.unavailable")
         : data.devices.complete
-          ? tr("Live from the device registry", "实时读取设备注册表")
-          : tr("Some devices could not be checked", "部分设备未能检查"),
+          ? tr("admin.adminOverview.liveFromTheDeviceRegistry")
+          : tr("admin.adminOverview.someDevicesCouldNotBeChecked"),
       target: "operations",
     },
     {
-      label: tr("Tool calls this month", "本月工具调用"),
+      label: tr("admin.adminOverview.toolCallsThisMonth"),
       value: number(data?.usage?.monthlyCalls),
-      detail: tr("Charged calls, UTC month", "计费调用，按 UTC 月"),
+      detail: tr("admin.adminOverview.chargedCallsUtcMonth"),
       target: "operations",
     },
     {
-      label: tr("Registered accounts", "注册账户"),
+      label: tr("admin.adminOverview.registeredAccounts"),
       value: number(data?.people?.total),
-      detail: tr("All time", "累计"),
+      detail: tr("admin.adminOverview.allTime"),
       target: "operations",
     },
     {
-      label: tr("Teams", "团队"),
+      label: tr("admin.adminOverview.teams"),
       value: data?.teams
-        ? number(data.teams.teams) + tr(" · ", " 个 · ") + number(data.teams.members)
+        ? number(data.teams.teams) + tr("admin.adminOverview.label2") + number(data.teams.members)
         : "—",
-      detail: tr("Teams · active members", "团队数 · 活跃成员"),
+      detail: tr("admin.adminOverview.teamsActiveMembers"),
       target: "operations",
     },
   ];
   return (
     <section className="ovPanel ovVitals">
       <div className="ovPanelHead">
-        <h2>{tr("Product vitals", "产品概况")}</h2>
+        <h2>{tr("admin.adminOverview.productVitals")}</h2>
       </div>
       <dl>
         {rows.map((row) => (
@@ -373,7 +369,7 @@ function Vitals({
         ))}
       </dl>
       <button type="button" className="adminOutlineBtn" onClick={() => setSection("operations")}>
-        {tr("Open users & devices", "查看用户与设备")} →
+        {tr("admin.adminOverview.openUsersDevices")} →
       </button>
     </section>
   );
@@ -402,67 +398,67 @@ export function AdminOverview({
       <AttentionList data={data} health={health} loaded={loaded} setSection={setSection} />
       <div className="ovKpis">
         <Kpi
-          label={tr("Active people today", "今日活跃用户")}
+          label={tr("admin.adminOverview.activePeopleToday")}
           value={number(people?.activeToday)}
           detail={
             people
-              ? number(people.active7d) + tr(" active in the last 7 days", " 人近 7 天活跃")
-              : tr("Unavailable", "暂时无法读取")
+              ? number(people.active7d) + tr("admin.adminOverview.activeInTheLastDays")
+              : tr("admin.adminOverview.unavailable")
           }
           icon="users"
           onOpen={() => setSection("events")}
-          openLabel={tr("Open business analytics", "查看经营分析")}
+          openLabel={tr("admin.adminOverview.openBusinessAnalytics")}
         />
         <Kpi
-          label={tr("Tool calls · 24h", "工具调用 · 24 小时")}
+          label={tr("admin.adminOverview.toolCallsH")}
           value={number(usage?.calls24h)}
           trend={
             usage
               ? {
                   value: change(usage.calls24h, usage.callsPrevious24h),
-                  label: tr("vs previous 24h", "较前 24 小时"),
+                  label: tr("admin.adminOverview.vsPreviousH"),
                 }
               : null
           }
           detail={
             failureRate === null
               ? usage
-                ? tr("No calls yet", "暂无调用")
-                : tr("Unavailable", "暂时无法读取")
-              : percent(1 - failureRate) + tr(" succeeded", " 成功率")
+                ? tr("admin.adminOverview.noCallsYet")
+                : tr("admin.adminOverview.unavailable")
+              : percent(1 - failureRate) + tr("admin.adminOverview.succeeded")
           }
           icon="activity"
           onOpen={() => setSection("health")}
-          openLabel={tr("Open service health", "查看服务健康")}
+          openLabel={tr("admin.adminOverview.openServiceHealth")}
         />
         <Kpi
-          label={tr("New sign-ups · 7 days", "新注册 · 7 天")}
+          label={tr("admin.adminOverview.newSignUpsDays")}
           value={number(people?.new7d)}
           detail={
             people
-              ? number(people.total) + tr(" accounts in total", " 个累计账户")
-              : tr("Unavailable", "暂时无法读取")
+              ? number(people.total) + tr("admin.adminOverview.accountsInTotal")
+              : tr("admin.adminOverview.unavailable")
           }
           icon="add"
           onOpen={() => setSection("events")}
-          openLabel={tr("Open business analytics", "查看经营分析")}
+          openLabel={tr("admin.adminOverview.openBusinessAnalytics")}
         />
         <Kpi
-          label={tr("Revenue · 30 days", "营收 · 30 天")}
+          label={tr("admin.adminOverview.revenueDays")}
           value={revenue ? usd(revenue.paidCents30d) : "—"}
           detail={
             revenue
               ? number(revenue.payments30d) +
-                tr(" payments · ", " 笔付款 · ") +
+                tr("admin.adminOverview.payments") +
                 number(revenue.activeSubscriptions) +
-                tr(" subscriptions · ", " 个订阅 · ") +
+                tr("admin.adminOverview.subscriptions") +
                 number(revenue.activeTrials) +
-                tr(" trials", " 个试用")
-              : tr("Unavailable", "暂时无法读取")
+                tr("admin.adminOverview.trials")
+              : tr("admin.adminOverview.unavailable")
           }
           icon="chart"
           onOpen={() => setSection("payments")}
-          openLabel={tr("Open payments", "查看支付")}
+          openLabel={tr("admin.adminOverview.openPayments")}
         />
       </div>
       <div className="ovGrid">
@@ -471,10 +467,7 @@ export function AdminOverview({
       </div>
       <Suspense
         fallback={
-          <WorkspaceLoading
-            label={tr("Loading model usage…", "正在读取模型用量…")}
-            variant="rows"
-          />
+          <WorkspaceLoading label={tr("admin.adminOverview.loadingModelUsage")} variant="rows" />
         }
       >
         <AdminApiUsage preview={preview} />

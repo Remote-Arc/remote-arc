@@ -1,50 +1,9 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { I18nContext, type I18n, type Locale } from "./i18n-context.js";
+import { useI18n } from "../hooks/use-i18n.js";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { isWebsite, localizedWebsiteHref, pageForLanguage } from "../lib/marketing-paths.js";
-import { DASHBOARD_PATHS, LEGACY_DASHBOARD_PATHS } from "../lib/dashboard-workspaces.js";
-
-export type Locale = "en" | "zh";
-
-type I18n = {
-  locale: Locale;
-  setLocale: (locale: Locale) => void;
-  tr: (en: string, zh: string) => string;
-};
-
-const I18nContext = createContext<I18n | null>(null);
-const LOCALE_KEY = "remotearc-locale-v2";
-const dashboardPaths = new Set([
-  ...Object.values(DASHBOARD_PATHS),
-  ...Object.keys(LEGACY_DASHBOARD_PATHS),
-  "/admin-preview",
-  "/checkout",
-  "/device",
-]);
-
-function urlLocale(): Locale | null {
-  // PR previews host the website and workspace together. Website URL prefixes
-  // choose its language; workspace routes retain the user's saved preference.
-  const path = location.pathname.replace(/\/+$/, "") || "/";
-  if (isWebsite() && !dashboardPaths.has(path) && !path.startsWith("/dashboard/browser/"))
-    return path === "/zh" || path.startsWith("/zh/") ? "zh" : "en";
-  const requested = new URLSearchParams(window.location.search).get("lang")?.toLowerCase();
-  if (requested === "zh" || requested === "zh-cn" || requested === "zh-hans") return "zh";
-  if (requested === "en") return "en";
-  return null;
-}
-
-function initialLocale(): Locale {
-  const requested = urlLocale();
-  if (requested) return requested;
-  try {
-    const saved = localStorage.getItem(LOCALE_KEY);
-    if (saved === "en" || saved === "zh") return saved;
-  } catch {
-    /* Storage can be disabled; use the browser preference. */
-  }
-  const preferred =
-    typeof navigator === "undefined" ? "" : navigator.languages?.[0] || navigator.language;
-  return /^zh(?:-|$)/i.test(preferred) ? "zh" : "en";
-}
+import { createTranslator, loadLocale, type LocaleSurface } from "../locales/locale-catalog.js";
+import { initialLocale, LOCALE_KEY, workspacePaths } from "../locales/locale-preference.js";
 
 function rememberLocale(locale: Locale) {
   try {
@@ -54,23 +13,28 @@ function rememberLocale(locale: Locale) {
   }
 }
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(initialLocale);
+export function I18nProvider({
+  children,
+  surface = "all",
+  initialLanguage,
+}: {
+  children: React.ReactNode;
+  surface?: LocaleSurface | "all";
+  initialLanguage?: Locale;
+}) {
+  const [locale, setLocaleState] = useState<Locale>(() => initialLanguage ?? initialLocale());
+  const loadRevision = useRef(0);
 
   useEffect(() => {
     document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
     // Marketing documents already carry localized SEO metadata from the Worker.
     // Do not replace it after Google renders the page with JavaScript enabled.
     if (!isWebsite() && window.location.pathname === "/") {
-      document.title = locale === "zh" ? "Remote Arc — 让 AI 安全连接你的电脑" : "Remote Arc";
+      const tr = createTranslator(locale);
+      document.title = tr("app.i18n.pageTitle");
       document
         .querySelector('meta[name="description"]')
-        ?.setAttribute(
-          "content",
-          locale === "zh"
-            ? "让 AI 聊天真正操作你的电脑：通过 Remote MCP 连接已授权的 Windows、macOS 与 Linux。无需单独购买模型 API 或充值 API Token；免费聊天套餐的工具支持因客户端而异。"
-            : "Let compatible AI chats work on your computer through Remote MCP. No separate model API key or pay-per-token API bill; free-chat support and limits depend on the AI provider.",
-        );
+        ?.setAttribute("content", tr("app.i18n.pageDescription"));
     }
   }, [locale]);
 
@@ -108,22 +72,24 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<I18n>(
     () => ({
       locale,
-      setLocale(next) {
+      async setLocale(next) {
+        const revision = ++loadRevision.current;
+        try {
+          await loadLocale(next, surface);
+        } catch {
+          return false;
+        }
+        if (revision !== loadRevision.current) return false;
         rememberLocale(next);
         setLocaleState(next);
+        return true;
       },
-      tr: (en, zh) => (locale === "zh" ? zh : en),
+      tr: createTranslator(locale),
     }),
-    [locale],
+    [locale, surface],
   );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
-}
-
-export function useI18n() {
-  const value = useContext(I18nContext);
-  if (!value) throw new Error("useI18n must be used inside I18nProvider");
-  return value;
 }
 
 export function LanguageSwitcher({
@@ -137,7 +103,7 @@ export function LanguageSwitcher({
   dropdown?: boolean;
   iconOnly?: boolean;
 }) {
-  const { locale, setLocale } = useI18n();
+  const { locale, setLocale, tr } = useI18n();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -158,12 +124,12 @@ export function LanguageSwitcher({
       document.removeEventListener("keydown", escape);
     };
   }, [open]);
-  const choose = (next: Locale) => {
+  const choose = async (next: Locale) => {
     const path = location.pathname.replace(/\/+$/, "") || "/";
     if (
       syncUrl &&
       isWebsite() &&
-      !dashboardPaths.has(path) &&
+      !workspacePaths.includes(path) &&
       !path.startsWith("/dashboard/browser/")
     ) {
       rememberLocale(next);
@@ -173,12 +139,12 @@ export function LanguageSwitcher({
       window.location.assign(url.pathname + url.search + url.hash);
       return;
     }
+    if (!(await setLocale(next))) return;
     if (syncUrl) {
       const url = new URL(window.location.href);
       url.searchParams.set("lang", next);
       window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
     }
-    setLocale(next);
     setOpen(false);
   };
   if (dropdown)
@@ -187,16 +153,8 @@ export function LanguageSwitcher({
         <button
           type="button"
           className="languageDropdownTrigger"
-          aria-label={
-            iconOnly
-              ? locale === "zh"
-                ? "语言"
-                : "Language"
-              : locale === "zh"
-                ? "选择网站语言"
-                : "Select website language"
-          }
-          title={iconOnly ? (locale === "zh" ? "语言" : "Language") : undefined}
+          aria-label={iconOnly ? tr("app.i18n.language") : tr("app.i18n.selectLanguage")}
+          title={iconOnly ? tr("app.i18n.language") : undefined}
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((previous) => !previous)}
@@ -227,7 +185,7 @@ export function LanguageSwitcher({
           </svg>
           {!iconOnly && (
             <>
-              <span className="languageDropdownCode">{locale === "zh" ? "中文" : "EN"}</span>
+              <span className="languageDropdownCode">{tr("app.i18n.activeLanguage")}</span>
               <svg
                 aria-hidden="true"
                 viewBox="0 0 12 12"
@@ -243,11 +201,7 @@ export function LanguageSwitcher({
           )}
         </button>
         {open && (
-          <div
-            className="languageDropdownMenu"
-            role="menu"
-            aria-label={locale === "zh" ? "语言" : "Languages"}
-          >
+          <div className="languageDropdownMenu" role="menu" aria-label={tr("app.i18n.languages")}>
             <button
               type="button"
               role="menuitemradio"
@@ -274,7 +228,7 @@ export function LanguageSwitcher({
     <div
       className={"languageSwitch" + (compact ? " compact" : "")}
       role="group"
-      aria-label={locale === "zh" ? "网站语言" : "Website language"}
+      aria-label={tr("app.i18n.websiteLanguage")}
     >
       <button
         className={locale === "en" ? "active" : ""}

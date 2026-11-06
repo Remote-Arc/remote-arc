@@ -1,8 +1,11 @@
+import { createTranslator, loadLocale } from "../src/locales/locale-catalog.js";
 import assert from "node:assert/strict";
 import { atComputerLimit, pairingFailureMessage } from "../src/features/auth/pairing-errors.js";
 
-const en = (text: string) => text;
-const zh = (_: string, text: string) => text;
+await loadLocale("en", "all");
+const en = createTranslator("en");
+await loadLocale("zh", "all");
+const zh = createTranslator("zh");
 const computers = { error: "device_limit_reached", limit: 2, device_type: "computer" };
 
 assert.equal(atComputerLimit(computers), true);

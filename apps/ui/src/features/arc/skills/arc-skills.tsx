@@ -1,12 +1,13 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { canonicalErrorEnvelope } from "../../../../../../packages/protocol/src/error-codes.js";
 import { communityExperience } from "./arc-community-experience.js";
 import { workflowExperience } from "./arc-skill-experience.js";
-import type { ArcMention } from "../composer/arc-skill-mentions.js";
+import type { ArcMention } from "../../../hooks/arc/use-arc-skill-mentions.js";
 import { WorkspaceLoading } from "../../../components/workspace-loading.js";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { arcRequest } from "../chat/use-arc-chat.js";
+import { arcRequest } from "../../../hooks/arc/use-arc-chat.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
-import "./arc-skills.css";
+import "../../../styles/arc/skills/arc-skills.css";
 
 type Skill = {
   id: string;
@@ -25,7 +26,7 @@ type Skill = {
   core?: boolean;
 };
 type Props = {
-  tr: (en: string, zh: string) => string;
+  tr: Translate;
   onChat: (prompt?: string, sessionId?: string, references?: ArcMention[]) => void;
 };
 export function ArcSkills({ tr, onChat }: Props) {
@@ -60,9 +61,7 @@ export function ArcSkills({ tr, onChat }: Props) {
       })
       .catch(() => {
         if (!controller.signal.aborted)
-          setError(
-            tr("Your skill library could not be loaded. Try again.", "技能库加载失败，请重试。"),
-          );
+          setError(tr("arc.skills.arcSkills.yourSkillLibraryCouldNotBe"));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -101,7 +100,7 @@ export function ArcSkills({ tr, onChat }: Props) {
   }, [importing]);
   async function readFile(file: File) {
     if (file.size > 16000 || !file.name.toLowerCase().endsWith(".md")) {
-      setError(tr("Choose a Markdown file up to 16 KB.", "请选择不超过 16 KB 的 Markdown 文件。"));
+      setError(tr("arc.skills.arcSkills.chooseAMarkdownFileUpTo"));
       return;
     }
     try {
@@ -116,12 +115,7 @@ export function ArcSkills({ tr, onChat }: Props) {
       setDescription((field("description") || "").slice(0, 500));
       setError("");
     } catch {
-      setError(
-        tr(
-          "This file could not be read. Paste its Markdown instead.",
-          "无法读取该文件，请直接粘贴 Markdown 内容。",
-        ),
-      );
+      setError(tr("arc.skills.arcSkills.thisFileCouldNotBeRead"));
     }
   }
   async function save(event: FormEvent) {
@@ -145,12 +139,7 @@ export function ArcSkills({ tr, onChat }: Props) {
       setSource("");
       setContent("");
     } catch {
-      setError(
-        tr(
-          "Could not import this skill. Check its fields, file size and the 50-skill library limit.",
-          "导入失败，请检查填写内容、文件大小及 50 项导入上限。",
-        ),
-      );
+      setError(tr("arc.skills.arcSkills.couldNotImportThisSkillCheck"));
     } finally {
       setSaving(false);
     }
@@ -176,13 +165,8 @@ export function ArcSkills({ tr, onChat }: Props) {
       <header className="overviewTopbar">
         <div>
           <span className="eyebrow">ARC / SKILLS</span>
-          <h1>{tr("Skills from the people who build the tools.", "来自工具开发者的实用技能。")}</h1>
-          <p>
-            {tr(
-              "Local creation workflows, office skills and pinned GitHub packages. Arc uses the methods, scripts and references needed for your goal.",
-              "提供本地创作、办公与思维方法，以及 GitHub 固定版本技能包。Arc 按目标选择方法，结合脚本与参考资料完成工作。",
-            )}
-          </p>
+          <h1>{tr("arc.skills.arcSkills.skillsFromThePeopleWhoBuild")}</h1>
+          <p>{tr("arc.skills.arcSkills.localCreationWorkflowsOfficeSkillsAnd")}</p>
         </div>
         <button
           className="addButton arcRadiantCta"
@@ -191,22 +175,17 @@ export function ArcSkills({ tr, onChat }: Props) {
           onClick={() => setImporting(!importing)}
         >
           <Icon name="add" />
-          {tr("Import a skill", "导入技能")}
+          {tr("arc.skills.arcSkills.importASkill")}
         </button>
       </header>
       <div className="arcSkillGuide">
         <img src="/remote-arc.svg" alt="" />
         <div>
-          <strong>{tr("Your goal comes first.", "把目标交给 Arc。")}</strong>
-          <p>
-            {tr(
-              "Describe your work in chat. Arc prepares the relevant skill on an authorized computer, checks dependencies and returns the result. Your own methods can live here too.",
-              "在 Chat 交代工作即可。Arc 会在已授权的电脑上准备相关技能、检查依赖并交付结果，你自己的方法也可以保存在这里。",
-            )}
-          </p>
+          <strong>{tr("arc.skills.arcSkills.yourGoalComesFirst")}</strong>
+          <p>{tr("arc.skills.arcSkills.describeYourWorkInChatArc")}</p>
         </div>
         <button type="button" className="ghostButton" onClick={() => onChat()}>
-          {tr("Open Arc Chat", "打开 Arc Chat")} →
+          {tr("arc.skills.arcSkills.openArcChat")} →
         </button>
       </div>
       {error && (
@@ -217,26 +196,26 @@ export function ArcSkills({ tr, onChat }: Props) {
             className="ghostButton"
             onClick={() => setRevision((value) => value + 1)}
           >
-            {tr("Reload library", "重新加载")}
+            {tr("arc.skills.arcSkills.reloadLibrary")}
           </button>
         </div>
       )}
       {importing && (
         <form className="arcSkillImport" onSubmit={(event) => void save(event)}>
           <header>
-            <h2>{tr("Bring a skill to Arc", "把技能带给 Arc")}</h2>
+            <h2>{tr("arc.skills.arcSkills.bringASkillToArc")}</h2>
             <button
               className="ghostButton"
               type="button"
               onClick={() => setImporting(false)}
-              aria-label={tr("Close import", "关闭导入")}
+              aria-label={tr("arc.skills.arcSkills.closeImport")}
             >
               <Icon name="close" />
             </button>
           </header>
           <div className="arcSkillImportFields">
             <label>
-              {tr("Name", "名称")}
+              {tr("arc.skills.arcSkills.name")}
               <input
                 ref={importHeading}
                 value={name}
@@ -246,7 +225,7 @@ export function ArcSkills({ tr, onChat }: Props) {
               />
             </label>
             <label>
-              {tr("Source link · optional", "来源链接 · 可选")}
+              {tr("arc.skills.arcSkills.sourceLinkOptional")}
               <input
                 type="url"
                 pattern="https://.*"
@@ -257,7 +236,7 @@ export function ArcSkills({ tr, onChat }: Props) {
               />
             </label>
             <label className="arcSkillWide">
-              {tr("What does this skill help with?", "这个技能能做什么？")}
+              {tr("arc.skills.arcSkills.whatDoesThisSkillHelpWith")}
               <input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -269,7 +248,7 @@ export function ArcSkills({ tr, onChat }: Props) {
             <label htmlFor="arc-skill-content">SKILL.md</label>
             <button className="ghostButton" type="button" onClick={() => upload.current?.click()}>
               <Icon name="book" />
-              {tr("Choose .md file", "选择 .md 文件")}
+              {tr("arc.skills.arcSkills.chooseMdFile")}
             </button>
             <input
               ref={upload}
@@ -296,51 +275,48 @@ export function ArcSkills({ tr, onChat }: Props) {
             }
           />
           <footer>
-            <p>
-              {tr(
-                "Imports instructions only. A source link records attribution; it does not download repository files.",
-                "导入的是指令。来源链接用于记录出处，不会自动下载仓库文件。",
-              )}
-            </p>
+            <p>{tr("arc.skills.arcSkills.importsInstructionsOnlyASourceLink")}</p>
             <button className="addButton arcRadiantCta" disabled={saving} type="submit">
-              {saving ? tr("Importing…", "正在导入…") : tr("Add to library", "加入技能库")}
+              {saving
+                ? tr("arc.skills.arcSkills.importing")
+                : tr("arc.skills.arcSkills.addToLibrary")}
             </button>
           </footer>
         </form>
       )}
       <div className="arcSkillToolbar">
         <span className="arcSkillCount">
-          {skills.length} {tr("skills", "项技能")}
+          {skills.length} {tr("arc.skills.arcSkills.skills")}
         </span>
         <select
-          aria-label={tr("Skill category", "技能类别")}
+          aria-label={tr("arc.skills.arcSkills.skillCategory")}
           value={category}
           onChange={(event) => setCategory(event.target.value)}
         >
           {[
-            ["all", tr("All categories", "全部类别")],
-            ["media", tr("Video, audio & maps", "音视频与地图")],
-            ["cognition", tr("Thinking & skills", "思维与技能")],
-            ["office", tr("Documents & office", "办公文档")],
-            ["data", tr("Data & analysis", "数据分析")],
-            ["design", tr("Design", "设计")],
-            ["development", tr("Development", "开发")],
-            ["automation", tr("Browser & testing", "浏览器与测试")],
-            ["browser", tr("Browser workflows", "浏览器工作流")],
-            ["desktop", tr("Desktop", "桌面操作")],
-            ["productivity", tr("Research & routines", "研究与例行任务")],
+            ["all", tr("arc.skills.arcSkills.allCategories")],
+            ["media", tr("arc.skills.arcSkills.videoAudioMaps")],
+            ["cognition", tr("arc.skills.arcSkills.thinkingSkills")],
+            ["office", tr("arc.skills.arcSkills.documentsOffice")],
+            ["data", tr("arc.skills.arcSkills.dataAnalysis")],
+            ["design", tr("arc.skills.arcSkills.design")],
+            ["development", tr("arc.skills.arcSkills.development")],
+            ["automation", tr("arc.skills.arcSkills.browserTesting")],
+            ["browser", tr("arc.skills.arcSkills.browserWorkflows")],
+            ["desktop", tr("arc.skills.arcSkills.desktop")],
+            ["productivity", tr("arc.skills.arcSkills.researchRoutines")],
           ].map(([id, label]) => (
             <option key={id} value={id}>
               {label}
             </option>
           ))}
         </select>
-        <div role="group" aria-label={tr("Skill source", "技能来源")}>
+        <div role="group" aria-label={tr("arc.skills.arcSkills.skillSource")}>
           {[
-            ["all", tr("All skills", "全部技能")],
-            ["imported", tr("Your imports", "你的导入")],
-            ["community", tr("From GitHub", "来自 GitHub")],
-            ["builtin", tr("By Remote Arc", "Remote Arc 原创")],
+            ["all", tr("arc.skills.arcSkills.allSkills")],
+            ["imported", tr("arc.skills.arcSkills.yourImports")],
+            ["community", tr("arc.skills.arcSkills.fromGithub")],
+            ["builtin", tr("arc.skills.arcSkills.byRemoteArc")],
           ].map(([value, label]) => (
             <button
               type="button"
@@ -356,15 +332,15 @@ export function ArcSkills({ tr, onChat }: Props) {
           <Icon name="search" />
           <input
             type="search"
-            aria-label={tr("Search skills", "搜索技能")}
-            placeholder={tr("Find a skill…", "查找技能…")}
+            aria-label={tr("arc.skills.arcSkills.searchSkills")}
+            placeholder={tr("arc.skills.arcSkills.findASkill")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </label>
       </div>
       {loading ? (
-        <WorkspaceLoading label={tr("Loading your library…", "正在加载技能库…")} variant="rows" />
+        <WorkspaceLoading label={tr("arc.skills.arcSkills.loadingYourLibrary")} variant="rows" />
       ) : visible.length ? (
         <div className="arcSkillGrid">
           {visible.map((skill) => (
@@ -391,9 +367,7 @@ export function ArcSkills({ tr, onChat }: Props) {
                   await arcRequest("skills/" + encodeURIComponent(skill.id), { method: "DELETE" });
                   setSkills((items) => items.filter((s) => s.id !== skill.id));
                 } catch {
-                  setError(
-                    tr("The skill could not be removed. Try again.", "技能删除失败，请重试。"),
-                  );
+                  setError(tr("arc.skills.arcSkills.theSkillCouldNotBeRemoved"));
                 }
               }}
             />
@@ -402,14 +376,11 @@ export function ArcSkills({ tr, onChat }: Props) {
       ) : (
         <div className="arcWorkEmpty">
           <Icon name="book" size={28} />
-          <h2>{tr("Make your next task a little easier.", "让下一项工作，更轻松一点。")}</h2>
+          <h2>{tr("arc.skills.arcSkills.makeYourNextTaskALittle")}</h2>
           <p>
             {query
-              ? tr("No skills match your search.", "没有匹配的技能。")
-              : tr(
-                  "Import a SKILL.md to start your reusable library.",
-                  "导入一份 SKILL.md，开始积累可复用的工作方法。",
-                )}
+              ? tr("arc.skills.arcSkills.noSkillsMatchYourSearch")
+              : tr("arc.skills.arcSkills.importASkillMdToStart")}
           </p>
         </div>
       )}
@@ -462,20 +433,22 @@ function SkillCard({
             <Icon name="book" />
           )}
         </span>
-        <small>{skill.origin === "imported" ? tr("YOUR IMPORT", "你的导入") : skill.owner}</small>
+        <small>
+          {skill.origin === "imported" ? tr("arc.skills.arcSkills.yourImport") : skill.owner}
+        </small>
       </div>
       <h2>{community?.title || experience?.title || skill.name}</h2>
       <p>
         {community?.description ||
           experience?.result ||
           skill.description ||
-          tr("Reusable instructions for your agent.", "智能体可复用的工作指令。")}
+          tr("arc.skills.arcSkills.reusableInstructionsForYourAgent")}
       </p>
       {skill.origin !== "imported" && (
         <p className="arcSkillRequirement" data-ready={resources.computer}>
           {resources.computer
-            ? tr("Computer connected · prepared as needed", "电脑已连接 · 工作时按需准备")
-            : tr("Runs on an authorized computer", "在已授权的电脑上运行")}
+            ? tr("arc.skills.arcSkills.computerConnectedPreparedAsNeeded")
+            : tr("arc.skills.arcSkills.runsOnAnAuthorizedComputer")}
           <small>
             {skill.requires?.filter((value) => value !== "Connected computer").join(" · ")}
           </small>
@@ -483,7 +456,7 @@ function SkillCard({
       )}
       {experience && (
         <p className="arcSkillRequirement" data-ready={connected}>
-          {connected ? tr("Connected · ", "已连接 · ") : tr("Needs · ", "需要 · ")}
+          {connected ? tr("arc.skills.arcSkills.connected") : tr("arc.skills.arcSkills.needs")}
           {experience.needs}
         </p>
       )}
@@ -495,25 +468,25 @@ function SkillCard({
           rel="noopener noreferrer"
         >
           {skill.sourceUrl.startsWith("https://github.com/")
-            ? tr("View on GitHub", "在 GitHub 查看")
-            : tr("View source", "查看来源")}
+            ? tr("arc.skills.arcSkills.viewOnGithub")
+            : tr("arc.skills.arcSkills.viewSource")}
           <Icon name="arrowUpRight" size={13} />
         </a>
       )}
       {skill.origin !== "imported" && (
         <div className="arcCommunityMeta">
           {skill.core && (
-            <span className="arcSkillCore">{tr("Core video skill", "核心视频技能")}</span>
+            <span className="arcSkillCore">{tr("arc.skills.arcSkills.coreVideoSkill")}</span>
           )}
           <span>
             {skill.origin === "builtin"
-              ? tr("Remote Arc original", "Remote Arc 原创")
+              ? tr("arc.skills.arcSkills.remoteArcOriginal")
               : skill.license}
           </span>
           {skill.origin === "builtin" && <span>v{skill.version}</span>}
           <span>
-            {skill.resourceCount || tr("Pinned source", "已固定源码版本")}{" "}
-            {skill.resourceCount ? tr("files", "个文件") : ""}
+            {skill.resourceCount || tr("arc.skills.arcSkills.pinnedSource")}{" "}
+            {skill.resourceCount ? tr("arc.skills.arcSkills.files") : ""}
           </span>
         </div>
       )}
@@ -522,18 +495,18 @@ function SkillCard({
           if (event.currentTarget.open) void load();
         }}
       >
-        <summary>{tr("Read instructions", "查看指令")}</summary>
+        <summary>{tr("arc.skills.arcSkills.readInstructions")}</summary>
         {error ? (
           <button type="button" className="ghostButton" onClick={() => void load()}>
-            {tr("Retry loading", "重新加载")}
+            {tr("arc.skills.arcSkills.retryLoading")}
           </button>
         ) : (
-          <pre>{content || tr("Loading…", "加载中…")}</pre>
+          <pre>{content || tr("arc.skills.arcSkills.loading")}</pre>
         )}
       </details>
       <footer>
         <button className="ghostButton" type="button" onClick={onUse}>
-          {tr("Start in Chat", "在 Chat 开始")}
+          {tr("arc.skills.arcSkills.startInChat")}
           <Icon name="arrowUpRight" size={14} />
         </button>
         {skill.origin === "imported" && (
@@ -545,7 +518,7 @@ function SkillCard({
               setBusy(true);
               void onRemove().finally(() => setBusy(false));
             }}
-            aria-label={tr("Remove skill", "删除技能") + ": " + skill.name}
+            aria-label={tr("arc.skills.arcSkills.removeSkill") + ": " + skill.name}
           >
             <Icon name="trash" size={15} />
           </button>

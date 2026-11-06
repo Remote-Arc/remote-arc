@@ -1,5 +1,6 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { canonicalErrorEnvelope } from "../../../../../../packages/protocol/src/error-codes.js";
-import type { ArcMention } from "../composer/arc-skill-mentions.js";
+import type { ArcMention } from "../../../hooks/arc/use-arc-skill-mentions.js";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import type {
   ArcEmployee,
@@ -11,11 +12,11 @@ import type {
 } from "@remotearc/protocol";
 import { TeamAvatar } from "./arc-team-avatar.js";
 import { ArcTeamArchive } from "./arc-team-archive.js";
-import { arcRequest, type ChatService } from "../chat/use-arc-chat.js";
+import { arcRequest, type ChatService } from "../../../hooks/arc/use-arc-chat.js";
 import { WorkspaceLoading } from "../../../components/workspace-loading.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
-import "./arc-teams-page.css";
-type Tr = (en: string, zh: string) => string;
+import "../../../styles/arc/teams/arc-teams-page.css";
+type Tr = Translate;
 type Connection = {
   id: string;
   provider: string;
@@ -46,36 +47,14 @@ const emptyProfile = (): ArcEmployeeProfile => ({
 });
 const fail = (code: string, tr: Tr) =>
   ({
-    ARC_EMPLOYEE_DRAFT_CLOSED: tr(
-      "This draft has expired or was cancelled. Ask Arc for a new one.",
-      "草稿已过期或取消，请让 Arc 重新准备。",
-    ),
-    ARC_EMPLOYEE_DRAFT_CHANGED: tr(
-      "This draft changed. Reopen the conversation before trying again.",
-      "草稿状态已变化，请重新打开对话后再试。",
-    ),
-    ARC_TEAM_VERSION_CONFLICT: tr(
-      "This changed elsewhere. Reload the current version before saving.",
-      "内容已在别处更新，请刷新后再保存。",
-    ),
-    ARC_TEAM_IDEMPOTENCY_CONFLICT: tr(
-      "The saved draft differs. Reload before creating another agent or team.",
-      "草稿内容与已保存版本不同，请先刷新。",
-    ),
-    ARC_EMPLOYEE_MODEL_UNAVAILABLE: tr(
-      "This model is unavailable in your workspace. Choose an available model.",
-      "当前工作空间无法使用此模型，请选择可用模型。",
-    ),
-    ARC_EMPLOYEE_SCOPE_UNAVAILABLE: tr(
-      "An app or computer permission changed. Review this agent’s access.",
-      "应用或电脑权限已变化，请重新核对智能体权限。",
-    ),
-    ARC_TEAM_MEMBER_ARCHIVED: tr(
-      "Remove archived agents before saving this team.",
-      "请先移除已归档智能体，再保存团队。",
-    ),
-  })[code] ||
-  tr("Could not save this change. Your draft is still here.", "保存失败，草稿仍然保留，请重试。");
+    ARC_EMPLOYEE_DRAFT_CLOSED: tr("arc.teams.arcTeamsPage.thisDraftHasExpiredOrWas"),
+    ARC_EMPLOYEE_DRAFT_CHANGED: tr("arc.teams.arcTeamsPage.thisDraftChangedReopenTheConversation"),
+    ARC_TEAM_VERSION_CONFLICT: tr("arc.teams.arcTeamsPage.thisChangedElsewhereReloadTheCurrent"),
+    ARC_TEAM_IDEMPOTENCY_CONFLICT: tr("arc.teams.arcTeamsPage.theSavedDraftDiffersReloadBefore"),
+    ARC_EMPLOYEE_MODEL_UNAVAILABLE: tr("arc.teams.arcTeamsPage.thisModelIsUnavailableInYour"),
+    ARC_EMPLOYEE_SCOPE_UNAVAILABLE: tr("arc.teams.arcTeamsPage.anAppOrComputerPermissionChanged"),
+    ARC_TEAM_MEMBER_ARCHIVED: tr("arc.teams.arcTeamsPage.removeArchivedAgentsBeforeSavingThis"),
+  })[code] || tr("arc.teams.arcTeamsPage.couldNotSaveThisChangeYour");
 export const EmployeeAvatar = TeamAvatar;
 export function ArcTeamsPage({
   accountId,
@@ -198,28 +177,23 @@ export function ArcTeamsPage({
   return (
     <section className="arcTeammateSettings">
       <div className="raSettingsSurface arcTeammateIntro">
-        <p>
-          {tr(
-            "Give Arc your goal in chat. Arc organizes the agents and brings their results back to that conversation. These settings are optional.",
-            "在 Arc Chat 交代目标，Arc 负责组织智能体，并把结果带回原对话。这里的设置为可选项。",
-          )}
-        </p>
+        <p>{tr("arc.teams.arcTeamsPage.giveArcYourGoalInChat")}</p>
         <a className="raSettingsButton" href="/dashboard/agent/chat">
-          {tr("Open Arc Chat", "打开 Arc Chat")} →
+          {tr("arc.teams.arcTeamsPage.openArcChat")} →
         </a>
       </div>
       {error && (
         <p role="alert">
           {error === "load"
-            ? tr("Could not load agent settings.", "无法读取智能体设置。")
-            : tr("Could not archive this item.", "归档失败，请重试。")}{" "}
+            ? tr("arc.teams.arcTeamsPage.couldNotLoadAgentSettings")
+            : tr("arc.teams.arcTeamsPage.couldNotArchiveThisItem")}{" "}
           <button type="button" onClick={() => setRevision((v) => v + 1)}>
-            {tr("Retry", "重试")}
+            {tr("arc.teams.arcTeamsPage.retry")}
           </button>
         </p>
       )}
       {!data && !error && (
-        <WorkspaceLoading label={tr("Loading agents…", "正在读取智能体…")} variant="cards" />
+        <WorkspaceLoading label={tr("arc.teams.arcTeamsPage.loadingAgents")} variant="cards" />
       )}
       {data && data.accountId === accountId && (
         <>
@@ -227,7 +201,7 @@ export function ArcTeamsPage({
             <div className="arcTeammateCreate">
               <button type="button" className="raSettingsButton" onClick={() => editEmployee(null)}>
                 <Icon name="add" size={15} />
-                {tr("Add agent", "添加智能体")}
+                {tr("arc.teams.arcTeamsPage.addAgent")}
               </button>
               <button
                 type="button"
@@ -235,28 +209,21 @@ export function ArcTeamsPage({
                 disabled={!employees.length}
                 onClick={() => editTeam(null)}
               >
-                {tr("Create team", "创建队伍")}
+                {tr("arc.teams.arcTeamsPage.createTeam")}
               </button>
               <button
                 type="button"
                 className="raSettingsButton"
-                onClick={() =>
-                  onWork(
-                    tr(
-                      "Help me organize the agents needed for my goal. Ask what I want to achieve if it is missing.",
-                      "帮我组织完成目标所需的智能体；如果还不知道我的目标，先了解要完成什么。",
-                    ),
-                  )
-                }
+                onClick={() => onWork(tr("arc.teams.arcTeamsPage.helpMeOrganizeTheAgentsNeeded"))}
               >
-                {tr("Organize with Arc", "让 Arc 组织")}
+                {tr("arc.teams.arcTeamsPage.organizeWithArc")}
               </button>
             </div>
           )}
           <div
             className="arcTeamsTabs"
             role="tablist"
-            aria-label={tr("Agent settings", "智能体设置")}
+            aria-label={tr("arc.teams.arcTeamsPage.agentSettings")}
           >
             {(["employees", "teams", "activity"] as const).map((tab) => (
               <button
@@ -267,21 +234,21 @@ export function ArcTeamsPage({
                 onClick={() => setView(tab)}
               >
                 {tab === "employees"
-                  ? tr("Agents", "智能体")
+                  ? tr("arc.teams.arcTeamsPage.agents")
                   : tab === "teams"
-                    ? tr("Saved teams", "常驻队伍")
-                    : tr("Changes", "变更记录")}
+                    ? tr("arc.teams.arcTeamsPage.savedTeams")
+                    : tr("arc.teams.arcTeamsPage.changes")}
               </button>
             ))}
           </div>
           {onWork && view !== "activity" && (
             <label className="arcTeammateSearch">
-              {tr("Search roles and responsibilities", "搜索智能体与职责")}
+              {tr("arc.teams.arcTeamsPage.searchRolesAndResponsibilities")}
               <input
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder={tr("Name, role or purpose…", "名字、职责或目标…")}
+                placeholder={tr("arc.teams.arcTeamsPage.nameRoleOrPurpose")}
               />
             </label>
           )}
@@ -295,7 +262,7 @@ export function ArcTeamsPage({
                   details.profile?.name ||
                   data.employees.find((e) => e.id === event.employeeId)?.name ||
                   data.teams.find((t) => t.id === event.teamId)?.name ||
-                  tr("Your workspace", "工作空间");
+                  tr("arc.teams.arcTeamsPage.yourWorkspace");
                 return (
                   <article key={event.id}>
                     <div>
@@ -303,18 +270,17 @@ export function ArcTeamsPage({
                       <p>
                         {(
                           {
-                            "employee.created": tr("Agent added", "已添加智能体"),
-                            "employee.updated": tr("Agent details updated", "已更新智能体资料"),
-                            "employee.archived": tr("Agent archived", "已归档智能体"),
-                            "team.created": tr("Team organized", "已组建队伍"),
-                            "team.updated": tr("Team updated", "已调整队伍"),
-                            "team.archived": tr("Team archived", "已归档队伍"),
+                            "employee.created": tr("arc.teams.arcTeamsPage.agentAdded"),
+                            "employee.updated": tr("arc.teams.arcTeamsPage.agentDetailsUpdated"),
+                            "employee.archived": tr("arc.teams.arcTeamsPage.agentArchived"),
+                            "team.created": tr("arc.teams.arcTeamsPage.teamOrganized"),
+                            "team.updated": tr("arc.teams.arcTeamsPage.teamUpdated"),
+                            "team.archived": tr("arc.teams.arcTeamsPage.teamArchived"),
                             "work.assigned": tr(
-                              "Work assigned. Results return to the original chat.",
-                              "已分派工作，结果将回到原对话。",
+                              "arc.teams.arcTeamsPage.workAssignedResultsReturnToThe",
                             ),
                           } as Record<string, string>
-                        )[event.type] || tr("Workspace updated", "工作空间已更新")}
+                        )[event.type] || tr("arc.teams.arcTeamsPage.workspaceUpdated")}
                       </p>
                     </div>
                     <time dateTime={event.createdAt}>
@@ -324,9 +290,7 @@ export function ArcTeamsPage({
                 );
               })}
               {!data.events.length && (
-                <p>
-                  {tr("Saved agent changes appear here.", "智能体资料的变更记录会显示在这里。")}
-                </p>
+                <p>{tr("arc.teams.arcTeamsPage.savedAgentChangesAppearHere")}</p>
               )}
             </div>
           ) : (
@@ -342,7 +306,7 @@ export function ArcTeamsPage({
                       <article className="arcTeamCard" key={item.id}>
                         {data.service.preview && (
                           <small className="arcTeamPreviewLabel">
-                            {tr("Preview example", "预览示例")}
+                            {tr("arc.teams.arcTeamsPage.previewExample")}
                           </small>
                         )}
                         <EmployeeAvatar employee={item} />
@@ -350,13 +314,13 @@ export function ArcTeamsPage({
                         <p>{item.responsibility}</p>
                         {onWork && (
                           <p className="arcTeammateAccess">
-                            {item.scope.connectionIds.length} {tr("apps", "个应用")} ·{" "}
-                            {item.scope.deviceIds.length} {tr("computers", "台电脑")} ·{" "}
+                            {item.scope.connectionIds.length} {tr("arc.teams.arcTeamsPage.apps")} ·{" "}
+                            {item.scope.deviceIds.length} {tr("arc.teams.arcTeamsPage.computers")} ·{" "}
                             {item.scope.appMode === "write"
-                              ? tr("Read & write", "读取与写入")
+                              ? tr("arc.teams.arcTeamsPage.readWrite")
                               : item.scope.appMode === "read"
-                                ? tr("Read only", "只读")
-                                : tr("No app access", "未授权应用")}
+                                ? tr("arc.teams.arcTeamsPage.readOnly")
+                                : tr("arc.teams.arcTeamsPage.noAppAccess")}
                           </p>
                         )}
                         <footer>
@@ -374,24 +338,24 @@ export function ArcTeamsPage({
                                 })
                               }
                             >
-                              {tr("Work with this agent", "与这个智能体协作")} →
+                              {tr("arc.teams.arcTeamsPage.workWithThisAgent")} →
                             </button>
                           ) : (
                             <a
                               href={"/dashboard/agent/chat?teammate=" + encodeURIComponent(item.id)}
                             >
-                              {tr("Work with this agent", "与这个智能体协作")} →
+                              {tr("arc.teams.arcTeamsPage.workWithThisAgent")} →
                             </a>
                           )}
                           <button type="button" onClick={() => editEmployee(item)}>
-                            {tr("Edit details & access", "编辑资料与访问设置")}
+                            {tr("arc.teams.arcTeamsPage.editDetailsAccess")}
                           </button>
                           <button
                             type="button"
                             disabled={busy}
                             onClick={() => void archive("employees", item)}
                           >
-                            {tr("Archive", "归档")}
+                            {tr("arc.teams.arcTeamsPage.archive")}
                           </button>
                         </footer>
                       </article>
@@ -405,7 +369,7 @@ export function ArcTeamsPage({
                         <h3>{item.name}</h3>
                         <p>{item.purpose}</p>
                         <small>
-                          {item.employeeIds.length} {tr("agents", "个智能体")}
+                          {item.employeeIds.length} {tr("arc.teams.arcTeamsPage.agents2")}
                         </small>
                         <footer>
                           {onWork && (
@@ -414,25 +378,25 @@ export function ArcTeamsPage({
                               className="arcTeammateWork"
                               onClick={() =>
                                 onWork(
-                                  tr(
-                                    `Work with my saved team "${item.name}" (ID ${item.id}). First ask for my goal if I have not provided one, then coordinate the work and return results in this chat.`,
-                                    `与我的常驻队伍“${item.name}”（ID ${item.id}）协作。若我尚未给出目标，先了解目标，再组织工作并在此对话返回结果。`,
-                                  ),
+                                  tr("arc.teams.arcTeamsPage.workWithMySavedTeamId", {
+                                    name: item.name,
+                                    id: item.id,
+                                  }),
                                 )
                               }
                             >
-                              {tr("Work with this team", "与这支队伍协作")} →
+                              {tr("arc.teams.arcTeamsPage.workWithThisTeam")} →
                             </button>
                           )}
                           <button type="button" onClick={() => editTeam(item)}>
-                            {tr("Edit saved team", "编辑常驻队伍")}
+                            {tr("arc.teams.arcTeamsPage.editSavedTeam")}
                           </button>
                           <button
                             type="button"
                             disabled={busy}
                             onClick={() => void archive("teams", item)}
                           >
-                            {tr("Archive", "归档")}
+                            {tr("arc.teams.arcTeamsPage.archive")}
                           </button>
                         </footer>
                       </article>
@@ -447,32 +411,19 @@ export function ArcTeamsPage({
                 ? employees.map((item) => item.name + " " + item.responsibility)
                 : teams.map((item) => item.name + " " + item.purpose)
             ).some((value) => value.toLowerCase().includes(search.toLowerCase())) && (
-              <p role="status">
-                {tr(
-                  "No matching agents or teams. Try a different search.",
-                  "没有匹配的智能体或队伍，请换个关键词。",
-                )}
-              </p>
+              <p role="status">{tr("arc.teams.arcTeamsPage.noMatchingAgentsOrTeamsTry")}</p>
             )}
           {view !== "activity" && !(view === "employees" ? employees : teams).length && (
             <p className="arcCheckoutQuiet">
-              {tr(
-                "No saved profiles yet. Ask Arc to organize the agents you need for your goal.",
-                "还没有常驻资料，直接让 Arc 按目标组织需要的智能体。",
-              )}
+              {tr("arc.teams.arcTeamsPage.noSavedProfilesYetAskArc")}
             </p>
           )}
 
           <details className="arcTeammateAdvanced">
-            <summary>{tr("Advanced profile setup", "高级资料设置")}</summary>
-            <p>
-              {tr(
-                "You can also maintain a saved profile manually. Work still starts in Arc Chat.",
-                "也可以在这里手动维护常驻资料，工作仍从 Arc Chat 开始。",
-              )}
-            </p>
+            <summary>{tr("arc.teams.arcTeamsPage.advancedProfileSetup")}</summary>
+            <p>{tr("arc.teams.arcTeamsPage.youCanAlsoMaintainASaved")}</p>
             <button type="button" className="raSettingsButton" onClick={() => editEmployee(null)}>
-              {tr("Add saved agent", "添加常驻智能体")}
+              {tr("arc.teams.arcTeamsPage.addSavedAgent")}
             </button>{" "}
             <button
               type="button"
@@ -480,7 +431,7 @@ export function ArcTeamsPage({
               disabled={!employees.length}
               onClick={() => editTeam(null)}
             >
-              {tr("Add saved team", "添加常驻队伍")}
+              {tr("arc.teams.arcTeamsPage.addSavedTeam")}
             </button>
           </details>
           {roomId && <ArcTeamArchive roomId={roomId} tr={tr} />}
@@ -538,7 +489,7 @@ function Modal({
     <dialog className="arcTeamDialog" ref={dialog} aria-labelledby={titleId} onCancel={onClose}>
       <header>
         <h2 id={titleId}>{title}</h2>
-        <button type="button" onClick={onClose} aria-label={tr("Close", "关闭")}>
+        <button type="button" onClick={onClose} aria-label={tr("arc.teams.arcTeamsPage.close")}>
           ×
         </button>
       </header>
@@ -591,12 +542,7 @@ export function EmployeeEditor({
     items.includes(id) ? items.filter((item) => item !== id) : [...items, id];
   async function photo(file: File) {
     if (file.size > 5000000 || !["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-      setError(
-        tr(
-          "Choose a PNG, JPEG or WebP image under 5 MB.",
-          "请选择不超过 5 MB 的 PNG、JPEG 或 WebP 图片。",
-        ),
-      );
+      setError(tr("arc.teams.arcTeamsPage.chooseAPngJpegOrWebp"));
       return;
     }
     try {
@@ -621,7 +567,7 @@ export function EmployeeEditor({
       bitmap.close();
       patch({ avatar: { kind: "image", dataUrl: canvas.toDataURL("image/png") } });
     } catch {
-      setError(tr("This image could not be opened.", "无法读取这张图片。"));
+      setError(tr("arc.teams.arcTeamsPage.thisImageCouldNotBeOpened"));
     }
   }
   async function save(event: FormEvent) {
@@ -660,10 +606,10 @@ export function EmployeeEditor({
     <Modal
       title={
         initial
-          ? tr("Edit agent", "编辑智能体")
+          ? tr("arc.teams.arcTeamsPage.editAgent")
           : initialProfile
-            ? tr("Review agent", "确认智能体资料")
-            : tr("Add an agent", "添加智能体")
+            ? tr("arc.teams.arcTeamsPage.reviewAgent")
+            : tr("arc.teams.arcTeamsPage.addAnAgent")
       }
       tr={tr}
       onClose={onClose}
@@ -677,7 +623,7 @@ export function EmployeeEditor({
         <div className="arcEmployeeIdentity">
           <EmployeeAvatar employee={value} size={56} />
           <label>
-            {tr("Name", "名字")}
+            {tr("arc.teams.arcTeamsPage.name")}
             <input
               autoFocus
               required
@@ -689,7 +635,7 @@ export function EmployeeEditor({
         </div>
         <div className="arcTeamTwo">
           <label>
-            {tr("Avatar", "头像")}
+            {tr("arc.teams.arcTeamsPage.avatar")}
             <select
               value={value.avatar.kind}
               onChange={(event) =>
@@ -701,10 +647,10 @@ export function EmployeeEditor({
                 })
               }
             >
-              <option value="initials">{tr("Initials", "首字母")}</option>
+              <option value="initials">{tr("arc.teams.arcTeamsPage.initials")}</option>
               <option value="emoji">Emoji</option>
               {value.avatar.kind === "image" && (
-                <option value="image">{tr("Uploaded image", "上传的图片")}</option>
+                <option value="image">{tr("arc.teams.arcTeamsPage.uploadedImage")}</option>
               )}
             </select>
           </label>
@@ -728,7 +674,7 @@ export function EmployeeEditor({
           )}
           {value.avatar.kind !== "image" && (
             <label>
-              {tr("Color", "颜色")}
+              {tr("arc.teams.arcTeamsPage.color")}
               <input
                 type="color"
                 value={value.avatar.color}
@@ -747,7 +693,7 @@ export function EmployeeEditor({
           )}
         </div>
         <label>
-          {tr("Upload avatar", "上传头像")}
+          {tr("arc.teams.arcTeamsPage.uploadAvatar")}
           <input
             type="file"
             accept="image/png,image/jpeg,image/webp"
@@ -759,22 +705,19 @@ export function EmployeeEditor({
           />
         </label>
         <label>
-          {tr("Responsibility", "职责")}
+          {tr("arc.teams.arcTeamsPage.responsibility")}
           <input
             required
             maxLength={500}
             value={value.responsibility}
-            placeholder={tr(
-              "E.g. product design, development or finance",
-              "例如：产品设计、开发或财务",
-            )}
+            placeholder={tr("arc.teams.arcTeamsPage.eGProductDesignDevelopmentOr")}
             onChange={(event) => patch({ responsibility: event.target.value })}
           />
         </label>
         <label>
-          {tr("Model", "模型")}
+          {tr("arc.teams.arcTeamsPage.model")}
           <select
-            aria-label={tr("Model", "模型")}
+            aria-label={tr("arc.teams.arcTeamsPage.model")}
             value={value.modelId}
             onChange={(event) => patch({ modelId: event.target.value })}
           >
@@ -789,14 +732,14 @@ export function EmployeeEditor({
               >
                 {model.label}
                 {model.requiresPaid && data.service.access.status !== "paid"
-                  ? " · " + tr("paid plan", "需付费方案")
+                  ? " · " + tr("arc.teams.arcTeamsPage.paidPlan")
                   : ""}
               </option>
             ))}
           </select>
         </label>
         <label>
-          {tr("Working instructions", "工作要求")}
+          {tr("arc.teams.arcTeamsPage.workingInstructions")}
           <textarea
             rows={4}
             maxLength={6000}
@@ -805,17 +748,12 @@ export function EmployeeEditor({
           />
         </label>
         <details className="arcTeamAccess">
-          <summary>{tr("Apps and computer access", "应用与电脑权限")}</summary>
-          <p>
-            {tr(
-              "Choose the connected resources this agent may use. Current provider and device permissions still apply.",
-              "选择智能体可以使用的已连接资源，执行时仍需满足应用和设备的当前权限。",
-            )}
-          </p>
+          <summary>{tr("arc.teams.arcTeamsPage.appsAndComputerAccess")}</summary>
+          <p>{tr("arc.teams.arcTeamsPage.chooseTheConnectedResourcesThisAgent")}</p>
           <label>
-            {tr("App actions", "应用操作")}
+            {tr("arc.teams.arcTeamsPage.appActions")}
             <select
-              aria-label={tr("App actions", "应用操作")}
+              aria-label={tr("arc.teams.arcTeamsPage.appActions")}
               value={value.scope.appMode}
               onChange={(event) =>
                 patchScope({
@@ -824,9 +762,9 @@ export function EmployeeEditor({
                 })
               }
             >
-              <option value="none">{tr("No app access", "不使用应用")}</option>
-              <option value="read">{tr("Read only", "只读")}</option>
-              <option value="write">{tr("Read and write", "读取与写入")}</option>
+              <option value="none">{tr("arc.teams.arcTeamsPage.noAppAccess2")}</option>
+              <option value="read">{tr("arc.teams.arcTeamsPage.readOnly")}</option>
+              <option value="write">{tr("arc.teams.arcTeamsPage.readAndWrite")}</option>
             </select>
           </label>
           {value.scope.appMode !== "none" &&
@@ -852,14 +790,9 @@ export function EmployeeEditor({
                 </label>
               ))}
           {data.resourceWarning && (
-            <p role="status">
-              {tr(
-                "Some connected resources could not load. Retry from the workspace before assigning new access.",
-                "部分连接资源未能加载。分配新权限前，请回到工作空间重试。",
-              )}
-            </p>
+            <p role="status">{tr("arc.teams.arcTeamsPage.someConnectedResourcesCouldNotLoad")}</p>
           )}
-          <strong>{tr("Skills", "技能")}</strong>
+          <strong>{tr("arc.teams.arcTeamsPage.skills")}</strong>
           {data.skills.map((skill) => (
             <label className="arcTeamCheck" key={skill.id}>
               <input
@@ -870,13 +803,8 @@ export function EmployeeEditor({
               <span>{skill.name}</span>
             </label>
           ))}
-          <strong>{tr("Team handoffs", "团队交接")}</strong>
-          <p>
-            {tr(
-              "Allow this agent to hand work to selected teams within their current access.",
-              "允许该智能体在现有权限内向选定团队交接工作。",
-            )}
-          </p>
+          <strong>{tr("arc.teams.arcTeamsPage.teamHandoffs")}</strong>
+          <p>{tr("arc.teams.arcTeamsPage.allowThisAgentToHandWork")}</p>
           {data.teams
             .filter((team) => team.status === "active")
             .map((team) => (
@@ -893,7 +821,7 @@ export function EmployeeEditor({
                 <span>{team.name}</span>
               </label>
             ))}
-          <strong>{tr("Computers", "电脑")}</strong>
+          <strong>{tr("arc.teams.arcTeamsPage.computers2")}</strong>
           {data.devices.map((device) => (
             <label className="arcTeamCheck" key={device.id}>
               <input
@@ -913,7 +841,7 @@ export function EmployeeEditor({
           ))}
           {commonTools.length > 0 && (
             <fieldset>
-              <legend>{tr("Allowed tools", "允许的工具")}</legend>
+              <legend>{tr("arc.teams.arcTeamsPage.allowedTools")}</legend>
               {commonTools.map((tool) => (
                 <label className="arcTeamCheck" key={tool}>
                   <input
@@ -930,12 +858,7 @@ export function EmployeeEditor({
           )}
         </details>
         <footer>
-          <span>
-            {tr(
-              "Uses your account’s existing Credits when working.",
-              "工作时使用账户现有 Credits。",
-            )}
-          </span>
+          <span>{tr("arc.teams.arcTeamsPage.usesYourAccountSExistingCredits")}</span>
           <button
             type="submit"
             className="addButton arcRadiantCta"
@@ -945,10 +868,10 @@ export function EmployeeEditor({
             }
           >
             {busy
-              ? tr("Saving…", "保存中…")
+              ? tr("arc.teams.arcTeamsPage.saving")
               : onCreate
-                ? tr("Create agent", "创建智能体")
-                : tr("Save agent", "保存智能体")}
+                ? tr("arc.teams.arcTeamsPage.createAgent")
+                : tr("arc.teams.arcTeamsPage.saveAgent")}
           </button>
         </footer>
       </form>
@@ -1006,7 +929,9 @@ function TeamEditor({
   }
   return (
     <Modal
-      title={initial ? tr("Manage team", "管理团队") : tr("Create a team", "创建团队")}
+      title={
+        initial ? tr("arc.teams.arcTeamsPage.manageTeam") : tr("arc.teams.arcTeamsPage.createATeam")
+      }
       tr={tr}
       onClose={onClose}
     >
@@ -1017,7 +942,7 @@ function TeamEditor({
           </p>
         )}
         <label>
-          {tr("Team name", "团队名称")}
+          {tr("arc.teams.arcTeamsPage.teamName")}
           <input
             autoFocus
             required
@@ -1027,7 +952,7 @@ function TeamEditor({
           />
         </label>
         <label>
-          {tr("Purpose", "团队职责")}
+          {tr("arc.teams.arcTeamsPage.purpose")}
           <textarea
             rows={3}
             maxLength={1000}
@@ -1038,7 +963,7 @@ function TeamEditor({
           />
         </label>
         <fieldset>
-          <legend>{tr("Members", "成员")}</legend>
+          <legend>{tr("arc.teams.arcTeamsPage.members")}</legend>
           {employees.map((employee) => (
             <label className="arcTeamCheck" key={employee.id}>
               <input
@@ -1066,20 +991,22 @@ function TeamEditor({
               <EmployeeAvatar employee={employee} size={26} />
               <span>
                 {employee.name} · {employee.responsibility}
-                {employee.status === "archived" ? " · " + tr("archived", "已归档") : ""}
+                {employee.status === "archived"
+                  ? " · " + tr("arc.teams.arcTeamsPage.archived")
+                  : ""}
               </span>
             </label>
           ))}
         </fieldset>
         <label>
-          {tr("Coordinator", "协调人")}
+          {tr("arc.teams.arcTeamsPage.coordinator")}
           <select
             value={value.coordinatorId || ""}
             onChange={(event) =>
               setValue((current) => ({ ...current, coordinatorId: event.target.value || null }))
             }
           >
-            <option value="">{tr("Choose per conversation", "按会话选择")}</option>
+            <option value="">{tr("arc.teams.arcTeamsPage.choosePerConversation")}</option>
             {employees
               .filter(
                 (employee) =>
@@ -1093,18 +1020,13 @@ function TeamEditor({
           </select>
         </label>
         <footer>
-          <span>
-            {tr(
-              "Teams can chat and work without an overnight task.",
-              "团队可以直接交流和工作，无需创建隔夜任务。",
-            )}
-          </span>
+          <span>{tr("arc.teams.arcTeamsPage.teamsCanChatAndWorkWithout")}</span>
           <button
             type="submit"
             className="addButton arcRadiantCta"
             disabled={busy || !value.employeeIds.length}
           >
-            {busy ? tr("Saving…", "保存中…") : tr("Save team", "保存团队")}
+            {busy ? tr("arc.teams.arcTeamsPage.saving") : tr("arc.teams.arcTeamsPage.saveTeam")}
           </button>
         </footer>
       </form>

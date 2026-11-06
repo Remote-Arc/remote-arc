@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { useI18n } from "./i18n.js";
+import { useI18n } from "../hooks/use-i18n.js";
 import { recoverAdminBrowser } from "../features/admin/admin-client-recovery.js";
 import { PRODUCT_SW } from "../config/pwa-config.js";
 import { ProductIcon as Icon } from "../components/product-icon.js";
-import "./product-pwa.css";
+import "../styles/app/product-pwa.css";
 
 type InstallPrompt = Event & { prompt(): Promise<{ outcome: "accepted" | "dismissed" }> };
 let pendingPrompt: InstallPrompt | null = null;
@@ -85,19 +85,14 @@ export function ProductInstall({ admin = false }: { admin?: boolean }) {
       >
         <Icon name={installed ? "check" : "device"} size={16} />
         {installed
-          ? tr("Installed on this device", "已安装到此设备")
+          ? tr("app.productPwa.installedOnThisDevice")
           : ready
-            ? tr("Install app", "安装应用")
-            : tr(admin ? "Install Admin app" : "Install Remote Arc", "安装应用")}
+            ? tr("app.productPwa.installApp")
+            : admin
+              ? tr("app.productPwa.installAdminApp")
+              : tr("app.productPwa.installRemoteArc")}
       </button>
-      {help && (
-        <p role="status">
-          {tr(
-            "In Chrome or Edge, choose Install app from the browser menu. On iPhone or iPad, use Share → Add to Home Screen. On Mac Safari, use File → Add to Dock.",
-            "Chrome / Edge：浏览器菜单中选择“安装应用”。iPhone / iPad：分享 → 添加到主屏幕。Mac Safari：文件 → 添加到程序坞。",
-          )}
-        </p>
-      )}
+      {help && <p role="status">{tr("app.productPwa.inChromeOrEdgeChooseInstall")}</p>}
     </div>
   );
 }

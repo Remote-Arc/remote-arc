@@ -1,4 +1,4 @@
-import type { ArcMention } from "./arc-skill-mentions.js";
+import type { ArcMention } from "../../../hooks/arc/use-arc-skill-mentions.js";
 import { TeamAvatar } from "../teams/arc-team-avatar.js";
 import { ProductIcon } from "../../../components/product-icon.js";
 const brands: Record<string, string> = {

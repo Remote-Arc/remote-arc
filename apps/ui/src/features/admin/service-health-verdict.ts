@@ -1,3 +1,4 @@
+import type { Translate } from "../../locales/locale-catalog.js";
 import {
   domainLabels,
   type FailureGroup,
@@ -5,7 +6,7 @@ import {
   type MonitoringSnapshot,
 } from "./service-health-model.js";
 
-type Tr = (en: string, zh: string) => string;
+type Tr = Translate;
 
 export type VerdictLevel = "ok" | "watch" | "broken" | "unknown";
 export type ProblemTarget = "infrastructure" | "devices" | "group";
@@ -29,8 +30,36 @@ export type Verdict = {
 // Show at most this many error codes in the ranked list; the rest stay below.
 export const VERDICT_GROUP_LIMIT = 3;
 
-const plural = (count: number, en: string, zh: string, tr: Tr) =>
-  count.toLocaleString() + tr(" " + en + (count === 1 ? "" : "s"), " " + zh);
+const units = {
+  error: [
+    "admin.serviceHealthVerdict.unit.error.one",
+    "admin.serviceHealthVerdict.unit.error.many",
+  ],
+  computer: [
+    "admin.serviceHealthVerdict.unit.computer.one",
+    "admin.serviceHealthVerdict.unit.computer.many",
+  ],
+  timeout: [
+    "admin.serviceHealthVerdict.unit.timeout.one",
+    "admin.serviceHealthVerdict.unit.timeout.many",
+  ],
+  "offline-call": [
+    "admin.serviceHealthVerdict.unit.offline-call.one",
+    "admin.serviceHealthVerdict.unit.offline-call.many",
+  ],
+  time: ["admin.serviceHealthVerdict.unit.time.one", "admin.serviceHealthVerdict.unit.time.many"],
+  account: [
+    "admin.serviceHealthVerdict.unit.account.one",
+    "admin.serviceHealthVerdict.unit.account.many",
+  ],
+  problem: [
+    "admin.serviceHealthVerdict.unit.problem.one",
+    "admin.serviceHealthVerdict.unit.problem.many",
+  ],
+} as const;
+
+const plural = (count: number, unit: keyof typeof units, tr: Tr) =>
+  count.toLocaleString() + tr(units[unit][count === 1 ? 0 : 1]);
 
 /**
  * One answer to "is anything wrong, and where?" from data the page already
@@ -49,24 +78,24 @@ export function healthVerdict(
       problems.push({
         key: "platform-now",
         level: "broken",
-        title: tr("The platform is returning server errors now", "平台正在返回服务器错误"),
+        title: tr("admin.serviceHealthVerdict.thePlatformIsReturningServerErrors"),
         detail:
-          plural(errors15m, "error", "次", tr) +
-          tr(" in the last 15 minutes · ", " · 最近 15 分钟 · ") +
-          plural(errors1h, "error", "次", tr) +
-          tr(" in the last hour", " · 最近 1 小时"),
+          plural(errors15m, "error", tr) +
+          tr("admin.serviceHealthVerdict.inTheLastMinutes") +
+          plural(errors1h, "error", tr) +
+          tr("admin.serviceHealthVerdict.inTheLastHour"),
         target: "infrastructure",
       });
     else if (errors1h > 0)
       problems.push({
         key: "platform-recent",
         level: "watch",
-        title: tr("Server errors in the last hour", "最近 1 小时出现过服务器错误"),
+        title: tr("admin.serviceHealthVerdict.serverErrorsInTheLastHour"),
         detail:
-          plural(errors1h, "error", "次", tr) +
-          tr(", none in the last 15 minutes · ", "，最近 15 分钟没有 · 24 小时共 ") +
-          plural(errors24h, "error", "次", tr) +
-          tr(" in 24 hours", ""),
+          plural(errors1h, "error", tr) +
+          tr("admin.serviceHealthVerdict.noneInTheLastMinutes") +
+          plural(errors24h, "error", tr) +
+          tr("admin.serviceHealthVerdict.inHours"),
         target: "infrastructure",
       });
     const deps = [
@@ -77,7 +106,7 @@ export function healthVerdict(
       problems.push({
         key: "dependencies",
         level: "broken",
-        title: tr("A platform dependency is degraded", "平台依赖服务异常"),
+        title: tr("admin.serviceHealthVerdict.aPlatformDependencyIsDegraded"),
         detail: deps.map(([name, status]) => name + " · " + status).join(" / "),
         target: "infrastructure",
       });
@@ -86,13 +115,13 @@ export function healthVerdict(
       problems.push({
         key: "devices",
         level: "watch",
-        title: tr("Computers are not completing calls", "有电脑没能完成调用"),
+        title: tr("admin.serviceHealthVerdict.computersAreNotCompletingCalls"),
         detail:
-          plural(devices.affectedDevices, "computer", "台电脑", tr) +
-          tr(" affected in 15 minutes · ", "受影响（15 分钟内）· ") +
-          plural(devices.timeouts, "timeout", "次超时", tr) +
+          plural(devices.affectedDevices, "computer", tr) +
+          tr("admin.serviceHealthVerdict.affectedInMinutes") +
+          plural(devices.timeouts, "timeout", tr) +
           " · " +
-          plural(devices.offlineCalls, "offline call", "次离线", tr),
+          plural(devices.offlineCalls, "offline-call", tr),
         target: "devices",
       });
   }
@@ -107,13 +136,13 @@ export function healthVerdict(
       level: "watch",
       title: tr(group.definition.meaningEn || group.definition.meaning, group.definition.meaning),
       detail:
-        (domain ? tr(...domain) : group.domain) +
+        (domain ? tr(domain) : group.domain) +
         " · " +
         group.code +
         " · " +
-        plural(group.total, "time", "次", tr) +
+        plural(group.total, "time", tr) +
         " · " +
-        plural(group.affectedUsers, "account", "位用户", tr),
+        plural(group.affectedUsers, "account", tr),
       target: "group",
       group,
     });
@@ -131,26 +160,18 @@ export function healthVerdict(
           ? "watch"
           : "ok";
   const headline = {
-    ok: tr("Everything is working", "一切正常"),
-    watch: tr("Working, with problems to look at", "服务可用，但有问题需要查看"),
-    broken: tr("Something is broken right now", "现在有故障"),
-    unknown: tr("Health could not be checked", "暂时无法检查服务状态"),
+    ok: tr("admin.serviceHealthVerdict.everythingIsWorking"),
+    watch: tr("admin.serviceHealthVerdict.workingWithProblemsToLookAt"),
+    broken: tr("admin.serviceHealthVerdict.somethingIsBrokenRightNow"),
+    unknown: tr("admin.serviceHealthVerdict.healthCouldNotBeChecked"),
   }[level];
   const summary =
     level === "unknown"
-      ? tr(
-          "Refresh in a moment. If it keeps failing, check admin access.",
-          "请稍后刷新；如果持续失败，请检查管理员权限。",
-        )
+      ? tr("admin.serviceHealthVerdict.refreshInAMomentIfIt")
       : level === "ok"
-        ? tr(
-            "No server errors in the last hour, computers are answering, and no error needs investigation.",
-            "最近 1 小时没有服务器错误，电脑响应正常，也没有需要排查的错误。",
-          )
-        : plural(problems.length, "problem", "个问题", tr) +
-          tr(", most urgent first.", "，按紧急程度排列。") +
-          (more > 0
-            ? tr(` ${more} more error codes are listed below.`, `另有 ${more} 个错误码见下方列表。`)
-            : "");
+        ? tr("admin.serviceHealthVerdict.noServerErrorsInTheLast")
+        : plural(problems.length, "problem", tr) +
+          tr("admin.serviceHealthVerdict.mostUrgentFirst") +
+          (more > 0 ? tr("admin.serviceHealthVerdict.moreErrorCodesAreListedBelow", { more }) : "");
   return { level, headline, summary, problems, expected };
 }

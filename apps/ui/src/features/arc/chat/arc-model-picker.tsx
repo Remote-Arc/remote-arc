@@ -1,6 +1,7 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { ChatService } from "./use-arc-chat.js";
+import type { ChatService } from "../../../hooks/arc/use-arc-chat.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
 
 type Props = {
@@ -8,7 +9,7 @@ type Props = {
   value: string;
   disabled: boolean;
   onChange: (id: string) => void;
-  tr: (en: string, zh: string) => string;
+  tr: Translate;
 };
 function ModelMark({ model }: { model: ChatService["models"][number] }) {
   if (model.provider === "openrouter")
@@ -88,7 +89,7 @@ export function ArcModelPicker({ models, value, disabled, onChange, tr }: Props)
         type="button"
         className="arcModelTrigger"
         disabled={disabled}
-        aria-label={tr("Choose model", "选择模型")}
+        aria-label={tr("arc.chat.arcModelPicker.chooseModel")}
         aria-haspopup="listbox"
         aria-expanded={Boolean(position)}
         aria-controls={position ? id : undefined}
@@ -118,7 +119,7 @@ export function ArcModelPicker({ models, value, disabled, onChange, tr }: Props)
             className="arcModelMenu"
             style={{ ...position, maxHeight: Math.min(360, innerHeight - position.bottom - 12) }}
             role="listbox"
-            aria-label={tr("Choose model", "选择模型")}
+            aria-label={tr("arc.chat.arcModelPicker.chooseModel")}
             onKeyDown={(event) => {
               const items = Array.from(
                   menu.current?.querySelectorAll<HTMLButtonElement>(
@@ -154,7 +155,7 @@ export function ArcModelPicker({ models, value, disabled, onChange, tr }: Props)
                     {group !== "auto" && (
                       <div className="arcModelGroupLabel">
                         {group === "openrouter"
-                          ? tr("Open models", "开放模型")
+                          ? tr("arc.chat.arcModelPicker.openModels")
                           : group.toUpperCase()}
                       </div>
                     )}
@@ -175,11 +176,11 @@ export function ArcModelPicker({ models, value, disabled, onChange, tr }: Props)
                           <strong>{model.id === "auto" ? "Auto" : model.label}</strong>
                           <small>
                             {!model.configured
-                              ? tr("Currently unavailable", "暂不可用")
+                              ? tr("arc.chat.arcModelPicker.currentlyUnavailable")
                               : model.requiresPaid
-                                ? tr("Plus / Pro", "Plus / Pro")
+                                ? tr("arc.chat.arcModelPicker.plusPro")
                                 : model.id === "auto"
-                                  ? tr("Automatic selection", "自动选择")
+                                  ? tr("arc.chat.arcModelPicker.automaticSelection")
                                   : null}
                           </small>
                         </span>

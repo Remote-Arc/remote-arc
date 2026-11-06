@@ -1,7 +1,8 @@
+import { usePermission } from "../../hooks/use-permission.js";
 import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
 import { useEffect, useState } from "react";
-import { useI18n } from "../../app/i18n.js";
-import "./organization-settings.css";
+import { useI18n } from "../../hooks/use-i18n.js";
+import "../../styles/settings/organization-settings.css";
 
 type Role = "owner" | "admin" | "member";
 type Organization = {
@@ -128,28 +129,27 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
   }
 
   const org = detail?.organization;
-  const canManage = org?.role === "owner" || org?.role === "admin";
+  const { can } = usePermission({ organizationRole: org?.role });
+  const canManage = can("organization:manage");
   const isTeam = org?.kind === "team";
 
   return (
-    <section className="orgHub" aria-label={tr("Organization settings", "组织管理")}>
+    <section
+      className="orgHub"
+      aria-label={tr("settings.organizationSettings.organizationSettings")}
+    >
       <header className="orgHubHeader">
         <div className="orgHubHeading">
-          <span className="orgHubEyebrow">{tr("WORKSPACES", "工作空间")}</span>
-          <h2>{tr("Organizations & teammates", "组织与队友")}</h2>
-          <p>
-            {tr(
-              "Work with your team while keeping your personal devices private.",
-              "协同管理团队，同时保持个人设备与凭证私有。",
-            )}
-          </p>
+          <span className="orgHubEyebrow">{tr("settings.organizationSettings.workspaces")}</span>
+          <h2>{tr("settings.organizationSettings.organizationsTeammates")}</h2>
+          <p>{tr("settings.organizationSettings.workWithYourTeamWhileKeeping")}</p>
         </div>
         <button
           className="orgHubPrimary"
           type="button"
           onClick={() => setEditing(editing === "create" ? null : "create")}
         >
-          <span aria-hidden="true">＋</span> {tr("Create team", "创建团队")}
+          <span aria-hidden="true">＋</span> {tr("settings.organizationSettings.createTeam")}
         </button>
       </header>
 
@@ -165,11 +165,11 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
               setNewName("");
               setEditing(null);
               await refresh(created.organization.id);
-              setNotice(tr("Team created.", "团队创建成功。"));
+              setNotice(tr("settings.organizationSettings.teamCreated"));
             });
           }}
         >
-          <label htmlFor="org-create-name">{tr("Team name", "团队名称")}</label>
+          <label htmlFor="org-create-name">{tr("settings.organizationSettings.teamName")}</label>
           <input
             id="org-create-name"
             maxLength={80}
@@ -177,13 +177,13 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
             autoFocus
             value={newName}
             onChange={(event) => setNewName(event.target.value)}
-            placeholder={tr("e.g. Product engineering", "例如：产品研发团队")}
+            placeholder={tr("settings.organizationSettings.eGProductEngineering")}
           />
           <button className="orgHubPrimary" type="submit" disabled={busy || !newName.trim()}>
-            {tr("Create", "创建")}
+            {tr("settings.organizationSettings.create")}
           </button>
           <button type="button" onClick={() => setEditing(null)}>
-            {tr("Cancel", "取消")}
+            {tr("settings.organizationSettings.cancel")}
           </button>
         </form>
       )}
@@ -191,7 +191,7 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
       {error && (
         <div className="orgHubAlert" role="alert">
           <span>
-            {tr("Could not load organization", "组织操作失败")}: {error}
+            {tr("settings.organizationSettings.couldNotLoadOrganization")}: {error}
           </span>
           <button
             type="button"
@@ -200,7 +200,7 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
               void refresh().catch((cause) => setError(String(cause)));
             }}
           >
-            {tr("Retry", "重试")}
+            {tr("settings.organizationSettings.retry")}
           </button>
         </div>
       )}
@@ -213,7 +213,7 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
       <div
         className="orgHubSwitcher"
         role="group"
-        aria-label={tr("Your workspaces", "你的工作空间")}
+        aria-label={tr("settings.organizationSettings.yourWorkspaces")}
       >
         {(collection?.organizations || []).map((item) => (
           <button
@@ -227,12 +227,14 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
               {item.kind === "personal" ? "⌂" : item.name.slice(0, 1).toUpperCase()}
             </span>
             <span className="orgHubTabName">
-              {item.kind === "personal" ? tr("Personal", "个人空间") : item.name}
+              {item.kind === "personal" ? tr("settings.organizationSettings.personal") : item.name}
             </span>
             {item.kind === "team" && <small>{item.members}</small>}
           </button>
         ))}
-        {loading && <span className="orgHubLoading">{tr("Loading…", "正在加载…")}</span>}
+        {loading && (
+          <span className="orgHubLoading">{tr("settings.organizationSettings.loading")}</span>
+        )}
       </div>
 
       {org && (
@@ -242,27 +244,25 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
               {isTeam ? "▦" : "⌂"}
             </div>
             <div className="orgHubSummaryText">
-              <h3>{isTeam ? org.name : tr("Your personal workspace", "你的个人空间")}</h3>
+              <h3>
+                {isTeam ? org.name : tr("settings.organizationSettings.yourPersonalWorkspace")}
+              </h3>
               <p>
                 {isTeam
-                  ? tr(
-                      "A place for your team and its members. Your personal devices stay separate.",
-                      "与队友一起协作，个人设备仍保持独立。",
-                    )
-                  : tr(
-                      "Only you can access your personal devices, credentials and tasks.",
-                      "你的设备、凭证和私人任务只有你自己可以访问。",
-                    )}
+                  ? tr("settings.organizationSettings.aPlaceForYourTeamAnd")
+                  : tr("settings.organizationSettings.onlyYouCanAccessYourPersonal")}
               </p>
             </div>
-            <span className="orgHubRole">{isTeam ? org.role : tr("Private", "私有")}</span>
+            <span className="orgHubRole">
+              {isTeam ? org.role : tr("settings.organizationSettings.private")}
+            </span>
             {isTeam && canManage && (
               <button
                 className="orgHubSubtle"
                 type="button"
                 onClick={() => setEditing(editing === "rename" ? null : "rename")}
               >
-                {tr("Rename", "重命名")}
+                {tr("settings.organizationSettings.rename")}
               </button>
             )}
           </div>
@@ -278,11 +278,13 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
                   });
                   await refresh();
                   setEditing(null);
-                  setNotice(tr("Name updated.", "团队名称已更新。"));
+                  setNotice(tr("settings.organizationSettings.nameUpdated"));
                 });
               }}
             >
-              <label htmlFor="org-rename-name">{tr("Organization name", "组织名称")}</label>
+              <label htmlFor="org-rename-name">
+                {tr("settings.organizationSettings.organizationName")}
+              </label>
               <input
                 id="org-rename-name"
                 maxLength={80}
@@ -295,10 +297,10 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
                 type="submit"
                 disabled={busy || renameName.trim() === org.name}
               >
-                {tr("Save", "保存")}
+                {tr("settings.organizationSettings.save")}
               </button>
               <button type="button" onClick={() => setEditing(null)}>
-                {tr("Cancel", "取消")}
+                {tr("settings.organizationSettings.cancel")}
               </button>
             </form>
           )}
@@ -308,9 +310,10 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
               <header className="orgHubPeopleHeader">
                 <div>
                   <h4>
-                    {tr("Members", "团队成员")} <span>{detail.members.length}</span>
+                    {tr("settings.organizationSettings.members")}{" "}
+                    <span>{detail.members.length}</span>
                   </h4>
-                  <p>{tr("Manage who can access this organization.", "管理组织成员及其角色。")}</p>
+                  <p>{tr("settings.organizationSettings.manageWhoCanAccessThisOrganization")}</p>
                 </div>
                 {canManage && (
                   <button
@@ -318,7 +321,8 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
                     type="button"
                     onClick={() => setEditing(editing === "invite" ? null : "invite")}
                   >
-                    <span aria-hidden="true">＋</span> {tr("Invite member", "邀请成员")}
+                    <span aria-hidden="true">＋</span>{" "}
+                    {tr("settings.organizationSettings.inviteMember")}
                   </button>
                 )}
               </header>
@@ -337,15 +341,14 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
                       setEditing(null);
                       await refresh();
                       setNotice(
-                        tr(
-                          "Invite created. Your teammate can accept it in Settings after signing in.",
-                          "邀请已创建。队友使用对应邮箱登录后可在设置中接受。",
-                        ),
+                        tr("settings.organizationSettings.inviteCreatedYourTeammateCanAccept"),
                       );
                     });
                   }}
                 >
-                  <label htmlFor="org-invite-email">{tr("Email", "邮箱")}</label>
+                  <label htmlFor="org-invite-email">
+                    {tr("settings.organizationSettings.email")}
+                  </label>
                   <input
                     id="org-invite-email"
                     type="email"
@@ -357,17 +360,19 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
                   />
                   <select
                     value={role}
-                    aria-label={tr("Role", "角色")}
+                    aria-label={tr("settings.organizationSettings.role")}
                     onChange={(event) => setRole(event.target.value as "member" | "admin")}
                   >
-                    <option value="member">{tr("Member", "成员")}</option>
-                    {org.role === "owner" && <option value="admin">{tr("Admin", "管理员")}</option>}
+                    <option value="member">{tr("settings.organizationSettings.member")}</option>
+                    {can("organization:assignRole") && (
+                      <option value="admin">{tr("settings.organizationSettings.admin")}</option>
+                    )}
                   </select>
                   <button className="orgHubPrimary" type="submit" disabled={busy || !email.trim()}>
-                    {tr("Invite", "邀请")}
+                    {tr("settings.organizationSettings.invite")}
                   </button>
                   <button type="button" onClick={() => setEditing(null)}>
-                    {tr("Cancel", "取消")}
+                    {tr("settings.organizationSettings.cancel")}
                   </button>
                 </form>
               )}
@@ -382,9 +387,9 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
                       <strong>{member.name || member.email}</strong>
                       <small>{member.email}</small>
                     </div>
-                    {org.role === "owner" && member.role !== "owner" ? (
+                    {can("organization:assignRole", { role: member.role, self: false }) ? (
                       <select
-                        aria-label={tr("Member role", "成员角色")}
+                        aria-label={tr("settings.organizationSettings.memberRole")}
                         value={member.role}
                         disabled={busy}
                         onChange={(event) =>
@@ -401,52 +406,52 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
                           })
                         }
                       >
-                        <option value="member">{tr("Member", "成员")}</option>
-                        <option value="admin">{tr("Admin", "管理员")}</option>
+                        <option value="member">{tr("settings.organizationSettings.member")}</option>
+                        <option value="admin">{tr("settings.organizationSettings.admin")}</option>
                       </select>
                     ) : (
                       <span className="orgHubMemberRole">{member.role}</span>
                     )}
-                    {member.role !== "owner" &&
-                      (member.email.toLowerCase() === currentEmail.toLowerCase() ||
-                        org.role === "owner" ||
-                        (org.role === "admin" && member.role === "member")) && (
-                        <button
-                          type="button"
-                          className="orgHubRemove"
-                          disabled={busy}
-                          onClick={() => {
-                            if (
-                              !window.confirm(
-                                tr("Remove this member from the team?", "确定移除这位队友吗？"),
-                              )
+                    {can("organization:removeMember", {
+                      role: member.role,
+                      self: member.email.toLowerCase() === currentEmail.toLowerCase(),
+                    }) && (
+                      <button
+                        type="button"
+                        className="orgHubRemove"
+                        disabled={busy}
+                        onClick={() => {
+                          if (
+                            !window.confirm(
+                              tr("settings.organizationSettings.removeThisMemberFromTheTeam"),
                             )
-                              return;
-                            void mutate(async () => {
-                              await organizationApi(
-                                "/" +
-                                  encodeURIComponent(selected) +
-                                  "/members/" +
-                                  encodeURIComponent(member.user_id),
-                                "DELETE",
-                              );
-                              await refresh();
-                              setNotice(tr("Member removed.", "成员已移除。"));
-                            });
-                          }}
-                        >
-                          {member.email.toLowerCase() === currentEmail.toLowerCase()
-                            ? tr("Leave", "退出")
-                            : tr("Remove", "移除")}
-                        </button>
-                      )}
+                          )
+                            return;
+                          void mutate(async () => {
+                            await organizationApi(
+                              "/" +
+                                encodeURIComponent(selected) +
+                                "/members/" +
+                                encodeURIComponent(member.user_id),
+                              "DELETE",
+                            );
+                            await refresh();
+                            setNotice(tr("settings.organizationSettings.memberRemoved"));
+                          });
+                        }}
+                      >
+                        {member.email.toLowerCase() === currentEmail.toLowerCase()
+                          ? tr("settings.organizationSettings.leave")
+                          : tr("settings.organizationSettings.remove")}
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
 
               {canManage && !!detail.invitations.length && (
                 <div className="orgHubPending">
-                  <h4>{tr("Pending invitations", "待接受邀请")}</h4>
+                  <h4>{tr("settings.organizationSettings.pendingInvitations")}</h4>
                   {detail.invitations.map((invite) => (
                     <div className="orgHubMember" key={invite.id}>
                       <div className="orgHubMemberAvatar orgHubPendingIcon" aria-hidden="true">
@@ -455,7 +460,7 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
                       <div className="orgHubMemberName">
                         <strong>{invite.email}</strong>
                         <small>
-                          {invite.role} · {tr("Expires", "有效期至")}{" "}
+                          {invite.role} · {tr("settings.organizationSettings.expires")}{" "}
                           {new Date(invite.expires_at).toLocaleDateString()}
                         </small>
                       </div>
@@ -476,7 +481,7 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
                           })
                         }
                       >
-                        {tr("Revoke", "撤销")}
+                        {tr("settings.organizationSettings.revoke")}
                       </button>
                     </div>
                   ))}
@@ -489,7 +494,7 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
 
       {!!collection?.invitations.length && (
         <div className="orgHubInbox">
-          <h3>{tr("Team invitations", "收到的团队邀请")}</h3>
+          <h3>{tr("settings.organizationSettings.teamInvitations")}</h3>
           {collection.invitations.map((invite) => (
             <div className="orgHubMember" key={invite.id}>
               <div className="orgHubMemberAvatar" aria-hidden="true">
@@ -512,11 +517,11 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
                       "POST",
                     );
                     await refresh(invite.organization_id);
-                    setNotice(tr("Joined team.", "已加入团队。"));
+                    setNotice(tr("settings.organizationSettings.joinedTeam"));
                   })
                 }
               >
-                {tr("Accept", "接受")}
+                {tr("settings.organizationSettings.accept")}
               </button>
               <button
                 type="button"
@@ -532,7 +537,7 @@ export function OrganizationSettings({ currentEmail }: { currentEmail: string })
                   })
                 }
               >
-                {tr("Decline", "拒绝")}
+                {tr("settings.organizationSettings.decline")}
               </button>
             </div>
           ))}

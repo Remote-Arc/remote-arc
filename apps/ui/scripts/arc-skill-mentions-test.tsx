@@ -1,11 +1,9 @@
+import { createTranslator, loadLocale } from "../src/locales/locale-catalog.js";
 import assert from "node:assert/strict";
 import React, { useRef, useState } from "react";
 // @ts-expect-error react-test-renderer has no declarations in this workspace.
 import { act, create } from "react-test-renderer";
-import {
-  skillMentionAt,
-  useArcSkillMentions,
-} from "../src/features/arc/composer/arc-skill-mentions.js";
+import { skillMentionAt, useArcSkillMentions } from "../src/hooks/arc/use-arc-skill-mentions.js";
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 assert.equal(skillMentionAt("user@example.com", 16), null);
 assert.deepEqual(skillMentionAt("Use @review please", 11), { start: 4, end: 11, query: "review" });
@@ -50,11 +48,14 @@ globalThis.fetch = (async (input) => {
 }) as typeof fetch;
 let current!: ReturnType<typeof useArcSkillMentions>,
   draftValue = "";
+await loadLocale("en", "all");
+const translate = createTranslator("en");
+
 function Harness({ account, revision = "" }: { account: string; revision?: string }) {
   const [draft, setDraft] = useState("");
   draftValue = draft;
   const editor = useRef<HTMLTextAreaElement | null>(null);
-  current = useArcSkillMentions(account, draft, setDraft, editor, (en) => en, [], revision);
+  current = useArcSkillMentions(account, draft, setDraft, editor, translate, [], revision);
   return (
     <>
       {current.button}

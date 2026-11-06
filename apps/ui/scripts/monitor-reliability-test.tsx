@@ -1,14 +1,17 @@
+import { createTranslator, loadLocale } from "../src/locales/locale-catalog.js";
 import React from "react";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
-import { MonitorReliability } from "../src/features/dashboard/views/monitor-reliability.js";
-import type { MonitorState } from "../src/types/app-types.js";
-const en = (a: string) => a,
-  zh = (_a: string, b: string) => b;
-const render = (state: MonitorState["deviceReliability"], tr = en) =>
+import { MonitorReliability } from "../src/features/admin/monitor-reliability.js";
+import type { DeviceReliabilityHealth } from "../src/features/admin/service-health-model.js";
+await loadLocale("en", "admin");
+const en = createTranslator("en");
+await loadLocale("zh", "admin");
+const zh = createTranslator("zh");
+const render = (state: DeviceReliabilityHealth | undefined, tr = en) =>
   renderToStaticMarkup(<MonitorReliability state={state} tr={tr} />);
 assert.match(render(undefined), /does not establish healthy/);
-const empty: NonNullable<MonitorState["deviceReliability"]> = {
+const empty: DeviceReliabilityHealth = {
   coverage: "no_samples",
   scope: "none",
   windows: [],

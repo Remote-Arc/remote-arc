@@ -4,7 +4,7 @@ import { SKILL_LIBRARY } from "../../../../packages/skills/src/library.js";
 const PREVIEW_SKILLS = SKILL_LIBRARY;
 import { ARC_MEMORY_LIMITS } from "@remotearc/protocol";
 import type { ArcAttachment } from "@remotearc/protocol";
-import type { ChatMessage, ChatRun, ChatSession } from "../features/arc/chat/use-arc-chat.js";
+import type { ChatMessage, ChatRun, ChatSession } from "../hooks/arc/use-arc-chat.js";
 
 type PreviewSession = {
   appConnections?: ArcAppConnectionRequest[];

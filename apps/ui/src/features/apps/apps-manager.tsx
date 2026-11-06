@@ -1,3 +1,5 @@
+import type { MessageKey } from "../../locales/locale-catalog.js";
+import type { Translate } from "../../locales/locale-catalog.js";
 import {
   canonicalErrorEnvelope,
   canonicalErrorCode,
@@ -6,9 +8,9 @@ import { SlackBotPanel } from "./slack-bot-panel.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 import { UI_PREVIEW } from "../../preview/preview-mode.js";
-import "./apps-manager.css";
+import "../../styles/apps/apps-manager.css";
 import { ProductIcon } from "../../components/product-icon.js";
 import directory from "../../data/app-directory.json" with { type: "json" };
 import { AppCredentialForm, type AppCredentialInput } from "./apps-auth-form.js";
@@ -124,148 +126,82 @@ async function requestJson(path: string, init?: RequestInit): Promise<unknown> {
   if (!body) throw new Error("APP_SERVICE_UNAVAILABLE");
   return body;
 }
-function statusLabel(status: string, tr: (en: string, zh: string) => string) {
+function statusLabel(status: string, tr: Translate) {
   switch (status) {
     case "active":
-      return tr("Connected", "已连接");
+      return tr("apps.appsManager.connected");
     case "disconnected":
-      return tr("Disconnected", "已断开");
+      return tr("apps.appsManager.disconnected");
     case "reauthorization_required":
-      return tr("Reconnect required", "需要重新授权");
+      return tr("apps.appsManager.reconnectRequired");
     case "pending_approval":
-      return tr("Awaiting review", "等待审核");
+      return tr("apps.appsManager.awaitingReview");
     case "approved":
-      return tr("Approved", "已批准");
+      return tr("apps.appsManager.approved");
     case "running":
-      return tr("Running", "执行中");
+      return tr("apps.appsManager.running");
     case "unknown":
-      return tr("Outcome unknown", "结果待核实");
+      return tr("apps.appsManager.outcomeUnknown");
     default:
-      return tr("Unavailable", "暂不可用");
+      return tr("apps.appsManager.unavailable");
   }
 }
-function errorLabel(code: string, tr: (en: string, zh: string) => string) {
+function errorLabel(code: string, tr: Translate) {
   code = canonicalErrorCode(code) || code;
   const recovery = billingRecovery(code);
   if (recovery) return tr(...recovery.message);
   switch (code) {
     case "UNAUTHORIZED":
-      return tr(
-        "Your session expired. Sign in again to manage Apps.",
-        "登录已过期，请重新登录后管理应用。",
-      );
+      return tr("apps.appsManager.yourSessionExpiredSignInAgain");
     case "APPS_NOT_ENABLED":
-      return tr(
-        "Apps are not enabled yet. Contact your administrator.",
-        "应用连接尚未启用，请联系管理员。",
-      );
+      return tr("apps.appsManager.appsAreNotEnabledYetContact");
     case "APP_NOT_CONFIGURED":
-      return tr(
-        "This provider has not been configured by your administrator.",
-        "管理员尚未配置此应用的授权信息。",
-      );
+      return tr("apps.appsManager.thisProviderHasNotBeenConfigured");
     case "SLACK_DISTRIBUTION_REQUIRED":
-      return tr(
-        "Slack installation is not available for this workspace yet. Contact support@remotearc.app or try again later.",
-        "此工作区暂时无法安装 Slack 应用，请联系 support@remotearc.app 或稍后重试。",
-      );
+      return tr("apps.appsManager.slackInstallationIsNotAvailableFor");
     case "APP_AUTHORIZATION_DENIED":
-      return tr(
-        "Slack authorization was cancelled or denied. You can connect again.",
-        "Slack 授权已取消或被拒绝，可以重新连接。",
-      );
+      return tr("apps.appsManager.slackAuthorizationWasCancelledOrDenied");
     case "SLACK_BOT_INSTALLATION_FAILED":
-      return tr(
-        "Slack Bot installation could not be completed. Try adding it again or contact support@remotearc.app.",
-        "Slack Bot 安装未完成，请重新添加，或联系 support@remotearc.app。",
-      );
+      return tr("apps.appsManager.slackBotInstallationCouldNotBe");
     case "APP_SCOPE_REQUIRED":
-      return tr(
-        "The provider needs additional permissions. Reconnect the account with the access you want.",
-        "应用需要额外授权，请选择所需权限后重新连接账号。",
-      );
+      return tr("apps.appsManager.theProviderNeedsAdditionalPermissionsReconnect");
     case "GOOGLE_APPS_BETA_INVITATION_REQUIRED":
-      return tr(
-        "Apply for Google Apps Beta before connecting.",
-        "请先申请 Google Apps 内测，获邀后再连接。",
-      );
+      return tr("apps.appsManager.applyForGoogleAppsBetaBefore");
     case "GOOGLE_APP_DATA_CONSENT_REQUIRED":
-      return tr(
-        "Review Google data use in Apps before continuing.",
-        "请先在 Apps 查看并同意 Google 数据使用方式。",
-      );
+      return tr("apps.appsManager.reviewGoogleDataUseInApps");
     case "APP_REAUTHORIZATION_REQUIRED":
-      return tr(
-        "This account needs authorization again. Reconnect to continue.",
-        "此账号需要重新授权，请重新连接后继续。",
-      );
+      return tr("apps.appsManager.thisAccountNeedsAuthorizationAgainReconnect");
     case "APP_ACCOUNT_CHANGED":
-      return tr(
-        "The provider returned a different account. Reconnect the intended account.",
-        "服务商返回了不同的账号，请重新授权你要使用的账号。",
-      );
+      return tr("apps.appsManager.theProviderReturnedADifferentAccount");
     case "APP_CONNECTION_CHANGED":
-      return tr(
-        "This connection changed during the check. Refresh and try again.",
-        "检查期间连接已发生变更，请刷新后重试。",
-      );
+      return tr("apps.appsManager.thisConnectionChangedDuringTheCheck");
     case "APP_RATE_LIMITED":
-      return tr(
-        "The provider is temporarily limiting requests. Try again later.",
-        "服务商暂时限制了请求频率，请稍后重试。",
-      );
+      return tr("apps.appsManager.theProviderIsTemporarilyLimitingRequests");
     case "APP_REFRESH_IN_PROGRESS":
-      return tr(
-        "The account is refreshing its authorization. Try again shortly.",
-        "账号正在刷新授权，请稍后重试。",
-      );
+      return tr("apps.appsManager.theAccountIsRefreshingItsAuthorization");
     case "APP_PROVIDER_UNAVAILABLE":
     case "APP_PROVIDER_FAILED":
-      return tr(
-        "The provider is temporarily unavailable. Try the check again later.",
-        "服务商暂时不可用，请稍后重新检查。",
-      );
+      return tr("apps.appsManager.theProviderIsTemporarilyUnavailableTry");
     case "MCP_PAUSED":
-      return tr(
-        "Tool access is paused. Resume it in Security before checking this account.",
-        "工具访问已暂停，请先在安全设置中恢复，再检查账号。",
-      );
+      return tr("apps.appsManager.toolAccessIsPausedResumeIt");
     case "APP_PERMISSION_REQUIRED":
-      return tr("This connection does not allow that permission.", "当前连接没有授予该项权限。");
+      return tr("apps.appsManager.thisConnectionDoesNotAllowThat");
     case "APP_APPROVAL_UNAVAILABLE":
-      return tr(
-        "This approval expired or the connection changed. Refresh and ask your AI for a new request.",
-        "审批已过期或连接已变更。请刷新，并让 AI 重新提交请求。",
-      );
+      return tr("apps.appsManager.thisApprovalExpiredOrTheConnection");
     case "APP_DAILY_LIMIT_REACHED":
-      return tr(
-        "This connection or provider reached its daily operation limit. Try again tomorrow.",
-        "此连接或服务已达到每日操作上限，请明天再试。",
-      );
+      return tr("apps.appsManager.thisConnectionOrProviderReachedIts");
     case "APP_COST_LIMIT":
-      return tr(
-        "The estimated usage exceeds the limit in this request. Review the estimate before requesting again.",
-        "预计用量超出本次请求的上限，请核对估算后重新提出请求。",
-      );
+      return tr("apps.appsManager.theEstimatedUsageExceedsTheLimit");
     case "APP_USER_TOKEN_REQUIRED":
-      return tr("Reconnect X to authorize your user account.", "请重新连接 X，完成用户账号授权。");
+      return tr("apps.appsManager.reconnectXToAuthorizeYourUser");
     case "APP_WHATSAPP_SETTINGS_REQUIRED":
-      return tr(
-        "Enter your WhatsApp Business account and phone number IDs.",
-        "请填写 WhatsApp Business 账号与电话号码 ID。",
-      );
+      return tr("apps.appsManager.enterYourWhatsappBusinessAccountAnd");
     case "APP_SHOP_DOMAIN_REQUIRED":
-      return tr("Enter the store's myshopify.com domain.", "请填写店铺的 myshopify.com 域名。");
+      return tr("apps.appsManager.enterTheStoreSMyshopifyCom");
     case "APP_CONNECTION_NOT_FOUND":
-      return tr(
-        "This connection no longer exists. Refresh the page.",
-        "该连接已不存在，请刷新页面。",
-      );
+      return tr("apps.appsManager.thisConnectionNoLongerExistsRefresh");
     default:
-      return tr(
-        "Apps could not be updated. Check your connection and try again.",
-        "应用状态暂时无法更新，请检查网络后重试。",
-      );
+      return tr("apps.appsManager.appsCouldNotBeUpdatedCheck");
   }
 }
 
@@ -313,31 +249,25 @@ function ConnectionRow({
           className="appsManagerStatus"
           data-status={needsScopes ? "limited" : connection.status}
         >
-          {needsScopes ? tr("Update access", "需要补充授权") : statusLabel(connection.status, tr)}
+          {needsScopes ? tr("apps.appsManager.updateAccess") : statusLabel(connection.status, tr)}
         </span>
       </div>
       {connection.status === "reauthorization_required" && (
         <p className="appsManagerConnectionHint">
-          {tr(
-            "Provider access expired or was revoked. Reconnect this account to restore access.",
-            "应用授权已过期或被撤销，请重新连接此账号以恢复访问。",
-          )}
+          {tr("apps.appsManager.providerAccessExpiredOrWasRevoked")}
         </p>
       )}
       {needsScopes && (
         <p className="appsManagerConnectionHint">
-          {tr(
-            "Some tools need additional provider permissions. Reconnect to enable them; existing authorized tools remain available.",
-            "部分工具需要补充服务商权限，重新授权即可启用，已有权限的工具仍可使用。",
-          )}
+          {tr("apps.appsManager.someToolsNeedAdditionalProviderPermissions")}
         </p>
       )}
       {verification && (
         <p className="appsManagerConnectionCheck" role="status">
           <ProductIcon name="check" size={15} />
           <span>
-            {tr("Account access verified", "账号访问已验证")} · {verification.toolAccess.available}/
-            {verification.toolAccess.total} {tr("tools authorized", "项工具已授权")}
+            {tr("apps.appsManager.accountAccessVerified")} · {verification.toolAccess.available}/
+            {verification.toolAccess.total} {tr("apps.appsManager.toolsAuthorized")}
           </span>
         </p>
       )}
@@ -349,12 +279,12 @@ function ConnectionRow({
             disabled={busy || !app.configured}
             onClick={() => onAuthorize(app.provider, connectedPermissions, connection.settings)}
           >
-            {tr("Reconnect account", "重新授权账号")}
+            {tr("apps.appsManager.reconnectAccount")}
           </button>
         )}
         {connection.dataConsentRequired && (
           <button type="button" disabled={busy} onClick={() => onConsent(connection)}>
-            {tr("Review data access", "查看数据授权")}
+            {tr("apps.appsManager.reviewDataAccess")}
           </button>
         )}
         {active && !connection.dataConsentRequired && (
@@ -366,7 +296,7 @@ function ConnectionRow({
               setVerification(await onCheck(connection));
             }}
           >
-            {tr("Check connection", "检查连接")}
+            {tr("apps.appsManager.checkConnection")}
           </button>
         )}
         {connection.status !== "disconnected" && (
@@ -376,7 +306,7 @@ function ConnectionRow({
             disabled={busy}
             onClick={() => setConfirmDisconnect(true)}
           >
-            {tr("Disconnect", "断开连接")}
+            {tr("apps.appsManager.disconnect")}
           </button>
         )}
         {app.dataPolicy && (
@@ -386,7 +316,7 @@ function ConnectionRow({
             disabled={busy}
             onClick={() => setConfirmErase(true)}
           >
-            {tr("Delete saved call data", "删除保存的调用原文")}
+            {tr("apps.appsManager.deleteSavedCallData")}
           </button>
         )}
       </div>
@@ -394,14 +324,9 @@ function ConnectionRow({
         <div
           className="appsManagerDisconnect"
           role="group"
-          aria-label={tr("Confirm account disconnection", "确认断开账号")}
+          aria-label={tr("apps.appsManager.confirmAccountDisconnection")}
         >
-          <p>
-            {tr(
-              "Disconnect this account? Arc and connected AI clients will lose access.",
-              "断开此账号？Arc 和已连接 AI 客户端将无法再使用此账号。",
-            )}
-          </p>
+          <p>{tr("apps.appsManager.disconnectThisAccountArcAndConnected")}</p>
           <div>
             <button
               type="button"
@@ -409,10 +334,10 @@ function ConnectionRow({
               disabled={busy}
               onClick={() => onDisconnect(connection)}
             >
-              {tr("Confirm disconnect", "确认断开")}
+              {tr("apps.appsManager.confirmDisconnect")}
             </button>
             <button type="button" disabled={busy} onClick={() => setConfirmDisconnect(false)}>
-              {tr("Keep connected", "保持连接")}
+              {tr("apps.appsManager.keepConnected")}
             </button>
           </div>
         </div>
@@ -421,14 +346,9 @@ function ConnectionRow({
         <div
           className="appsManagerDisconnect"
           role="group"
-          aria-label={tr("Confirm deletion of saved call data", "确认删除调用原文")}
+          aria-label={tr("apps.appsManager.confirmDeletionOfSavedCallData")}
         >
-          <p>
-            {tr(
-              "Permanently delete background call contents for this account? Waiting calls are cancelled; already dispatched operations may finish. This does not delete chat/task/memory copies or undo changes in Google.",
-              "永久删除此账号的后台调用原文？等待中的调用会被取消，已派发的操作可能继续完成。对话、任务和记忆副本需分别删除，Google 中已完成的更改不会被撤销。",
-            )}
-          </p>
+          <p>{tr("apps.appsManager.permanentlyDeleteBackgroundCallContentsFor")}</p>
           <div>
             <button
               type="button"
@@ -439,10 +359,10 @@ function ConnectionRow({
                 setConfirmErase(false);
               }}
             >
-              {tr("Delete call contents", "删除调用原文")}
+              {tr("apps.appsManager.deleteCallContents")}
             </button>
             <button type="button" disabled={busy} onClick={() => setConfirmErase(false)}>
-              {tr("Cancel", "取消")}
+              {tr("apps.appsManager.cancel")}
             </button>
           </div>
         </div>
@@ -453,149 +373,44 @@ function ConnectionRow({
 
 type AppPanelTab = "accounts" | "tools";
 
-const appSummaries: Record<string, [string, string]> = {
-  github: [
-    "Work with repositories, issues, pull requests and CI runs.",
-    "查看代码仓库、跟进 Issue 和 PR，检查 CI 运行结果。",
-  ],
-  slack: [
-    "Find conversations, share updates and keep your team in sync.",
-    "查找团队对话、发送进展，让信息同步到位。",
-  ],
-  gmail: [
-    "Find emails, prepare replies and organize your inbox.",
-    "查找邮件、起草回复，整理收件箱。",
-  ],
-  outlook: ["Read mail, draft replies and manage your inbox.", "阅读邮件、起草回复，管理收件箱。"],
-  google_calendar: [
-    "Check availability and keep meetings up to date.",
-    "查询空闲时间，创建和更新会议日程。",
-  ],
-  microsoft_calendar: [
-    "Plan meetings and respond to calendar invitations.",
-    "安排会议，管理日历邀请与出席状态。",
-  ],
-  google_drive: [
-    "Find files, read documents and organize shared work.",
-    "查找文件、读取文档，整理已授权的工作资料。",
-  ],
-  google_docs: [
-    "Create documents and turn your ideas into written work.",
-    "创建与编辑文档，把想法整理成文字。",
-  ],
-  google_sheets: [
-    "Read data, update spreadsheets and build reports.",
-    "读取数据、更新电子表格，整理工作报表。",
-  ],
-  notion: [
-    "Find knowledge, create pages and keep notes current.",
-    "查找知识、创建页面，更新工作笔记。",
-  ],
-  linear: [
-    "Track issues and turn next steps into team tasks.",
-    "跟进 Issue，把下一步工作变成团队任务。",
-  ],
-  vercel: [
-    "Inspect projects, check deployments and review domains.",
-    "检查项目、查看部署状态，管理域名信息。",
-  ],
-  jira: [
-    "Find issues, add context and track project work.",
-    "查找 Issue、补充讨论，跟踪项目工作。",
-  ],
-  confluence: [
-    "Find team spaces, read pages and publish documentation.",
-    "查找团队空间、阅读页面，创建项目文档。",
-  ],
-  runway: [
-    "Generate images and videos, then follow their actual results.",
-    "生成图片与视频，跟踪创作任务的实际结果。",
-  ],
-  youtube: [
-    "Explore videos and create, edit or organize playlists.",
-    "查看视频，创建、编辑和整理播放列表。",
-  ],
-  facebook: [
-    "Follow your Pages and publish updates to your audience.",
-    "查看主页动态，向你的受众发布更新。",
-  ],
-  instagram: [
-    "Manage media, publish content and respond to comments.",
-    "管理媒体内容、发布动态，回复用户评论。",
-  ],
-  x: ["Read your posts and create or manage new updates.", "查看账号帖子，创建和管理发布内容。"],
-  whatsapp: [
-    "Send business messages and work with approved templates.",
-    "发送商务消息，使用已获服务商批准的消息模板。",
-  ],
-  linkedin: [
-    "Publish professional updates and manage your posts.",
-    "发布职业动态，管理你的帖子内容。",
-  ],
-  google_search_console: [
-    "Analyze search traffic and submit or remove sitemaps.",
-    "分析搜索流量，提交或移除 Sitemap。",
-  ],
-  google_analytics: [
-    "Explore traffic and create or maintain GA4 custom dimensions.",
-    "分析网站流量，创建和维护 GA4 自定义维度。",
-  ],
-  google_ads: [
-    "Review ad performance, pause delivery and organize labels.",
-    "查看投放表现，暂停广告并整理标签。",
-  ],
-  meta_ads: [
-    "Review campaign results and pause underperforming campaigns.",
-    "查看广告活动表现，暂停需要调整的活动。",
-  ],
-  shopify: [
-    "Review orders, browse products and prepare new listings.",
-    "查看订单、浏览商品，创建商品草稿。",
-  ],
-  supabase: [
-    "Inspect projects, query data and review deployed functions.",
-    "检查项目、查询数据，查看已部署的函数。",
-  ],
-  hubspot: [
-    "Follow deals and keep customer contacts up to date.",
-    "跟进销售机会，更新客户联系人信息。",
-  ],
-  salesforce: [
-    "Review opportunities and manage customer contacts.",
-    "查看销售机会，管理客户联系人。",
-  ],
-  google_slides: [
-    "Read presentations, create slides and edit their text.",
-    "阅读演示文稿，创建幻灯片并编辑文字。",
-  ],
-  onedrive: [
-    "Find files, create folders and organize your drive.",
-    "查找文件、创建文件夹，移动和整理云盘资料。",
-  ],
-  microsoft_excel: [
-    "Read workbook data, update cells and build tables.",
-    "读取工作簿，更新单元格并创建表格。",
-  ],
-  microsoft_teams: [
-    "Read chats and send, edit or remove your messages.",
-    "查看聊天，发送、编辑或删除自己的消息。",
-  ],
-  microsoft_todo: [
-    "Read task lists, create tasks and track completion.",
-    "查看任务列表，创建任务并更新完成状态。",
-  ],
-  dropbox: [
-    "Find files, create folders and copy or move your work.",
-    "查找文件、创建文件夹，复制和移动工作资料。",
-  ],
-  asana: [
-    "Find project tasks, update progress and add comments.",
-    "查看项目任务，更新进度并添加评论。",
-  ],
-  airtable: [
-    "Read base records and create, update or remove entries.",
-    "读取数据表记录，创建、更新和删除条目。",
-  ],
+const appSummaries: Record<string, MessageKey> = {
+  github: "apps.appsManager.workWithRepositoriesIssuesPull",
+  slack: "apps.appsManager.findConversationsShareUpdatesAnd",
+  gmail: "apps.appsManager.findEmailsPrepareRepliesAnd",
+  outlook: "apps.appsManager.readMailDraftRepliesAnd",
+  google_calendar: "apps.appsManager.checkAvailabilityAndKeepMeetings",
+  microsoft_calendar: "apps.appsManager.planMeetingsAndRespondTo",
+  google_drive: "apps.appsManager.findFilesReadDocumentsAnd",
+  google_docs: "apps.appsManager.createDocumentsAndTurnYour",
+  google_sheets: "apps.appsManager.readDataUpdateSpreadsheetsAnd",
+  notion: "apps.appsManager.findKnowledgeCreatePagesAnd",
+  linear: "apps.appsManager.trackIssuesAndTurnNext",
+  vercel: "apps.appsManager.inspectProjectsCheckDeploymentsAnd",
+  jira: "apps.appsManager.findIssuesAddContextAnd",
+  confluence: "apps.appsManager.findTeamSpacesReadPages",
+  runway: "apps.appsManager.generateImagesAndVideosThen",
+  youtube: "apps.appsManager.exploreVideosAndCreateEdit",
+  facebook: "apps.appsManager.followYourPagesAndPublish",
+  instagram: "apps.appsManager.manageMediaPublishContentAnd",
+  x: "apps.appsManager.readYourPostsAndCreate",
+  whatsapp: "apps.appsManager.sendBusinessMessagesAndWork",
+  linkedin: "apps.appsManager.publishProfessionalUpdatesAndManage",
+  google_search_console: "apps.appsManager.analyzeSearchTrafficAndSubmit",
+  google_analytics: "apps.appsManager.exploreTrafficAndCreateOr",
+  google_ads: "apps.appsManager.reviewAdPerformancePauseDelivery",
+  meta_ads: "apps.appsManager.reviewCampaignResultsAndPause",
+  shopify: "apps.appsManager.reviewOrdersBrowseProductsAnd",
+  supabase: "apps.appsManager.inspectProjectsQueryDataAnd",
+  hubspot: "apps.appsManager.followDealsAndKeepCustomer",
+  salesforce: "apps.appsManager.reviewOpportunitiesAndManageCustomer",
+  google_slides: "apps.appsManager.readPresentationsCreateSlidesAnd",
+  onedrive: "apps.appsManager.findFilesCreateFoldersAnd",
+  microsoft_excel: "apps.appsManager.readWorkbookDataUpdateCells",
+  microsoft_teams: "apps.appsManager.readChatsAndSendEdit",
+  microsoft_todo: "apps.appsManager.readTaskListsCreateTasks",
+  dropbox: "apps.appsManager.findFilesCreateFoldersAnd2",
+  asana: "apps.appsManager.findProjectTasksUpdateProgress",
+  airtable: "apps.appsManager.readBaseRecordsAndCreate",
 };
 
 function appCategory(app: AppDefinition) {
@@ -631,34 +446,28 @@ function AppTools({
     <div className="appsToolsContent">
       <p className="appsPanelIntro">
         {active
-          ? tr(
-              "Connected. Just tell Arc or your connected AI what you want to get done.",
-              "已连接。直接告诉 Arc 或已连接的 AI 你想做什么即可。",
-            )
-          : tr(
-              "Connect your account, then describe what you need in chat.",
-              "连接账号后，直接在对话里说出你的需求即可。",
-            )}
+          ? tr("apps.appsManager.connectedJustTellArcOrYour")
+          : tr("apps.appsManager.connectYourAccountThenDescribeWhat")}
       </p>
       <label className="appsSearchField appsToolsSearch">
         <ProductIcon name="search" size={17} />
-        <span className="appsSrOnly">{tr("Find a tool", "搜索工具")}</span>
+        <span className="appsSrOnly">{tr("apps.appsManager.findATool")}</span>
         <input
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder={tr("Search tools…", "搜索工具…")}
+          placeholder={tr("apps.appsManager.searchTools")}
         />
       </label>
       <div
         className="appsToolFilters"
         role="group"
-        aria-label={tr("Tool access type", "工具读写类型")}
+        aria-label={tr("apps.appsManager.toolAccessType")}
       >
         {[
-          ["all", tr("All tools", "全部工具")],
-          ["read", tr("Read", "读取")],
-          ["write", tr("Write", "写入")],
+          ["all", tr("apps.appsManager.allTools")],
+          ["read", tr("apps.appsManager.read")],
+          ["write", tr("apps.appsManager.write")],
         ].map(([kind, label]) => (
           <button
             type="button"
@@ -687,7 +496,9 @@ function AppTools({
                 </span>
                 <span className="appsToolMeta">
                   <small className="appsToolAccessBadge" data-permission={item.permission}>
-                    {item.permission === "write" ? tr("Write", "写入") : tr("Read", "读取")}
+                    {item.permission === "write"
+                      ? tr("apps.appsManager.write")
+                      : tr("apps.appsManager.read")}
                   </small>
                   <ProductIcon name="chevron" size={15} />
                 </span>
@@ -700,16 +511,13 @@ function AppTools({
               >
                 <span className="appsToolPermission">
                   {item.permission === "write"
-                    ? tr("Makes changes", "可进行更改")
-                    : tr("Reads data", "读取数据")}
+                    ? tr("apps.appsManager.makesChanges")
+                    : tr("apps.appsManager.readsData")}
                 </span>
                 <p>
                   {item.permission === "write"
-                    ? tr(
-                        "Uses the permissions granted by your connected account.",
-                        "使用连接账号已授予的权限。",
-                      )
-                    : tr("Returns data this account has access to.", "返回该账号有权访问的数据。")}
+                    ? tr("apps.appsManager.usesThePermissionsGrantedByYour")
+                    : tr("apps.appsManager.returnsDataThisAccountHasAccess")}
                 </p>
                 {!active && (
                   <button
@@ -719,8 +527,8 @@ function AppTools({
                     onClick={onConnect}
                   >
                     {app.configured
-                      ? tr("Connect account", "连接账号")
-                      : tr("Connection coming soon", "账号连接即将开放")}
+                      ? tr("apps.appsManager.connectAccount")
+                      : tr("apps.appsManager.connectionComingSoon")}
                   </button>
                 )}
               </div>
@@ -729,7 +537,7 @@ function AppTools({
         ))}
         {!matching.length && (
           <p className="appsToolsEmpty">
-            {tr("No matching tools. Try another keyword.", "没有匹配的工具，试试其他关键词。")}
+            {tr("apps.appsManager.noMatchingToolsTryAnotherKeyword")}
           </p>
         )}
       </div>
@@ -852,20 +660,26 @@ function AppDetailsPanel({
             <AppIcon brand={app.brand} />
             <div>
               <h2 id={"app-panel-title-" + app.provider}>{app.name}</h2>
-              <p>{category ? tr(category.name, category.nameZh) : tr("Integration", "应用集成")}</p>
+              <p>
+                {category ? tr(category.name, category.nameZh) : tr("apps.appsManager.integration")}
+              </p>
             </div>
           </div>
           <button
             ref={closeRef}
             type="button"
             className="appsPanelClose"
-            aria-label={tr("Close app details", "关闭应用详情")}
+            aria-label={tr("apps.appsManager.closeAppDetails")}
             onClick={onClose}
           >
             <ProductIcon name="close" />
           </button>
         </header>
-        <div className="appsPanelTabs" role="tablist" aria-label={tr("App details", "应用详情")}>
+        <div
+          className="appsPanelTabs"
+          role="tablist"
+          aria-label={tr("apps.appsManager.appDetails")}
+        >
           {(["accounts", "tools"] as const).map((value) => (
             <button
               key={value}
@@ -891,7 +705,9 @@ function AppDetailsPanel({
                 document.getElementById("app-panel-tab-" + next)?.focus();
               }}
             >
-              {value === "accounts" ? tr("Accounts", "连接账号") : tr("Tools", "工具")}
+              {value === "accounts"
+                ? tr("apps.appsManager.accounts")
+                : tr("apps.appsManager.tools")}
               <span>{value === "accounts" ? connections.length : app.operations.length}</span>
             </button>
           ))}
@@ -919,7 +735,7 @@ function AppDetailsPanel({
             ) : (
               <>
                 {app.provider === "slack" && <SlackBotPanel />}
-                {summary && <p className="appsPanelIntro">{tr(...summary)}</p>}
+                {summary && <p className="appsPanelIntro">{tr(summary)}</p>}
                 {connections.length ? (
                   <div className="appsPanelAccounts">
                     {connections.map((connection) => (
@@ -939,26 +755,13 @@ function AppDetailsPanel({
                 ) : (
                   <div className="appsPanelEmpty">
                     <ProductIcon name="link" size={25} />
-                    <h3>
-                      {tr(
-                        "Connect your " + app.name + " account",
-                        "连接你的 " + app.name + " 账号",
-                      )}
-                    </h3>
-                    <p>
-                      {tr(
-                        "Your connected AI can use this app with the access you grant.",
-                        "连接后，你的 AI 即可在授权范围内使用此应用。",
-                      )}
-                    </p>
+                    <h3>{tr("apps.appsManager.connectYourAccount", { name: app.name })}</h3>
+                    <p>{tr("apps.appsManager.yourConnectedAiCanUseThis")}</p>
                   </div>
                 )}
                 {!app.configured ? (
                   <p className="appsPanelAvailability">
-                    {tr(
-                      "Account connection is coming soon. You can explore the tools in the meantime.",
-                      "账号连接即将开放，你可以先浏览应用工具。",
-                    )}
+                    {tr("apps.appsManager.accountConnectionIsComingSoonYou")}
                   </p>
                 ) : (
                   <div className="appsPanelConnect">
@@ -970,7 +773,7 @@ function AppDetailsPanel({
                         }}
                       >
                         <label className="appsManagerStore">
-                          {tr("Store domain", "店铺域名")}
+                          {tr("apps.appsManager.storeDomain")}
                           <input
                             value={shopDomain}
                             onChange={(event) => setShopDomain(event.target.value)}
@@ -988,7 +791,7 @@ function AppDetailsPanel({
                             busy || !/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shopDomain)
                           }
                         >
-                          {tr("Connect store", "连接店铺")}
+                          {tr("apps.appsManager.connectStore")}
                         </button>
                       </form>
                     ) : credentialOpen ? (
@@ -1008,27 +811,21 @@ function AppDetailsPanel({
                       >
                         <ProductIcon name={connections.length ? "add" : "link"} size={16} />
                         {connections.length
-                          ? tr("Connect another account", "连接其他账号")
-                          : tr("Connect account", "连接账号")}
+                          ? tr("apps.appsManager.connectAnotherAccount")
+                          : tr("apps.appsManager.connectAccount")}
                       </button>
                     )}
                     <p className="appsPanelAccessNote">
                       <ProductIcon name="shield" size={15} />
                       {app.auth === "api_key"
-                        ? tr(
-                            "Credentials are encrypted and kept out of AI messages.",
-                            "凭据加密保存，不会进入 AI 对话。",
-                          )
-                        : tr(
-                            "Sign in securely with " + app.name + ". Disconnect at any time.",
-                            "通过 " + app.name + " 安全登录，随时可以断开连接。",
-                          )}
+                        ? tr("apps.appsManager.credentialsAreEncryptedAndKeptOut")
+                        : tr("apps.appsManager.signInSecurelyWithDisconnectAt", { name: app.name })}
                     </p>
                   </div>
                 )}
                 {(app.connectionNote || app.billingNote) && (
                   <details className="appsManagerProviderNotes">
-                    <summary>{tr("Connection & billing details", "连接与费用说明")}</summary>
+                    <summary>{tr("apps.appsManager.connectionBillingDetails")}</summary>
                     {app.connectionNote && <p>{app.connectionNote}</p>}
                     {app.billingNote && <p>{app.billingNote}</p>}
                   </details>
@@ -1097,35 +894,33 @@ function CatalogCard({
             </button>
           </h2>
           <span>
-            {category ? tr(category.name, category.nameZh) : tr("Integration", "应用集成")}
+            {category ? tr(category.name, category.nameZh) : tr("apps.appsManager.integration")}
           </span>
         </div>
       </header>
       <p className="appsCardDescription">
-        {summary
-          ? tr(...summary)
-          : tr("Use this app from your connected AI chat.", "通过已连接的 AI 对话使用此应用。")}
+        {summary ? tr(summary) : tr("apps.appsManager.useThisAppFromYourConnected")}
       </p>
       <div className="appsCardState" data-state={state}>
         {state === "connected" ? (
           <>
             <ProductIcon name="check" size={14} />
-            {tr("Connected", "已连接")}
+            {tr("apps.appsManager.connected")}
             {connections.length > 1 && (
               <span>
-                · {connections.length} {tr("accounts", "个账号")}
+                · {connections.length} {tr("apps.appsManager.accounts2")}
               </span>
             )}
           </>
         ) : state === "attention" ? (
           <>
             <span className="appsCardStateDot" />
-            {tr("Needs attention", "需要关注")}
+            {tr("apps.appsManager.needsAttention")}
           </>
         ) : state === "soon" ? (
-          tr("Coming soon", "即将开放")
+          tr("apps.appsManager.comingSoon")
         ) : (
-          tr("Ready to connect", "可连接账号")
+          tr("apps.appsManager.readyToConnect")
         )}
       </div>
       <footer className="appsCardFooter">
@@ -1135,9 +930,9 @@ function CatalogCard({
           aria-haspopup="dialog"
           onClick={() => onOpen("tools")}
         >
-          {app.operations.length} {tr("tools", "项工具")} ·{" "}
+          {app.operations.length} {tr("apps.appsManager.tools2")} ·{" "}
           {app.operations.filter((item) => item.permission === "write").length}{" "}
-          {tr("write", "写入")}
+          {tr("apps.appsManager.write2")}
           <ProductIcon name="chevron" size={14} />
         </button>
         {connections.length ? (
@@ -1147,7 +942,7 @@ function CatalogCard({
             aria-haspopup="dialog"
             onClick={() => onOpen("accounts")}
           >
-            {tr("Manage", "管理连接")}
+            {tr("apps.appsManager.manage")}
             <ProductIcon name="chevron" size={14} />
           </button>
         ) : app.provider === "slack" ? (
@@ -1157,12 +952,12 @@ function CatalogCard({
             aria-haspopup="dialog"
             onClick={() => onOpen("accounts")}
           >
-            {tr("Set up Slack", "设置 Slack")}
+            {tr("apps.appsManager.setUpSlack")}
           </button>
         ) : app.configured ? (
           <button type="button" className="appsManagerPrimary" disabled={busy} onClick={onConnect}>
             <ProductIcon name="add" size={15} />
-            {tr("Connect", "连接账号")}
+            {tr("apps.appsManager.connect")}
           </button>
         ) : (
           <button
@@ -1171,7 +966,7 @@ function CatalogCard({
             aria-haspopup="dialog"
             onClick={() => onOpen("tools")}
           >
-            {tr("Explore", "查看详情")}
+            {tr("apps.appsManager.explore")}
             <ProductIcon name="chevron" size={14} />
           </button>
         )}
@@ -1239,12 +1034,7 @@ export function AppsManager({
     else if (appError === "APP_AUTHORIZATION_DENIED" || slackError)
       setError("APP_AUTHORIZATION_DENIED");
     else if (query.get("slack_bot") === "installed")
-      setNotice(
-        tr(
-          "Remote Arc Bot was installed. Open Remote Arc in Slack Apps and send a message to link your account.",
-          "Remote Arc Bot 已安装。在 Slack 应用中打开 Remote Arc，发送消息以关联账号。",
-        ),
-      );
+      setNotice(tr("apps.appsManager.remoteArcBotWasInstalledOpen"));
   }, [loading, tr]);
   const closeDetails = useCallback(() => setDetails(null), []);
   const mounted = useRef(false);
@@ -1345,7 +1135,7 @@ export function AppsManager({
           throw new Error("APP_SERVICE_UNAVAILABLE");
         navigate(result.authorizationUrl);
       },
-      tr("Continue in the provider's authorization page.", "请在应用的授权页面继续。"),
+      tr("apps.appsManager.continueInTheProviderSAuthorization"),
     );
   }
   function reviewData(connection: AppConnection) {
@@ -1367,7 +1157,7 @@ export function AppsManager({
             "/api/apps/connections/" + encodeURIComponent(consent.connectionId!) + "/data-consent",
             { method: "POST", body: JSON.stringify({ dataConsent: app.dataPolicy!.version }) },
           ),
-        tr("Google data access confirmed.", "已确认 Google 数据授权。"),
+        tr("apps.appsManager.googleDataAccessConfirmed"),
       );
     } else
       authorizeNow(consent.provider, consent.permissions, consent.settings, app.dataPolicy.version);
@@ -1381,10 +1171,7 @@ export function AppsManager({
           method: "POST",
           body: JSON.stringify({ confirm: true }),
         }),
-      tr(
-        "Saved call contents deleted. Chat, task and memory copies have separate controls.",
-        "已删除后台调用原文，对话、任务和记忆副本需分别删除。",
-      ),
+      tr("apps.appsManager.savedCallContentsDeletedChatTask"),
     );
   }
   function submitBeta(input: {
@@ -1396,7 +1183,7 @@ export function AppsManager({
     void mutate(
       "google-beta",
       () => request("/api/apps/google-beta", { method: "POST", body: JSON.stringify(input) }),
-      tr("Beta application received.", "已收到内测申请。"),
+      tr("apps.appsManager.betaApplicationReceived"),
     );
   }
   function connectCredential(provider: string, input: AppCredentialInput) {
@@ -1407,7 +1194,7 @@ export function AppsManager({
           method: "POST",
           body: JSON.stringify({ provider, ...input }),
         }),
-      tr("Account validated and connected.", "账号已验证并连接。"),
+      tr("apps.appsManager.accountValidatedAndConnected"),
     );
   }
   function disconnect(connection: AppConnection) {
@@ -1415,7 +1202,7 @@ export function AppsManager({
       "disconnect:" + connection.id,
       () =>
         request("/api/apps/connections/" + encodeURIComponent(connection.id), { method: "DELETE" }),
-      tr("The account was disconnected.", "账号已断开。"),
+      tr("apps.appsManager.theAccountWasDisconnected"),
     );
   }
   async function check(connection: AppConnection) {
@@ -1434,10 +1221,7 @@ export function AppsManager({
           throw new Error("APP_SERVICE_UNAVAILABLE");
         result = checked;
       },
-      tr(
-        "Account access verified. Actual tool results still need to be checked in your workflow.",
-        "账号访问已验证，具体工具结果仍需在实际工作中核对。",
-      ),
+      tr("apps.appsManager.accountAccessVerifiedActualToolResults"),
       true,
     );
     return success ? result : undefined;
@@ -1501,14 +1285,9 @@ export function AppsManager({
     <div className="appsManager">
       <header className="appsManagerHeader">
         <div>
-          <span className="eyebrow">{tr("YOUR AI'S TOOLKIT", "让 AI 开始工作")}</span>
-          <h1>{tr("Apps", "应用")}</h1>
-          <p>
-            {tr(
-              "Your everyday apps. Ready to work with your AI.",
-              "连接你每天使用的应用，让 AI 帮你完成工作。",
-            )}
-          </p>
+          <span className="eyebrow">{tr("apps.appsManager.yourAiSToolkit")}</span>
+          <h1>{tr("apps.appsManager.apps")}</h1>
+          <p>{tr("apps.appsManager.yourEverydayAppsReadyToWork")}</p>
         </div>
         <button
           type="button"
@@ -1520,7 +1299,7 @@ export function AppsManager({
           }}
         >
           <ProductIcon name="refresh" size={16} />
-          {loading ? tr("Refreshing…", "刷新中…") : tr("Refresh", "刷新")}
+          {loading ? tr("apps.appsManager.refreshing") : tr("apps.appsManager.refresh")}
         </button>
       </header>
       {error && (
@@ -1528,10 +1307,10 @@ export function AppsManager({
           <p>{errorLabel(error, tr)}</p>
           <BillingRecoveryActions code={error} tr={tr} />
           {error === "UNAUTHORIZED" && (
-            <a href="/auth/login?return_to=%2Fapps">{tr("Sign in", "登录")}</a>
+            <a href="/auth/login?return_to=%2Fapps">{tr("apps.appsManager.signIn")}</a>
           )}
           <button type="button" onClick={() => setError("")}>
-            {tr("Dismiss", "关闭")}
+            {tr("apps.appsManager.dismiss")}
           </button>
         </div>
       )}
@@ -1545,34 +1324,21 @@ export function AppsManager({
           <strong>
             Google Apps <span className="appsBetaBadge">Beta</span>
           </strong>
-          <p>
-            {tr(
-              "By invitation. Apply once, then connect after approval. Google authorization normally expires after 7 days.",
-              "申请获邀后即可连接。Google 授权通常在 7 天后需重新连接。",
-            )}
-          </p>
+          <p>{tr("apps.appsManager.byInvitationApplyOnceThenConnect")}</p>
           <button type="button" onClick={() => setBetaProvider("gmail")}>
             {snapshot.googleBeta.request
-              ? tr("View application", "查看申请")
-              : tr("Apply to join", "申请加入")}
+              ? tr("apps.appsManager.viewApplication")
+              : tr("apps.appsManager.applyToJoin")}
           </button>
         </section>
       )}
       {loading && !snapshot && (
-        <WorkspaceLoading
-          label={tr("Loading app connections…", "正在加载应用连接…")}
-          variant="rows"
-        />
+        <WorkspaceLoading label={tr("apps.appsManager.loadingAppConnections")} variant="rows" />
       )}
       {snapshot && !snapshot.enabled && (
         <section className="appsManagerDisabled">
-          <h2>{tr("Apps are not enabled yet", "应用连接尚未启用")}</h2>
-          <p>
-            {tr(
-              "An administrator needs to enable Apps and configure the providers before you can connect accounts. Your existing device and AI connections are unchanged.",
-              "管理员启用 Apps 并配置应用授权后，你即可连接账号。现有设备和 AI 连接仍可继续使用。",
-            )}
-          </p>
+          <h2>{tr("apps.appsManager.appsAreNotEnabledYet")}</h2>
+          <p>{tr("apps.appsManager.anAdministratorNeedsToEnableApps")}</p>
         </section>
       )}
       {snapshot?.enabled && (
@@ -1581,32 +1347,32 @@ export function AppsManager({
             <div
               className="appsManagerViewTabs"
               role="group"
-              aria-label={tr("Connection filter", "连接筛选")}
+              aria-label={tr("apps.appsManager.connectionFilter")}
             >
               <button
                 type="button"
                 aria-pressed={connectionView === "all"}
                 onClick={() => setConnectionView("all")}
               >
-                {tr("All apps", "全部应用")} <span>{snapshot.apps.length}</span>
+                {tr("apps.appsManager.allApps")} <span>{snapshot.apps.length}</span>
               </button>
               <button
                 type="button"
                 aria-pressed={connectionView === "available"}
                 onClick={() => setConnectionView("available")}
               >
-                {tr("Available", "可连接")} <span>{availableCount}</span>
+                {tr("apps.appsManager.available")} <span>{availableCount}</span>
               </button>
               <button
                 type="button"
                 aria-pressed={connectionView === "connected"}
                 onClick={() => setConnectionView("connected")}
               >
-                {tr("Connected", "已连接")} <span>{connectedProviders.size}</span>
+                {tr("apps.appsManager.connected")} <span>{connectedProviders.size}</span>
               </button>
             </div>
             <label className="appsSearchField">
-              <span className="appsSrOnly">{tr("Search apps", "搜索应用")}</span>
+              <span className="appsSrOnly">{tr("apps.appsManager.searchApps")}</span>
               <span className="appsSearchIcon">
                 <ProductIcon name="search" size={17} />
               </span>
@@ -1614,20 +1380,20 @@ export function AppsManager({
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={tr("Search apps…", "搜索应用…")}
+                placeholder={tr("apps.appsManager.searchApps2")}
               />
             </label>
             <div
               className="appsManagerCategories"
               role="group"
-              aria-label={tr("App categories", "应用分类")}
+              aria-label={tr("apps.appsManager.appCategories")}
             >
               <button
                 type="button"
                 aria-pressed={category === "all"}
                 onClick={() => setCategory("all")}
               >
-                {tr("All categories", "全部分类")}
+                {tr("apps.appsManager.allCategories")}
               </button>
               {directory.categories.map((item) => (
                 <button
@@ -1641,7 +1407,7 @@ export function AppsManager({
               ))}
             </div>
           </div>
-          <section className="appsManagerGrid" aria-label={tr("Available apps", "可用应用")}>
+          <section className="appsManagerGrid" aria-label={tr("apps.appsManager.availableApps")}>
             {visibleApps.map((app) => (
               <CatalogCard
                 key={app.provider}
@@ -1662,13 +1428,8 @@ export function AppsManager({
           {!!snapshot.apps.length && !visibleApps.length && (
             <div className="appsManagerEmpty">
               <ProductIcon name="search" size={24} />
-              <h2>{tr("No matching apps", "没有匹配的应用")}</h2>
-              <p>
-                {tr(
-                  "Try another keyword or reset your filters.",
-                  "试试其他关键词，或重置筛选条件。",
-                )}
-              </p>
+              <h2>{tr("apps.appsManager.noMatchingApps")}</h2>
+              <p>{tr("apps.appsManager.tryAnotherKeywordOrResetYour")}</p>
               <button
                 type="button"
                 onClick={() => {
@@ -1677,13 +1438,13 @@ export function AppsManager({
                   setConnectionView("all");
                 }}
               >
-                {tr("Reset filters", "重置筛选")}
+                {tr("apps.appsManager.resetFilters")}
               </button>
             </div>
           )}
           {!snapshot.apps.length && (
             <p className="appsManagerEmpty">
-              {tr("No app providers are available yet.", "目前还没有可用的应用服务。")}
+              {tr("apps.appsManager.noAppProvidersAreAvailableYet")}
             </p>
           )}
         </>

@@ -1,13 +1,8 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
-import { arcRequest } from "../chat/use-arc-chat.js";
-export function ArcTeamArchive({
-  roomId,
-  tr,
-}: {
-  roomId: string;
-  tr: (en: string, zh: string) => string;
-}) {
+import { arcRequest } from "../../../hooks/arc/use-arc-chat.js";
+export function ArcTeamArchive({ roomId, tr }: { roomId: string; tr: Translate }) {
   const [messages, setMessages] = useState<
       { id: string; role: string; text: string; speaker?: { name: string } }[] | null
     >(null),
@@ -34,18 +29,15 @@ export function ArcTeamArchive({
   }, [roomId]);
   return (
     <details className="arcTeamArchive">
-      <summary>{tr("Previous team work — read only", "历史团队工作记录（只读）")}</summary>
-      <p>
-        {tr(
-          "Continue new work in Arc Chat. Your previous messages remain here.",
-          "新的工作统一在 Arc Chat 继续，过去的消息保留在这里。",
-        )}
-      </p>
-      {error && <p role="status">{tr("Could not load this record.", "暂时无法读取这段记录。")}</p>}
+      <summary>{tr("arc.teams.arcTeamArchive.previousTeamWorkReadOnly")}</summary>
+      <p>{tr("arc.teams.arcTeamArchive.continueNewWorkInArcChat")}</p>
+      {error && <p role="status">{tr("arc.teams.arcTeamArchive.couldNotLoadThisRecord")}</p>}
       {messages?.map((message) => (
         <article key={message.id}>
           <strong>
-            {message.role === "user" ? tr("You", "你") : message.speaker?.name || "Arc"}
+            {message.role === "user"
+              ? tr("arc.teams.arcTeamArchive.you")
+              : message.speaker?.name || "Arc"}
           </strong>
           <Markdown skipHtml>{message.text}</Markdown>
         </article>

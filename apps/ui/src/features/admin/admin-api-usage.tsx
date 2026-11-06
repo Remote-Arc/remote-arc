@@ -1,8 +1,8 @@
 import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import { useEffect, useState } from "react";
-import { useI18n } from "../../app/i18n.js";
-import "./payments/admin-payments.css";
+import { useI18n } from "../../hooks/use-i18n.js";
+import "../../styles/admin/payments/admin-payments.css";
 type Usage = {
   month: string;
   modelActivity: { users: number; todayCalls: number };
@@ -55,8 +55,7 @@ export function AdminApiUsage({ preview = false }: { preview?: boolean }) {
         if (!controller.signal.aborted) setData(value);
       })
       .catch(() => {
-        if (!controller.signal.aborted)
-          setError(tr("Could not load model usage.", "无法读取模型用量。"));
+        if (!controller.signal.aborted) setError(tr("admin.adminApiUsage.couldNotLoadModelUsage"));
       });
     return () => controller.abort();
   }, [preview, revision, tr]);
@@ -68,56 +67,51 @@ export function AdminApiUsage({ preview = false }: { preview?: boolean }) {
       .reduce((sum, row) => sum + row.calls, 0),
     tokens = rows.reduce((sum, row) => sum + row.inputTokens + row.outputTokens, 0);
   const labels: Record<string, string> = {
-    completed: tr("Completed", "已完成"),
-    failed: tr("Failed", "失败"),
-    reserved: tr("Reserved", "已预留"),
-    unknown: tr("Check result", "待核实"),
-    settling: tr("Settling", "结算中"),
+    completed: tr("admin.adminApiUsage.completed"),
+    failed: tr("admin.adminApiUsage.failed"),
+    reserved: tr("admin.adminApiUsage.reserved"),
+    unknown: tr("admin.adminApiUsage.checkResult"),
+    settling: tr("admin.adminApiUsage.settling"),
   };
   return (
     <section className="adminSurface adminApiUsage">
       <div className="adminSectionHeader">
         <div>
-          <h2>{tr("Model API usage", "模型 API 使用情况")}</h2>
-          <p>
-            {tr(
-              "This month, UTC. Connect tool calls appear separately above. Tokens include reported input and output; unknown requests retain a cost reservation.",
-              "本月，按 UTC 计；Connect 工具调用在上方单独展示。Token 包含已报告的输入与输出；结果不明的请求保留成本预留。",
-            )}
-          </p>
+          <h2>{tr("admin.adminApiUsage.modelApiUsage")}</h2>
+          <p>{tr("admin.adminApiUsage.thisMonthUtcConnectToolCalls")}</p>
         </div>
         <button
           type="button"
           className="adminOutlineBtn"
           onClick={() => setRevision((value) => value + 1)}
         >
-          {tr("Refresh", "刷新")}
+          {tr("admin.adminApiUsage.refresh")}
         </button>
       </div>
       {error && <p role="alert">{error}</p>}
       {!data && !error && (
-        <WorkspaceLoading label={tr("Loading API usage…", "正在读取 API 用量…")} variant="cards" />
+        <WorkspaceLoading label={tr("admin.adminApiUsage.loadingApiUsage")} variant="cards" />
       )}
       {data && (
         <>
           <div className="adminMetrics adminMetrics--overview">
             {[
               {
-                label: tr("Model requests / users", "模型请求 / 用户"),
+                label: tr("admin.adminApiUsage.modelRequestsUsers"),
                 value: calls.toLocaleString() + " / " + data.modelActivity.users,
               },
               {
-                label: tr("Requests today", "今日模型请求"),
+                label: tr("admin.adminApiUsage.requestsToday"),
                 value: data.modelActivity.todayCalls.toLocaleString(),
               },
-              { label: tr("Reported tokens", "已报告 Tokens"), value: tokens.toLocaleString() },
-              { label: tr("Failed / to verify", "失败 / 待核实"), value: failed + " / " + unknown },
+              { label: tr("admin.adminApiUsage.reportedTokens"), value: tokens.toLocaleString() },
+              { label: tr("admin.adminApiUsage.failedToVerify"), value: failed + " / " + unknown },
               {
-                label: tr("Rated model cost", "模型计价成本"),
+                label: tr("admin.adminApiUsage.ratedModelCost"),
                 value: "US$" + data.modelRatedCostUsd.toFixed(4),
               },
               {
-                label: tr("Maximum cost reserved", "最高成本预留"),
+                label: tr("admin.adminApiUsage.maximumCostReserved"),
                 value: "US$" + data.heldModelMaximumUsd.toFixed(4),
               },
             ].map((item) => (
@@ -132,11 +126,11 @@ export function AdminApiUsage({ preview = false }: { preview?: boolean }) {
               <thead>
                 <tr>
                   {[
-                    tr("Model / provider", "模型 / 供应商"),
-                    tr("Status", "状态"),
-                    tr("Requests", "请求"),
-                    tr("Input / output tokens", "输入 / 输出 Tokens"),
-                    tr("Rated cost or reserve", "计价成本或预留"),
+                    tr("admin.adminApiUsage.modelProvider"),
+                    tr("admin.adminApiUsage.status"),
+                    tr("admin.adminApiUsage.requests"),
+                    tr("admin.adminApiUsage.inputOutputTokens"),
+                    tr("admin.adminApiUsage.ratedCostOrReserve"),
                   ].map((label) => (
                     <th key={label}>{label}</th>
                   ))}
@@ -161,7 +155,7 @@ export function AdminApiUsage({ preview = false }: { preview?: boolean }) {
             </table>
             {rows.length === 0 && (
               <p className="adminNoData">
-                {tr("No model requests recorded this month.", "本月暂无模型请求记录。")}
+                {tr("admin.adminApiUsage.noModelRequestsRecordedThisMonth")}
               </p>
             )}
           </div>

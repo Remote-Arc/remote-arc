@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../../../lib/marketing-paths.js";
-import { useMarketingPlayback } from "./use-marketing-playback.js";
-import { APP_WORKFLOW_EXAMPLES, translateCopy } from "./app-workflow-examples.js";
-import "./app-workflow-showcase.css";
+import { useMarketingPlayback } from "../../../hooks/marketing/use-marketing-playback.js";
+import { APP_WORKFLOW_EXAMPLES } from "./app-workflow-examples.js";
+import "../../../styles/marketing/home/app-workflow-showcase.css";
 export function AppWorkflowShowcase() {
   const { tr, locale } = useI18n(),
     [selected, setSelected] = useState(0),
@@ -25,22 +25,17 @@ export function AppWorkflowShowcase() {
     >
       <header className="modernSectionIntro">
         <span className="eyebrow">
-          {tr("ONE REQUEST · ACROSS YOUR TOOLSTACK", "一句需求 · 串联你的工具")}
+          {tr("marketing.home.appWorkflowShowcase.oneRequestAcrossYourToolstack")}
         </span>
         <h2 id="appWorkflowsTitle">
-          {tr("Real work rarely stays in one app.", "真正的工作，不会只在一个应用里。")}
+          {tr("marketing.home.appWorkflowShowcase.realWorkRarelyStaysInOne")}
         </h2>
-        <p>
-          {tr(
-            "Let your AI connect the context, carry out the work and return results you can inspect. These Connect workflows use the same Apps foundation that Arc Agent will build on.",
-            "让 AI 串联上下文、执行工作，并返回可检查的结果。这些 Connect 工作流与未来 Arc Agent 共用同一套 Apps 基础。",
-          )}
-        </p>
+        <p>{tr("marketing.home.appWorkflowShowcase.letYourAiConnectTheContext")}</p>
       </header>
       <div
         className="appWorkflowTabs"
         role="group"
-        aria-label={tr("Example workflows", "示例工作流")}
+        aria-label={tr("marketing.home.appWorkflowShowcase.exampleWorkflows")}
       >
         {APP_WORKFLOW_EXAMPLES.map((item, index) => (
           <button
@@ -49,24 +44,24 @@ export function AppWorkflowShowcase() {
             aria-pressed={selected === index}
             onClick={() => setSelected(index)}
           >
-            {translateCopy(item.label, tr)}
+            {tr(item.label)}
           </button>
         ))}
       </div>
       <article className="appWorkflowPanel" data-workflow={example.id}>
         <div className="appWorkflowStory">
           <span className="appWorkflowNumber">0{selected + 1}</span>
-          <h3>{translateCopy(example.title, tr)}</h3>
-          <blockquote>{translateCopy(example.request, tr)}</blockquote>
-          <p>{translateCopy(example.result, tr)}</p>
-          <span className="appWorkflowPermissions">{translateCopy(example.permission, tr)}</span>
+          <h3>{tr(example.title)}</h3>
+          <blockquote>{tr(example.request)}</blockquote>
+          <p>{tr(example.result)}</p>
+          <span className="appWorkflowPermissions">{tr(example.permission)}</span>
           <a
             href={localizedWebsiteHref(
               "/integrations?provider=" + example.connectionProvider,
               locale,
             )}
           >
-            {tr("Explore these connections", "查看相关连接")} ↗
+            {tr("marketing.home.appWorkflowShowcase.exploreTheseConnections")} ↗
           </a>
         </div>
         <div className="appWorkflowAction">
@@ -104,8 +99,8 @@ export function AppWorkflowShowcase() {
                 >
                   <span>{index < step ? "✓" : String(index + 1).padStart(2, "0")}</span>
                   <div>
-                    <strong>{translateCopy(trace.working, tr).replace(/…$/, "")}</strong>
-                    <small>{translateCopy(trace.output, tr)}</small>
+                    <strong>{tr(trace.working).replace(/…$/, "")}</strong>
+                    <small>{tr(trace.output)}</small>
                   </div>
                 </button>
               </li>
@@ -113,7 +108,7 @@ export function AppWorkflowShowcase() {
           </ol>
           <footer>
             <span>
-              {tr("SIMULATED WORKFLOW · CONNECTED ACCOUNTS", "模拟工作流 · 已授权的账号")}
+              {tr("marketing.home.appWorkflowShowcase.simulatedWorkflowConnectedAccounts")}
             </span>
             <button
               type="button"
@@ -121,15 +116,15 @@ export function AppWorkflowShowcase() {
               disabled={reducedMotion}
               aria-label={
                 playing
-                  ? tr("Pause workflow animation", "暂停工作流动画")
-                  : tr("Play workflow animation", "播放工作流动画")
+                  ? tr("marketing.home.appWorkflowShowcase.pauseWorkflowAnimation")
+                  : tr("marketing.home.appWorkflowShowcase.playWorkflowAnimation")
               }
             >
               {reducedMotion
-                ? tr("Manual preview", "手动预览")
+                ? tr("marketing.home.appWorkflowShowcase.manualPreview")
                 : playing
-                  ? tr("Pause", "暂停")
-                  : tr("Play", "播放")}
+                  ? tr("marketing.home.appWorkflowShowcase.pause")
+                  : tr("marketing.home.appWorkflowShowcase.play")}
             </button>
           </footer>
           {example.id === "video" && (
@@ -145,10 +140,7 @@ export function AppWorkflowShowcase() {
         </div>
       </article>
       <p className="appWorkflowDisclosure">
-        {tr(
-          "Illustrative examples. This demo does not connect accounts, run actions or generate paid media. Connect your own accounts to use available apps.",
-          "示例演示，不连接账号、执行操作或进行付费生成。连接你自己的账号，即可使用已开放的应用。",
-        )}
+        {tr("marketing.home.appWorkflowShowcase.illustrativeExamplesThisDemoDoesNot")}
       </p>
     </section>
   );

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { appSource } from "./app-source.mjs";
+import { appSource, readLocaleMessages } from "./app-source.mjs";
 
 const source = appSource;
 const styles = readFileSync(new URL("../src/styles/styles.css", import.meta.url), "utf8");
@@ -37,12 +37,12 @@ assert.doesNotMatch(
 );
 for (const path of ["https://claude.ai/customize/connectors", "https://cursor.com/docs/mcp"])
   assert.ok(installGuide.includes(path), "missing official setup link: " + path);
-const publicSetup = readFileSync(
-  new URL("../src/features/install/chatgpt-plugin-setup.tsx", import.meta.url),
-  "utf8",
+const website = readLocaleMessages("en", "website");
+assert.equal(website["install.chatgptPluginSetup.tryInChat"], "Try in chat");
+assert.match(
+  website["install.chatgptPluginSetup.followTheBrowserPairingPageAnd"],
+  /same Remote Arc account/,
 );
-assert.ok(publicSetup.includes("Try in chat"));
-assert.ok(publicSetup.includes("same Remote Arc account"));
 const mcpDocs = readFileSync(
   new URL("../src/features/docs/product-docs.tsx", import.meta.url),
   "utf8",

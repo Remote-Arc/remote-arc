@@ -1,6 +1,7 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { WorkspaceLoading } from "../../../components/workspace-loading.js";
 import { useState } from "react";
-import { arcRequest, type ChatMessage } from "../chat/use-arc-chat.js";
+import { arcRequest, type ChatMessage } from "../../../hooks/arc/use-arc-chat.js";
 import { workStepLabel, workStepStatus } from "../chat/arc-work-summary.js";
 export function ArcExecutionLog({
   runId,
@@ -9,7 +10,7 @@ export function ArcExecutionLog({
 }: {
   runId: string;
   sessionId: string;
-  tr: (en: string, zh: string) => string;
+  tr: Translate;
 }) {
   const [events, setEvents] = useState<ChatMessage[] | null>(null),
     [error, setError] = useState(false),
@@ -42,17 +43,19 @@ export function ArcExecutionLog({
         if (event.currentTarget.open) void load();
       }}
     >
-      <summary>{tr("Execution log", "执行日志")}</summary>
-      {loading && <WorkspaceLoading label={tr("Loading…", "加载中…")} variant="compact" />}
+      <summary>{tr("arc.workspace.arcExecutionLog.executionLog")}</summary>
+      {loading && (
+        <WorkspaceLoading label={tr("arc.workspace.arcExecutionLog.loading")} variant="compact" />
+      )}
       {error && (
         <button type="button" onClick={() => void load()}>
-          {tr("Could not load. Retry", "读取失败，重试")}
+          {tr("arc.workspace.arcExecutionLog.couldNotLoadRetry")}
         </button>
       )}
       {events && (
         <div>
           {events.length === 0 ? (
-            <p>{tr("No tool actions were recorded for this run.", "本次运行没有工具执行记录。")}</p>
+            <p>{tr("arc.workspace.arcExecutionLog.noToolActionsWereRecordedFor")}</p>
           ) : (
             events.map((message) => (
               <article key={message.id}>

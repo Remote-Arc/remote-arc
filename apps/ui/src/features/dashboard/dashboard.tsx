@@ -1,5 +1,6 @@
 import React from "react";
-import { useRunnerAttention } from "../browser-runner/runner-view.js";
+import { useMessages } from "../../hooks/use-i18n.js";
+import { useRunnerAttention } from "../../hooks/use-runner-attention.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import { AppsManager } from "../apps/apps-manager.js";
 import { ArcWorkWorkspace } from "../arc/workspace/arc-workspace.js";
@@ -8,12 +9,14 @@ import { ConnectTasksErrorBoundary } from "../tasks/connect-tasks-error-boundary
 import { ProductIcon, type ProductIconName } from "../../components/product-icon.js";
 import { WorkspacePicker } from "./workspace-picker.js";
 import { type DashboardTab } from "../../lib/dashboard-workspaces.js";
-import { useDashboardModel, type DashboardProps } from "./hooks/use-dashboard-model.js";
+import {
+  useDashboardModel,
+  type DashboardProps,
+} from "../../hooks/dashboard/use-dashboard-model.js";
 import { OverviewView } from "./views/overview-view.js";
 import { DevicesView } from "./views/devices-view.js";
 import { ConnectView } from "./views/connect-view.js";
 import { SecurityView } from "./views/security-view.js";
-import { MonitorView } from "./views/monitor-view.js";
 import { SettingsView } from "./views/settings-view.js";
 import { DashboardDialogHost, DirectoryPickerDialog } from "./views/dashboard-overlays.js";
 import { AddDeviceDialog } from "./views/add-device-dialog.js";
@@ -39,7 +42,6 @@ function DashboardNavIcon({ tab }: { tab: DashboardTab }) {
     "agent-apps": "apps",
     connect: "link",
     security: "shield",
-    monitor: "activity",
     "agent-chat": "chat",
     "agent-goals": "tasks",
     "agent-routines": "routine",
@@ -51,11 +53,13 @@ function DashboardNavIcon({ tab }: { tab: DashboardTab }) {
 }
 export function Dashboard(props: DashboardProps) {
   const m = useDashboardModel(props);
+  const labels = useMessages("dashboard");
   const {
     active,
     arcAvailable,
     arcEntry,
     arcNavigationOpen,
+    can,
     devices,
     dialog,
     directoryPicker,
@@ -99,20 +103,12 @@ export function Dashboard(props: DashboardProps) {
           <button
             type="button"
             className="sidebarCollapseToggle"
-            aria-label={
-              sidebarCollapsed
-                ? tr("Expand sidebar", "展开侧栏")
-                : tr("Collapse sidebar", "收起侧栏")
-            }
+            aria-label={sidebarCollapsed ? labels.expandSidebar : labels.collapseSidebar}
             aria-expanded={!sidebarCollapsed}
             aria-controls={
               workspace === "agent" ? "arc-sidebar-nav-root" : "dashboard-sidebar-navigation"
             }
-            title={
-              sidebarCollapsed
-                ? tr("Expand sidebar", "展开侧栏")
-                : tr("Collapse sidebar", "收起侧栏")
-            }
+            title={sidebarCollapsed ? labels.expandSidebar : labels.collapseSidebar}
             onClick={toggleSidebar}
           >
             <ProductIcon name="panel" size={17} />
@@ -126,11 +122,11 @@ export function Dashboard(props: DashboardProps) {
         />
         {workspace === "agent" ? null : (
           <>
-            <div className="workspaceNavHeading">{tr("CONNECTIONS", "连接管理")}</div>
+            <div className="workspaceNavHeading">{labels.connectionsGroup}</div>
             <nav
               id="dashboard-sidebar-navigation"
               className="sideNav"
-              aria-label={tr("Dashboard navigation", "控制台导航")}
+              aria-label={labels.navigation}
             >
               {navItems.map(([id, label]) => (
                 <button
@@ -152,11 +148,11 @@ export function Dashboard(props: DashboardProps) {
           </>
         )}
         <div className="sidebarGlobalNavigation">
-          <div className="workspaceNavHeading">{tr("ACCOUNT", "账户")}</div>
+          <div className="workspaceNavHeading">{labels.accountGroup}</div>
           <button
             type="button"
-            aria-label={tr("Settings", "设置")}
-            title={tr("Settings", "设置")}
+            aria-label={labels.settings}
+            title={labels.settings}
             aria-current={active === "settings" || active === "agent-settings" ? "page" : undefined}
             className={active === "settings" || active === "agent-settings" ? "active" : ""}
             onClick={() => navigateTab(workspace === "agent" ? "agent-settings" : "settings")}
@@ -164,30 +160,22 @@ export function Dashboard(props: DashboardProps) {
             <span className="sideNavIcon">
               <DashboardNavIcon tab="settings" />
             </span>
-            <span className="sideNavLabel">{tr("Settings", "设置")}</span>
+            <span className="sideNavLabel">{labels.settings}</span>
           </button>
-          {user.isAdmin && (
-            <a
-              href="https://admin.remotearc.app/"
-              aria-label={tr("Admin", "管理员后台")}
-              title={tr("Admin", "管理员后台")}
-            >
+          {can("admin:access") && (
+            <a href="https://admin.remotearc.app/" aria-label={labels.admin} title={labels.admin}>
               <span className="sideNavIcon">
                 <ProductIcon name="shield" />
               </span>
-              <span className="sideNavLabel">{tr("Admin", "管理员后台")}</span>
+              <span className="sideNavLabel">{labels.admin}</span>
               <ProductIcon name="arrowUpRight" size={13} />
             </a>
           )}
-          <a
-            href={MARKETING_ORIGIN + "/docs"}
-            aria-label={tr("Help & documentation", "帮助与文档")}
-            title={tr("Help & documentation", "帮助与文档")}
-          >
+          <a href={MARKETING_ORIGIN + "/docs"} aria-label={labels.help} title={labels.help}>
             <span className="sideNavIcon">
               <ProductIcon name="book" />
             </span>
-            <span className="sideNavLabel">{tr("Help & documentation", "帮助与文档")}</span>
+            <span className="sideNavLabel">{labels.help}</span>
             <ProductIcon name="arrowUpRight" size={13} />
           </a>
         </div>
@@ -203,7 +191,7 @@ export function Dashboard(props: DashboardProps) {
             <strong>{user.name || "Owner"}</strong>
             <span>{user.email}</span>
           </div>
-          <button onClick={() => void signOutSafely()} aria-label={tr("Sign out", "退出登录")}>
+          <button onClick={() => void signOutSafely()} aria-label={labels.signOut}>
             <ProductIcon name="logout" />
           </button>
         </div>
@@ -213,13 +201,8 @@ export function Dashboard(props: DashboardProps) {
         {UI_PREVIEW && (
           <div className="previewModeBanner" role="status">
             <strong>PR PREVIEW</strong>
-            <span>
-              {tr(
-                "Interactive Arc demo · simulated data · no real accounts, tools, models or payments",
-                "Arc 交互演示 · 模拟数据 · 不连接真实账号、工具、模型或支付",
-              )}
-            </span>
-            <a href="/device">{tr("Preview onboarding", "预览配对流程")} →</a>
+            <span>{tr("dashboard.dashboard.interactiveArcDemoSimulatedDataNo")}</span>
+            <a href="/device">{tr("dashboard.dashboard.previewOnboarding")} →</a>
           </div>
         )}
         <header className="mobileTopbar">
@@ -227,7 +210,7 @@ export function Dashboard(props: DashboardProps) {
             <button
               className="arcWorkspaceMobileMenu"
               type="button"
-              aria-label={tr("Open workspace navigation", "打开工作空间导航")}
+              aria-label={labels.openNavigation}
               onClick={() => setArcNavigationOpen(true)}
             >
               <ProductIcon name="menu" />
@@ -244,7 +227,7 @@ export function Dashboard(props: DashboardProps) {
           <div className="arcChatMount" hidden={active !== "agent-chat"}>
             <React.Suspense
               fallback={
-                <WorkspaceLoading label={tr("Opening Arc…", "正在打开 Arc…")} variant="rows" />
+                <WorkspaceLoading label={tr("dashboard.dashboard.openingArc")} variant="rows" />
               }
             >
               <ArcNativeChat
@@ -298,22 +281,14 @@ export function Dashboard(props: DashboardProps) {
           <section className="arcTeammatesPage">
             <header className="overviewTopbar">
               <div>
-                <span className="eyebrow">ARC / {tr("AGENTS", "智能体")}</span>
-                <h1>{tr("Agents", "智能体")}</h1>
-                <p>
-                  {tr(
-                    "Choose who helps with your next goal. Review roles and access, then continue in Chat.",
-                    "选择协助下一个目标的智能体，查看分工与权限，然后在 Chat 中推进工作。",
-                  )}
-                </p>
+                <span className="eyebrow">ARC / {tr("dashboard.dashboard.agents")}</span>
+                <h1>{tr("dashboard.dashboard.agents2")}</h1>
+                <p>{tr("dashboard.dashboard.chooseWhoHelpsWithYourNext")}</p>
               </div>
             </header>
             <React.Suspense
               fallback={
-                <WorkspaceLoading
-                  label={tr("Loading agents…", "正在读取智能体…")}
-                  variant="cards"
-                />
+                <WorkspaceLoading label={tr("dashboard.dashboard.loadingAgents")} variant="cards" />
               }
             >
               <ArcTeammates
@@ -329,7 +304,7 @@ export function Dashboard(props: DashboardProps) {
         {active === "agent-skills" && (
           <React.Suspense
             fallback={
-              <WorkspaceLoading label={tr("Loading skills…", "正在加载技能…")} variant="rows" />
+              <WorkspaceLoading label={tr("dashboard.dashboard.loadingSkills")} variant="rows" />
             }
           >
             <ArcSkills tr={tr} onChat={openArcChat} />
@@ -346,24 +321,22 @@ export function Dashboard(props: DashboardProps) {
 
         {active === "security" && <SecurityView m={m} browserAttention={browserAttention} />}
 
-        {active === "monitor" && user.isAdmin && <MonitorView m={m} />}
-
         {(active === "settings" || active === "agent-settings") && <SettingsView m={m} />}
 
         <footer className="dashboardFooter">
           <span>Remote Arc · agent.remotearc.app</span>
           <div>
-            <a href={MARKETING_ORIGIN + "/pricing"}>{tr("Pricing", "价格")}</a>
-            <a href={MARKETING_ORIGIN + "/docs"}>{tr("Docs", "文档")}</a>
+            <a href={MARKETING_ORIGIN + "/pricing"}>{labels.pricing}</a>
+            <a href={MARKETING_ORIGIN + "/docs"}>{labels.docs}</a>
             <a href={MARKETING_ORIGIN + "/docs/mcp"}>MCP</a>
-            <a href={MARKETING_ORIGIN + "/privacy"}>{tr("Privacy", "隐私")}</a>
-            <a href={MARKETING_ORIGIN + "/terms"}>{tr("Terms", "条款")}</a>
-            <a href={MARKETING_ORIGIN + "/support"}>{tr("Support", "支持")}</a>
+            <a href={MARKETING_ORIGIN + "/privacy"}>{labels.privacy}</a>
+            <a href={MARKETING_ORIGIN + "/terms"}>{labels.terms}</a>
+            <a href={MARKETING_ORIGIN + "/support"}>{labels.support}</a>
           </div>
         </footer>
       </main>
 
-      <nav className="mobileBottomNav" aria-label={tr("Dashboard navigation", "控制台导航")}>
+      <nav className="mobileBottomNav" aria-label={labels.navigation}>
         {mobileNavItems.map(([id, label]) => (
           <button
             key={id}
@@ -377,11 +350,11 @@ export function Dashboard(props: DashboardProps) {
             </span>
             <small>
               {id === "overview"
-                ? tr("Home", "首页")
+                ? labels.home
                 : id === "connect"
-                  ? tr("Clients", "客户端")
+                  ? labels.clients
                   : id === "agent-chat"
-                    ? tr("Home", "首页")
+                    ? labels.home
                     : label}
             </small>
           </button>
@@ -395,7 +368,7 @@ export function Dashboard(props: DashboardProps) {
           <span aria-hidden="true">
             <DashboardNavIcon tab="settings" />
           </span>
-          <small>{tr("Settings", "设置")}</small>
+          <small>{labels.settings}</small>
         </button>
       </nav>
 

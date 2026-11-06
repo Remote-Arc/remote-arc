@@ -7,7 +7,6 @@ export type DashboardTab =
   | "apps"
   | "connect"
   | "security"
-  | "monitor"
   | "settings"
   | "agent-teams"
   | "agent-apps"
@@ -27,7 +26,6 @@ export const DASHBOARD_PATHS: Record<DashboardTab, string> = {
   apps: "/dashboard/connect/apps",
   connect: "/dashboard/connect/clients",
   security: "/dashboard/connect/security",
-  monitor: "/monitor",
   settings: "/dashboard/connect/settings",
   "agent-teams": "/dashboard/agent/teams",
   "agent-apps": "/dashboard/agent/apps",
@@ -51,7 +49,6 @@ export const LEGACY_DASHBOARD_PATHS: Record<string, DashboardTab> = {
   "/apps": "apps",
   "/connect": "connect",
   "/security": "security",
-  "/dashboard/connect/monitor": "monitor",
   "/settings": "settings",
 };
 

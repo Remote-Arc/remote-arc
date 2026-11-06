@@ -1,7 +1,7 @@
 import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
 import { useEffect, useRef, useState } from "react";
-import { useI18n } from "../../app/i18n.js";
-import "./support-inbox.css";
+import { useI18n } from "../../hooks/use-i18n.js";
+import "../../styles/admin/support-inbox.css";
 
 import {
   betaReplyDraft,
@@ -48,9 +48,7 @@ export function AdminSupportInbox() {
       if (version === listVersion.current) setThreads(data.items);
     } catch {
       if (version === listVersion.current)
-        setError(
-          tr("Could not load conversations. Refresh to try again.", "无法读取会话，请刷新重试。"),
-        );
+        setError(tr("admin.supportInbox.couldNotLoadConversationsRefreshTo"));
     } finally {
       if (version === listVersion.current) setLoading(false);
     }
@@ -61,12 +59,7 @@ export function AdminSupportInbox() {
       if (selectedRef.current === id) setDetail(value);
     } catch {
       if (selectedRef.current === id)
-        setError(
-          tr(
-            "Could not load this conversation. Refresh to try again.",
-            "无法读取会话内容，请刷新重试。",
-          ),
-        );
+        setError(tr("admin.supportInbox.couldNotLoadThisConversationRefresh"));
     }
   }
   useEffect(() => {
@@ -95,32 +88,15 @@ export function AdminSupportInbox() {
         },
       );
       if (data.status === "sent") {
-        setInfo(
-          tr(
-            "Reply submitted to SendPulse. Delivery is not yet confirmed.",
-            "已提交 SendPulse，尚未确认送达。",
-          ),
-        );
+        setInfo(tr("admin.supportInbox.replySubmittedToSendpulseDeliveryIs"));
         setMessage("");
         setAttempt("");
       } else {
-        setError(
-          tr(
-            "Delivery is uncertain. Do not send again until verified in the provider dashboard.",
-            "发送结果不确定，请先到服务商后台核实，不要重复发送。",
-          ),
-        );
+        setError(tr("admin.supportInbox.deliveryIsUncertainDoNotSend"));
       }
       await Promise.all([loadThread(selected), reloadList()]);
     } catch (e) {
-      setError(
-        tr(
-          "Could not confirm submission. Keep this draft and verify before retrying.",
-          "无法确认邮件提交，请保留草稿，核实后再操作。",
-        ) +
-          " " +
-          String(e),
-      );
+      setError(tr("admin.supportInbox.couldNotConfirmSubmissionKeepThis") + " " + String(e));
     } finally {
       setBusy(false);
     }
@@ -128,21 +104,10 @@ export function AdminSupportInbox() {
   async function reconcile(messageId: string, outcome: "sent" | "failed") {
     if (!selected || busy) return;
     const evidence = window.prompt(
-      tr(
-        "Enter the SendPulse provider evidence (message ID or exact delivery log finding; minimum 10 characters).",
-        "输入 SendPulse 后台核验依据（消息 ID 或准确的投递日志结果，至少 10 字符）。",
-      ),
+      tr("admin.supportInbox.enterTheSendpulseProviderEvidenceMessage"),
     );
     if (!evidence) return;
-    if (
-      !window.confirm(
-        tr(
-          "Confirm you checked SendPulse and this outcome is accurate?",
-          "确认已核实 SendPulse 后台，此判断准确吗？",
-        ),
-      )
-    )
-      return;
+    if (!window.confirm(tr("admin.supportInbox.confirmYouCheckedSendpulseAndThis"))) return;
     setBusy(true);
     setError("");
     setInfo("");
@@ -153,7 +118,7 @@ export function AdminSupportInbox() {
       });
       await Promise.all([loadThread(selected), reloadList()]);
       setAttempt("");
-      setInfo(tr("Delivery review recorded.", "已保存投递核验记录。"));
+      setInfo(tr("admin.supportInbox.deliveryReviewRecorded"));
     } catch (e) {
       setError(String(e));
     } finally {
@@ -181,10 +146,7 @@ export function AdminSupportInbox() {
     if (
       decision === "approve" &&
       !window.confirm(
-        tr(
-          "Confirm you have added this exact Google account to the Apps project test-user list: ",
-          "确认已将这个 Google 账号加入 Apps 项目测试名单：",
-        ) + detail.beta.googleEmail,
+        tr("admin.supportInbox.confirmYouHaveAddedThisExact") + detail.beta.googleEmail,
       )
     )
       return;
@@ -199,7 +161,7 @@ export function AdminSupportInbox() {
         }),
       });
       await Promise.all([loadThread(selected), reloadList()]);
-      setInfo(tr("Beta request updated. No email was sent.", "已更新内测申请，未自动发送邮件。"));
+      setInfo(tr("admin.supportInbox.betaRequestUpdatedNoEmailWas"));
     } catch (e) {
       setError(String(e));
     } finally {
@@ -220,22 +182,22 @@ export function AdminSupportInbox() {
   };
   const statusLabel = (status: string) =>
     ({
-      open: tr("Needs attention", "待处理"),
-      waiting: tr("Waiting for customer", "等待客户"),
-      resolved: tr("Resolved", "已解决"),
+      open: tr("admin.supportInbox.needsAttention"),
+      waiting: tr("admin.supportInbox.waitingForCustomer"),
+      resolved: tr("admin.supportInbox.resolved"),
     })[status] || status;
   const betaLabel = (status: string) =>
     ({
-      pending: tr("Pending review", "待审核"),
-      approved: tr("Approved", "已开通"),
-      declined: tr("Not admitted", "暂不开通"),
+      pending: tr("admin.supportInbox.pendingReview"),
+      approved: tr("admin.supportInbox.approved"),
+      declined: tr("admin.supportInbox.notAdmitted"),
     })[status] || status;
   const deliveryLabel = (status: string) =>
     ({
-      sent: tr("Submitted", "已提交"),
-      unknown: tr("Verify delivery", "待核验"),
-      failed: tr("Not sent", "发送失败"),
-      sending: tr("Submitting", "提交中"),
+      sent: tr("admin.supportInbox.submitted"),
+      unknown: tr("admin.supportInbox.verifyDelivery"),
+      failed: tr("admin.supportInbox.notSent"),
+      sending: tr("admin.supportInbox.submitting"),
     })[status] || status;
   const readable = (value: string) =>
     new Date(value).toLocaleString(locale === "zh" ? "zh-CN" : "en-NZ", {
@@ -256,36 +218,18 @@ export function AdminSupportInbox() {
   function prepareBetaReply() {
     if (!detail?.beta || detail.beta.status !== "approved" || busy || attempt || unconfirmed)
       return;
-    if (
-      message.trim() &&
-      !window.confirm(
-        tr(
-          "Replace this reply draft with the English Beta notification?",
-          "用英文内测开通通知替换当前回复草稿？",
-        ),
-      )
-    )
+    if (message.trim() && !window.confirm(tr("admin.supportInbox.replaceThisReplyDraftWithThe")))
       return;
     setMessage(betaReplyDraft(detail));
-    setInfo(
-      tr(
-        "English reply prepared. Review the recipient and message before sending.",
-        "已准备英文回复，请核对收件人和正文后再发送。",
-      ),
-    );
+    setInfo(tr("admin.supportInbox.englishReplyPreparedReviewTheRecipient"));
   }
   return (
     <section
       className="adminSupportInbox adminSurface"
-      aria-label={tr("Support inbox", "客服收件箱")}
+      aria-label={tr("admin.supportInbox.supportInbox")}
     >
       <header className="adminSupportToolbar">
-        <p>
-          {tr(
-            "Customer mail and Apps applications. Review, reply and follow up here.",
-            "查看客户来信与 Apps 申请，在这里处理并跟进回复。",
-          )}
-        </p>
+        <p>{tr("admin.supportInbox.customerMailAndAppsApplicationsReview")}</p>
         <button
           type="button"
           className="adminOutlineBtn"
@@ -294,7 +238,7 @@ export function AdminSupportInbox() {
             void Promise.all([reloadList(), selected ? loadThread(selected) : Promise.resolve()])
           }
         >
-          {tr("Refresh", "刷新")}
+          {tr("admin.supportInbox.refresh")}
         </button>
       </header>
       {error && (
@@ -308,14 +252,14 @@ export function AdminSupportInbox() {
         </p>
       )}
       <div className="adminSupportLayout">
-        <aside className="adminSupportList" aria-label={tr("Conversations", "会话列表")}>
+        <aside className="adminSupportList" aria-label={tr("admin.supportInbox.conversations")}>
           <div className="adminSupportListTitle">
-            <h2>{tr("Conversations", "会话")}</h2>
+            <h2>{tr("admin.supportInbox.conversations2")}</h2>
             <small>{loading ? "…" : threads.length}</small>
           </div>
           <div className="adminSupportFilters">
             <label>
-              {tr("Source", "来源")}
+              {tr("admin.supportInbox.source")}
               <select
                 value={source}
                 disabled={busy}
@@ -324,13 +268,13 @@ export function AdminSupportInbox() {
                   setSource(event.target.value);
                 }}
               >
-                <option value="all">{tr("All sources", "全部来源")}</option>
-                <option value="email">{tr("Customer email", "客户来信")}</option>
-                <option value="google-beta">{tr("Apps application", "内测申请")}</option>
+                <option value="all">{tr("admin.supportInbox.allSources")}</option>
+                <option value="email">{tr("admin.supportInbox.customerEmail")}</option>
+                <option value="google-beta">{tr("admin.supportInbox.appsApplication")}</option>
               </select>
             </label>
             <label>
-              {tr("Status", "处理状态")}
+              {tr("admin.supportInbox.status")}
               <select
                 value={filter}
                 disabled={busy}
@@ -339,21 +283,21 @@ export function AdminSupportInbox() {
                   setFilter(event.target.value);
                 }}
               >
-                <option value="all">{tr("All statuses", "全部状态")}</option>
-                <option value="open">{tr("Needs attention", "待处理")}</option>
-                <option value="waiting">{tr("Waiting for customer", "等待客户")}</option>
-                <option value="resolved">{tr("Resolved", "已解决")}</option>
+                <option value="all">{tr("admin.supportInbox.allStatuses")}</option>
+                <option value="open">{tr("admin.supportInbox.needsAttention")}</option>
+                <option value="waiting">{tr("admin.supportInbox.waitingForCustomer")}</option>
+                <option value="resolved">{tr("admin.supportInbox.resolved")}</option>
               </select>
             </label>
           </div>
           {loading && (
             <p className="adminSupportEmpty" role="status">
-              {tr("Loading conversations…", "正在读取会话…")}
+              {tr("admin.supportInbox.loadingConversations")}
             </p>
           )}
           {!loading && !threads.length && (
             <p className="adminSupportEmpty">
-              {tr("No conversations match these filters.", "此筛选下暂无会话。")}
+              {tr("admin.supportInbox.noConversationsMatchTheseFilters")}
             </p>
           )}
           <div className="adminSupportThreadList" aria-busy={loading}>
@@ -374,8 +318,8 @@ export function AdminSupportInbox() {
                 <span className="adminSupportThreadMeta">
                   <span className="adminSupportTag" data-source={item.source}>
                     {item.source === "google-beta"
-                      ? tr("Apps application", "内测申请")
-                      : tr("Customer email", "客户来信")}
+                      ? tr("admin.supportInbox.appsApplication")
+                      : tr("admin.supportInbox.customerEmail")}
                   </span>
                   <small>
                     {item.beta_status === "pending"
@@ -387,10 +331,10 @@ export function AdminSupportInbox() {
                 </span>
                 <small className="adminSupportLastDirection">
                   {item.last_direction === "outbound"
-                    ? tr("Support → customer", "客服 → 客户")
+                    ? tr("admin.supportInbox.supportCustomer")
                     : item.source === "google-beta"
-                      ? tr("Applicant → support", "申请人 → 客服")
-                      : tr("Customer → support", "客户 → 客服")}
+                      ? tr("admin.supportInbox.applicantSupport")
+                      : tr("admin.supportInbox.customerSupport")}
                 </small>
               </button>
             ))}
@@ -401,15 +345,10 @@ export function AdminSupportInbox() {
             <div className="adminSupportPlaceholder">
               <strong>
                 {selected
-                  ? tr("Loading conversation…", "正在读取会话…")
-                  : tr("Select a conversation", "选择一个会话")}
+                  ? tr("admin.supportInbox.loadingConversation")
+                  : tr("admin.supportInbox.selectAConversation")}
               </strong>
-              <p>
-                {tr(
-                  "See who wrote in, review the request and reply to the right address.",
-                  "查看来信人、处理申请，并核对收件人后回复。",
-                )}
-              </p>
+              <p>{tr("admin.supportInbox.seeWhoWroteInReviewThe")}</p>
             </div>
           ) : (
             <>
@@ -417,53 +356,51 @@ export function AdminSupportInbox() {
                 <div>
                   <span className="adminSupportEyebrow">
                     {detail.beta
-                      ? tr("APPS APPLICATION", "APPS 内测申请")
-                      : tr("CUSTOMER CONVERSATION", "客户会话")}
+                      ? tr("admin.supportInbox.appsApplication2")
+                      : tr("admin.supportInbox.customerConversation")}
                   </span>
                   <h3>
                     {detail.beta
-                      ? tr("Google Apps Beta application", "Google Apps 内测申请")
+                      ? tr("admin.supportInbox.googleAppsBetaApplication")
                       : detail.thread.subject}
                   </h3>
                   <p>{detail.thread.sender_email}</p>
                 </div>
                 <label>
-                  {tr("Conversation status", "会话状态")}
+                  {tr("admin.supportInbox.conversationStatus")}
                   <select
                     value={detail.thread.status}
                     disabled={busy}
                     onChange={(event) => void changeStatus(event.target.value as Thread["status"])}
                   >
-                    <option value="open">{tr("Needs attention", "待处理")}</option>
-                    <option value="waiting">{tr("Waiting for customer", "等待客户")}</option>
-                    <option value="resolved">{tr("Resolved", "已解决")}</option>
+                    <option value="open">{tr("admin.supportInbox.needsAttention")}</option>
+                    <option value="waiting">{tr("admin.supportInbox.waitingForCustomer")}</option>
+                    <option value="resolved">{tr("admin.supportInbox.resolved")}</option>
                   </select>
                 </label>
               </header>
               {detail.beta && (
                 <section
                   className="adminSupportBeta"
-                  aria-label={tr("Google Apps Beta application", "Google Apps 内测申请")}
+                  aria-label={tr("admin.supportInbox.googleAppsBetaApplication")}
                 >
                   <div className="adminSupportBetaHeading">
-                    <strong>{tr("Application details", "申请信息")}</strong>
+                    <strong>{tr("admin.supportInbox.applicationDetails")}</strong>
                     <span
                       className="adminSupportTag"
                       role="status"
-                      aria-label={tr("Beta status", "内测状态")}
+                      aria-label={tr("admin.supportInbox.betaStatus")}
                     >
                       {betaLabel(detail.beta.status)}
                     </span>
                   </div>
                   <dl className="adminSupportAddresses">
                     <div>
-                      <dt>{tr("Remote Arc account · reply to", "RA 账号 · 回复此邮箱")}</dt>
+                      <dt>{tr("admin.supportInbox.remoteArcAccountReplyTo")}</dt>
                       <dd>{detail.thread.sender_email}</dd>
                     </div>
                     <div>
-                      <dt>
-                        {tr("Google account · add to test list", "Google 账号 · 加入测试名单")}
-                      </dt>
+                      <dt>{tr("admin.supportInbox.googleAccountAddToTestList")}</dt>
                       <dd>{detail.beta.googleEmail}</dd>
                     </div>
                   </dl>
@@ -474,32 +411,30 @@ export function AdminSupportInbox() {
                   </div>
                   <ol
                     className="adminSupportSteps"
-                    aria-label={tr("Application workflow", "申请处理流程")}
+                    aria-label={tr("admin.supportInbox.applicationWorkflow")}
                   >
                     <li data-done={detail.beta.status === "approved"}>
                       <span>1</span>
                       <div>
-                        <strong>{tr("Google test users", "加入 Google 名单")}</strong>
-                        <small>
-                          {tr("Add the Google account above.", "添加上方 Google 账号。")}
-                        </small>
+                        <strong>{tr("admin.supportInbox.googleTestUsers")}</strong>
+                        <small>{tr("admin.supportInbox.addTheGoogleAccountAbove")}</small>
                       </div>
                     </li>
                     <li data-done={detail.beta.status === "approved"}>
                       <span>2</span>
                       <div>
-                        <strong>{tr("Open Beta access", "开通 RA 内测")}</strong>
-                        <small>{tr("Confirm the Google step first.", "确认名单后开通。")}</small>
+                        <strong>{tr("admin.supportInbox.openBetaAccess")}</strong>
+                        <small>{tr("admin.supportInbox.confirmTheGoogleStepFirst")}</small>
                       </div>
                     </li>
                     <li data-done={Boolean(replied)}>
                       <span>3</span>
                       <div>
-                        <strong>{tr("Reply to applicant", "回复申请人")}</strong>
+                        <strong>{tr("admin.supportInbox.replyToApplicant")}</strong>
                         <small>
                           {replied
-                            ? tr("Reply submitted", "已提交回复")
-                            : tr("Review and send the notice.", "审阅并发送通知。")}
+                            ? tr("admin.supportInbox.replySubmitted")
+                            : tr("admin.supportInbox.reviewAndSendTheNotice")}
                         </small>
                       </div>
                     </li>
@@ -512,7 +447,7 @@ export function AdminSupportInbox() {
                         target="_blank"
                         rel="noreferrer"
                       >
-                        {tr("1 · Open Google test users", "1 · 打开 Google 测试名单")} ↗
+                        {tr("admin.supportInbox.openGoogleTestUsers")} ↗
                       </a>
                       <button
                         type="button"
@@ -520,7 +455,7 @@ export function AdminSupportInbox() {
                         disabled={busy}
                         onClick={() => void reviewBeta("approve")}
                       >
-                        {tr("Added to Google — open Beta access", "2 · 确认已加入，开通内测")}
+                        {tr("admin.supportInbox.addedToGoogleOpenBetaAccess")}
                       </button>
                       <button
                         type="button"
@@ -528,7 +463,7 @@ export function AdminSupportInbox() {
                         disabled={busy}
                         onClick={() => void reviewBeta("decline")}
                       >
-                        {tr("Decline request", "暂不开通")}
+                        {tr("admin.supportInbox.declineRequest")}
                       </button>
                     </div>
                   ) : detail.beta.status === "approved" ? (
@@ -539,31 +474,24 @@ export function AdminSupportInbox() {
                         disabled={busy || Boolean(attempt) || Boolean(unconfirmed)}
                         onClick={prepareBetaReply}
                       >
-                        {tr("Prepare English notification", "准备英文开通通知")}
+                        {tr("admin.supportInbox.prepareEnglishNotification")}
                       </button>
-                      <small>
-                        {tr("Opening access does not send an email.", "开通内测不会自动发邮件。")}
-                      </small>
+                      <small>{tr("admin.supportInbox.openingAccessDoesNotSendAn")}</small>
                     </div>
                   ) : (
-                    <p>
-                      {tr(
-                        "This request was not admitted. You can explain the next steps below.",
-                        "本次申请暂未开通，可在下方回复说明。",
-                      )}
-                    </p>
+                    <p>{tr("admin.supportInbox.thisRequestWasNotAdmittedYou")}</p>
                   )}
                 </section>
               )}
               <section
                 className="adminSupportMessages"
-                aria-label={tr("Conversation history", "会话记录")}
+                aria-label={tr("admin.supportInbox.conversationHistory")}
               >
                 {detail.messages.map((mail) =>
                   mail.source === "application" ? (
                     <details key={mail.id} className="adminSupportApplicationRecord">
                       <summary>
-                        {tr("Original web application", "网页申请原始记录")} ·{" "}
+                        {tr("admin.supportInbox.originalWebApplication")} ·{" "}
                         {readable(mail.createdAt)}
                       </summary>
                       <p>{mail.body}</p>
@@ -574,25 +502,25 @@ export function AdminSupportInbox() {
                       className={"adminSupportMail " + mail.direction}
                       aria-label={
                         mail.direction === "outbound"
-                          ? tr("Support reply", "客服回复")
-                          : tr("Customer email", "客户来信")
+                          ? tr("admin.supportInbox.supportReply")
+                          : tr("admin.supportInbox.customerEmail")
                       }
                     >
                       <header>
                         <strong>
                           {mail.direction === "outbound"
-                            ? tr("Remote Arc support", "Remote Arc 客服")
-                            : tr("Customer", "客户来信")}
+                            ? tr("admin.supportInbox.remoteArcSupport")
+                            : tr("admin.supportInbox.customer")}
                         </strong>
                         <time dateTime={mail.createdAt}>{readable(mail.createdAt)}</time>
                       </header>
                       <dl className="adminSupportMailAddresses">
                         <div>
-                          <dt>{tr("From", "发件人")}</dt>
+                          <dt>{tr("admin.supportInbox.from")}</dt>
                           <dd>{mail.from}</dd>
                         </div>
                         <div>
-                          <dt>{tr("To", "收件人")}</dt>
+                          <dt>{tr("admin.supportInbox.to")}</dt>
                           <dd>{mail.to}</dd>
                         </div>
                       </dl>
@@ -605,24 +533,21 @@ export function AdminSupportInbox() {
                       {mail.direction === "outbound" && mail.deliveryStatus === "unknown" && (
                         <div className="adminSupportReview">
                           <strong>
-                            {tr(
-                              "Check the SendPulse delivery log before sending another reply.",
-                              "请先核实 SendPulse 投递日志，再发送新回复。",
-                            )}
+                            {tr("admin.supportInbox.checkTheSendpulseDeliveryLogBefore")}
                           </strong>
                           <button
                             type="button"
                             disabled={busy}
                             onClick={() => void reconcile(mail.id, "sent")}
                           >
-                            {tr("Confirmed submitted", "核实已提交")}
+                            {tr("admin.supportInbox.confirmedSubmitted")}
                           </button>
                           <button
                             type="button"
                             disabled={busy}
                             onClick={() => void reconcile(mail.id, "failed")}
                           >
-                            {tr("Confirmed not sent", "核实未发送")}
+                            {tr("admin.supportInbox.confirmedNotSent")}
                           </button>
                         </div>
                       )}
@@ -638,11 +563,13 @@ export function AdminSupportInbox() {
                 }}
               >
                 <div className="adminSupportComposeHead">
-                  <label htmlFor="admin-support-reply">{tr("Reply to customer", "回复客户")}</label>
-                  <span>{tr("From", "发件人")} support@remotearc.app</span>
+                  <label htmlFor="admin-support-reply">
+                    {tr("admin.supportInbox.replyToCustomer")}
+                  </label>
+                  <span>{tr("admin.supportInbox.from")} support@remotearc.app</span>
                 </div>
                 <p className="adminSupportRecipient">
-                  {tr("To: ", "收件人：")}
+                  {tr("admin.supportInbox.to2")}
                   <strong>{detail.thread.sender_email}</strong>
                 </p>
                 <textarea
@@ -652,19 +579,13 @@ export function AdminSupportInbox() {
                   rows={5}
                   disabled={busy || Boolean(attempt) || Boolean(unconfirmed)}
                   onChange={(event) => setMessage(event.target.value)}
-                  placeholder={tr("Write your reply here…", "在这里填写回复内容…")}
+                  placeholder={tr("admin.supportInbox.writeYourReplyHere")}
                 />
                 <div>
                   <small>
                     {unconfirmed
-                      ? tr(
-                          "Verify the previous submission above first.",
-                          "请先核验上方的上一次发送。",
-                        )
-                      : tr(
-                          "Check the recipient before sending. Submitted does not mean delivered.",
-                          "发送前请核对收件人；已提交不等于已送达。",
-                        )}
+                      ? tr("admin.supportInbox.verifyThePreviousSubmissionAboveFirst")
+                      : tr("admin.supportInbox.checkTheRecipientBeforeSendingSubmitted")}
                   </small>
                   <button
                     className="adminPrimaryBtn"
@@ -672,8 +593,8 @@ export function AdminSupportInbox() {
                     disabled={busy || !message.trim() || Boolean(attempt) || Boolean(unconfirmed)}
                   >
                     {busy
-                      ? tr("Submitting…", "提交中…")
-                      : tr("Send reviewed reply", "确认发送回复")}
+                      ? tr("admin.supportInbox.submitting2")
+                      : tr("admin.supportInbox.sendReviewedReply")}
                   </button>
                 </div>
               </form>

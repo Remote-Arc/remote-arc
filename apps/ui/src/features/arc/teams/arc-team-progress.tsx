@@ -1,31 +1,32 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import type { ArcDelegationProgress } from "@remotearc/protocol";
 import { TeamAvatar } from "./arc-team-avatar.js";
-import "./arc-team-progress.css";
-type Tr = (en: string, zh: string) => string;
+import "../../../styles/arc/teams/arc-team-progress.css";
+type Tr = Translate;
 export function ArcTeamProgress({ items, tr }: { items: ArcDelegationProgress[]; tr: Tr }) {
   if (!items.length) return null;
   const members = items.flatMap((item) => item.members),
     completed = members.filter((member) => member.status === "completed").length;
   const label = (state: string) =>
     state === "completed"
-      ? tr("Completed", "已完成")
+      ? tr("arc.teams.arcTeamProgress.completed")
       : state === "working"
-        ? tr("Working", "进行中")
+        ? tr("arc.teams.arcTeamProgress.working")
         : state === "queued"
-          ? tr("Queued", "等待执行")
+          ? tr("arc.teams.arcTeamProgress.queued")
           : state === "paused"
-            ? tr("Paused", "已暂停")
+            ? tr("arc.teams.arcTeamProgress.paused")
             : state === "cancelled"
-              ? tr("Stopped", "已停止")
+              ? tr("arc.teams.arcTeamProgress.stopped")
               : state === "unknown"
-                ? tr("Needs attention", "需要关注")
-                : tr("Could not finish", "未能完成");
+                ? tr("arc.teams.arcTeamProgress.needsAttention")
+                : tr("arc.teams.arcTeamProgress.couldNotFinish");
   return (
-    <section className="arcTeamProgress" aria-label={tr("Team progress", "智能体进度")}>
+    <section className="arcTeamProgress" aria-label={tr("arc.teams.arcTeamProgress.teamProgress")}>
       <div className="arcTeamProgressHeading">
-        <strong>{tr("Team progress", "智能体进度")}</strong>
+        <strong>{tr("arc.teams.arcTeamProgress.teamProgress")}</strong>
         <span aria-live="polite">
-          {completed}/{members.length} {tr("completed", "已完成")}
+          {completed}/{members.length} {tr("arc.teams.arcTeamProgress.completed2")}
         </span>
       </div>
       {members.length ? (
@@ -36,9 +37,9 @@ export function ArcTeamProgress({ items, tr }: { items: ArcDelegationProgress[];
               <strong>{member.name}</strong>
               <span>
                 {member.status === "working"
-                  ? member.activity || tr("Working on the assignment…", "正在处理分工…")
+                  ? member.activity || tr("arc.teams.arcTeamProgress.workingOnTheAssignment")
                   : member.status === "queued"
-                    ? tr("Waiting for an available work slot", "等待可用的执行位置")
+                    ? tr("arc.teams.arcTeamProgress.waitingForAnAvailableWorkSlot")
                     : label(member.status)}
               </span>
             </div>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useI18n } from "../../../app/i18n.js";
-import "./request-volume.css";
+import { useI18n } from "../../../hooks/use-i18n.js";
+import "../../../styles/marketing/home/request-volume.css";
 
 // Traffic snapshot supplied by the owner, 2026-11-02. This is a projection,
 // not a measured rolling month or a count of user tool calls/completed tasks.
@@ -80,30 +80,22 @@ export function RequestVolume() {
       id="request-volume"
       data-entered={entered}
       data-monthly-estimate={monthly}
-      aria-label={tr("Estimated monthly server requests", "月度服务器请求量估算")}
+      aria-label={tr("marketing.home.requestVolume.estimatedMonthlyServerRequests")}
     >
       <div className="requestVolumeIntro">
-        <h2>{tr("Remote Arc serves", "Remote Arc 承接")}</h2>
-        <p className="requestVolumeNote">
-          {tr(
-            "30-day estimate · 265.25K / day · Nov 2, 2026",
-            "按日请求量估算 · 2026 年 11 月 2 日",
-          )}
-        </p>
+        <h2>{tr("marketing.home.requestVolume.remoteArcServes")}</h2>
+        <p className="requestVolumeNote">{tr("marketing.home.requestVolume.dayEstimateKDayNov")}</p>
       </div>
       <div className="requestVolumeMetric">
         <span className="requestVolumeAccessible">
-          {tr(
-            monthlyLabel + " server requests per month, estimated.",
-            "每月 " + monthlyLabel + " 次服务器请求，按日流量估算。",
-          )}
+          {tr("marketing.home.requestVolume.serverRequestsPerMonthEstimated", { monthlyLabel })}
         </span>
         <div className="requestVolumeNumber" aria-hidden="true">
           <span className="requestVolumeApprox">~</span>
           <span data-request-count>{countFormat.format(Math.floor(count))}</span>
         </div>
         <span className="requestVolumeLabel">
-          {tr("server requests / month", "次服务器请求 / 月")}
+          {tr("marketing.home.requestVolume.serverRequestsMonth")}
         </span>
       </div>
     </section>

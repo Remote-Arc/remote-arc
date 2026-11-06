@@ -1,9 +1,9 @@
 import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
 import { useEffect, useRef, useState } from "react";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../../lib/marketing-paths.js";
 import directory from "../../data/app-directory.json" with { type: "json" };
-import "./integrations-page.css";
+import "../../styles/marketing/integrations-page.css";
 type Availability = { enabled: boolean; providers: { provider: string; ready: boolean }[] };
 type AvailabilityState =
   { state: "loading" } | { state: "unavailable" } | { state: "loaded"; data: Availability };
@@ -99,43 +99,38 @@ export function IntegrationsPage() {
     <main className="integrationsPage">
       <header className="integrationsHero">
         <a href={localizedWebsiteHref("/#apps", locale)}>
-          ← {tr("Back to Remote Arc", "返回 Remote Arc")}
+          ← {tr("marketing.integrationsPage.backToRemoteArc")}
         </a>
         <span className="eyebrow">REMOTE ARC CONNECT / APPS</span>
-        <h1>{tr("Explore your integrations.", "探索你的应用连接。")}</h1>
-        <p>
-          {tr(
-            "Find the apps for your work, explore their tools, and connect your accounts to the AI you already use.",
-            "找到工作所需的应用，了解可用工具，再把账号连接到你正在使用的 AI。",
-          )}
-        </p>
+        <h1>{tr("marketing.integrationsPage.exploreYourIntegrations")}</h1>
+        <p>{tr("marketing.integrationsPage.findTheAppsForYourWork")}</p>
         <span className="integrationsCount">
-          {directory.apps.length} {tr("native integrations", "个原生集成")} ·{" "}
-          {directory.categories.length} {tr("categories", "个类别")}
+          {directory.apps.length} {tr("marketing.integrationsPage.nativeIntegrations")} ·{" "}
+          {directory.categories.length} {tr("marketing.integrationsPage.categories")}
         </span>
       </header>
       <div className="integrationsLayout">
         <div className="integrationsCatalog" ref={catalogRef}>
           <label className="integrationsSearch">
-            {tr("Find an app", "查找应用")}
+            {tr("marketing.integrationsPage.findAnApp")}
             <input
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={tr("Search apps…", "搜索应用…")}
+              placeholder={tr("marketing.integrationsPage.searchApps")}
             />
           </label>
           <div
             className="integrationsFilters"
             role="group"
-            aria-label={tr("App categories", "应用分类")}
+            aria-label={tr("marketing.integrationsPage.appCategories")}
           >
             <button
               type="button"
               aria-pressed={category === "all"}
               onClick={() => chooseCategory("all")}
             >
-              {tr("All apps", "全部应用")}
+              {tr("marketing.integrationsPage.allApps")}
             </button>
             {directory.categories.map((item) => (
               <button
@@ -150,14 +145,11 @@ export function IntegrationsPage() {
           </div>
           {unknownProvider && (
             <p className="integrationsNotice" role="status">
-              {tr(
-                "That app is not in the current catalog. Choose an integration below.",
-                "当前目录中没有这个应用，请从下面选择。",
-              )}
+              {tr("marketing.integrationsPage.thatAppIsNotInThe")}
             </p>
           )}
           <p className="integrationsResults">
-            {filtered.length} {tr("integrations", "个集成")}
+            {filtered.length} {tr("marketing.integrationsPage.integrations")}
           </p>
           <ul className="integrationsGrid">
             {filtered.map((app) => (
@@ -174,7 +166,7 @@ export function IntegrationsPage() {
                   <span>
                     <strong>{app.name}</strong>
                     <small>
-                      {app.operationCount} {tr("operations", "项操作")}
+                      {app.operationCount} {tr("marketing.integrationsPage.operations")}
                     </small>
                   </span>
                   <span className="integrationsSelectArrow" aria-hidden="true">
@@ -186,14 +178,14 @@ export function IntegrationsPage() {
           </ul>
           {!filtered.length && (
             <p className="integrationsNotice" role="status">
-              {tr("No apps match your search.", "没有匹配的应用。")}
+              {tr("marketing.integrationsPage.noAppsMatchYourSearch")}
             </p>
           )}
         </div>
         <aside
           className="integrationDetail"
           ref={detailRef}
-          aria-label={tr("Selected integration details", "所选应用详情")}
+          aria-label={tr("marketing.integrationsPage.selectedIntegrationDetails")}
         >
           {selected ? (
             <>
@@ -209,24 +201,21 @@ export function IntegrationsPage() {
                 <div>
                   <span className="eyebrow">
                     {selected.auth === "api_key"
-                      ? tr("YOUR API ACCOUNT", "你的 API 账号")
-                      : tr("ACCOUNT AUTHORIZATION", "账号授权")}
+                      ? tr("marketing.integrationsPage.yourApiAccount")
+                      : tr("marketing.integrationsPage.accountAuthorization")}
                   </span>
                   <h2>{selected.name}</h2>
                 </div>
               </header>
               <section className="integrationAvailability" aria-live="polite">
-                <h3>{tr("Connection availability", "连接开放状态")}</h3>
+                <h3>{tr("marketing.integrationsPage.connectionAvailability")}</h3>
                 {availability.state === "loading" ? (
-                  <p role="status">{tr("Checking the connection service…", "正在检查连接服务…")}</p>
+                  <p role="status">
+                    {tr("marketing.integrationsPage.checkingTheConnectionService")}
+                  </p>
                 ) : ready ? (
                   <>
-                    <p>
-                      {tr(
-                        "This integration is ready for account authorization. Sign in to choose your own account and permissions.",
-                        "此集成已开放账号授权。登录后选择你自己的账号与权限。",
-                      )}
-                    </p>
+                    <p>{tr("marketing.integrationsPage.thisIntegrationIsReadyForAccount")}</p>
                     <a
                       className="primaryButton"
                       href={
@@ -234,33 +223,26 @@ export function IntegrationsPage() {
                         encodeURIComponent(selected.provider)
                       }
                     >
-                      {tr("Connect your account", "连接你的账号")} ↗
+                      {tr("marketing.integrationsPage.connectYourAccount")} ↗
                     </a>
                   </>
                 ) : (
                   <>
                     <p>
                       {availability.state === "unavailable"
-                        ? tr(
-                            "We couldn't check connection availability. Try again, or explore the supported tools below.",
-                            "暂时无法确认连接状态。请重试，也可以先查看下面支持的工具。",
-                          )
+                        ? tr("marketing.integrationsPage.weCouldnTCheckConnectionAvailability")
                         : availability.data.enabled
-                          ? tr(
-                              "Account connection for this app is coming soon. Explore the supported tools below.",
-                              "此应用即将开放账号连接。你可以先查看下面支持的工具。",
-                            )
+                          ? tr("marketing.integrationsPage.accountConnectionForThisAppIs")
                           : tr(
-                              "App connections are temporarily unavailable. Please check again later.",
-                              "应用连接暂不可用，请稍后重试。",
+                              "marketing.integrationsPage.appConnectionsAreTemporarilyUnavailablePlease",
                             )}
                     </p>
                     <button type="button" disabled>
                       {availability.state === "unavailable"
-                        ? tr("Status unavailable", "状态暂不可用")
+                        ? tr("marketing.integrationsPage.statusUnavailable")
                         : availability.data.enabled
-                          ? tr("Coming soon", "即将推出")
-                          : tr("Temporarily unavailable", "暂不可用")}
+                          ? tr("marketing.integrationsPage.comingSoon")
+                          : tr("marketing.integrationsPage.temporarilyUnavailable")}
                     </button>
                     {availability.state === "unavailable" && (
                       <button
@@ -268,46 +250,31 @@ export function IntegrationsPage() {
                         type="button"
                         onClick={() => setRefresh((value) => value + 1)}
                       >
-                        {tr("Check again", "重新检查")}
+                        {tr("marketing.integrationsPage.checkAgain")}
                       </button>
                     )}
                   </>
                 )}
               </section>
               <section className="integrationSetup">
-                <h3>{tr("What you need", "连接前准备")}</h3>
+                <h3>{tr("marketing.integrationsPage.whatYouNeed")}</h3>
                 <p>
                   {selected.auth === "api_key"
-                    ? tr(
-                        "Use an API key or access token from your own provider account. Enter it only in the signed-in Apps page.",
-                        "使用你自己的服务账号提供的 API 密钥或访问令牌，仅在登录后的 Apps 页面填写。",
-                      )
-                    : tr(
-                        "Sign in on the provider's consent page and authorize the account you want your AI to use.",
-                        "在服务商的授权页面登录，授权你希望 AI 使用的账号。",
-                      )}
+                    ? tr("marketing.integrationsPage.useAnApiKeyOrAccess")
+                    : tr("marketing.integrationsPage.signInOnTheProviderS")}
                 </p>
                 {selected.connectionNote && <p>{selected.connectionNote}</p>}
-                <p>
-                  {tr(
-                    "Connecting enables the supported read and write tools within your account's permissions. There is no additional Remote Arc write switch. Your AI client's own confirmation settings still apply.",
-                    "连接后，账号授权范围内的读取与写入工具一并启用，无需额外打开 Remote Arc 写入开关。AI 客户端自身的确认设置仍然适用。",
-                  )}
-                </p>
+                <p>{tr("marketing.integrationsPage.connectingEnablesTheSupportedReadAnd")}</p>
               </section>
               <section className="integrationBilling">
-                <h3>{tr("Usage and costs", "用量与费用")}</h3>
+                <h3>{tr("marketing.integrationsPage.usageAndCosts")}</h3>
                 <p>{selected.billingNote}</p>
-                <p>
-                  {tr(
-                    "Remote Arc tool-call limits and provider API fees are separate. A web subscription may not include API usage.",
-                    "Remote Arc 工具调用额度与服务商 API 费用分别计算；网页订阅不一定包含 API 用量。",
-                  )}
-                </p>
+                <p>{tr("marketing.integrationsPage.remoteArcToolCallLimitsAnd")}</p>
               </section>
               <section className="integrationOperations">
                 <h3>
-                  {tr("Supported operations", "支持的操作")} <span>{selected.operationCount}</span>
+                  {tr("marketing.integrationsPage.supportedOperations")}{" "}
+                  <span>{selected.operationCount}</span>
                 </h3>
                 <ul>
                   {selected.operations.map((operation) => (
@@ -316,8 +283,8 @@ export function IntegrationsPage() {
                       <code>{operation.name}</code>
                       <span data-permission={operation.permission}>
                         {operation.permission === "write"
-                          ? tr("Write", "写入")
-                          : tr("Read", "读取")}
+                          ? tr("marketing.integrationsPage.write")
+                          : tr("marketing.integrationsPage.read")}
                       </span>
                     </li>
                   ))}
@@ -328,16 +295,11 @@ export function IntegrationsPage() {
                 type="button"
                 onClick={() => catalogRef.current?.scrollIntoView({ block: "start" })}
               >
-                {tr("Choose another app", "选择其他应用")} ↑
+                {tr("marketing.integrationsPage.chooseAnotherApp")} ↑
               </button>
             </>
           ) : (
-            <p>
-              {tr(
-                "Choose an integration to see its operations and connection requirements.",
-                "选择应用，查看操作和连接条件。",
-              )}
-            </p>
+            <p>{tr("marketing.integrationsPage.chooseAnIntegrationToSeeIts")}</p>
           )}
         </aside>
       </div>

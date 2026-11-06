@@ -1,3 +1,4 @@
+import type { Translate } from "../../locales/locale-catalog.js";
 import { trackProductEvent } from "../../lib/product-events.js";
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { loadStripe } from "@stripe/stripe-js/pure/index.js";
@@ -19,7 +20,7 @@ import {
 } from "./arc-billing-client.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 
-type Tr = (en: string, zh: string) => string;
+type Tr = Translate;
 type CheckoutProps = {
   session: NativePaymentSession;
   locale: StripeElementLocale;
@@ -126,25 +127,20 @@ function LiveEmbeddedCheckout({ session, locale, tr, onComplete }: CheckoutProps
   return (
     <section
       className="arcEmbeddedPayment"
-      aria-label={tr("Secure payment", "安全付款")}
+      aria-label={tr("billing.stripeEmbedded.securePayment")}
       aria-busy={!ready && !failed}
     >
       {!ready && !failed && (
         <WorkspaceLoading
-          label={tr("Loading secure payment…", "正在加载安全付款表单…")}
+          label={tr("billing.stripeEmbedded.loadingSecurePayment")}
           variant="compact"
         />
       )}
       {failed && (
         <div role="alert">
-          <p>
-            {tr(
-              "The payment form could not load. Your order is saved.",
-              "付款表单未能加载，订单已保留。",
-            )}
-          </p>
+          <p>{tr("billing.stripeEmbedded.thePaymentFormCouldNotLoad")}</p>
           <button className="raSettingsButton" onClick={() => setRetry((value) => value + 1)}>
-            {tr("Reload payment form", "重新加载付款表单")}
+            {tr("billing.stripeEmbedded.reloadPaymentForm")}
           </button>
         </div>
       )}
@@ -198,24 +194,12 @@ function LivePaymentMethod({ session, locale, tr, onSaved, onClose }: MethodProp
           if (!disposed) setReady(true);
         });
         payment.on("loaderror", () => {
-          if (!disposed)
-            setError(
-              tr(
-                "The secure form could not load. Close it and try again.",
-                "安全表单未能加载，请关闭后重试。",
-              ),
-            );
+          if (!disposed) setError(tr("billing.stripeEmbedded.theSecureFormCouldNotLoad"));
         });
         if (host.current) payment.mount(host.current);
       })
       .catch(() => {
-        if (!disposed)
-          setError(
-            tr(
-              "The secure form could not load. Close it and try again.",
-              "安全表单未能加载，请关闭后重试。",
-            ),
-          );
+        if (!disposed) setError(tr("billing.stripeEmbedded.theSecureFormCouldNotLoad"));
       });
     return () => {
       disposed = true;
@@ -253,16 +237,11 @@ function LivePaymentMethod({ session, locale, tr, onSaved, onClose }: MethodProp
   }
   return (
     <form className="raBillingMethodForm" onSubmit={(event) => void save(event)}>
-      <h3>{tr("Update payment method", "更新付款方式")}</h3>
-      <p>
-        {tr(
-          "Your new method will be used for future invoices. This does not make a purchase.",
-          "新的付款方式将用于后续账单，此操作不会购买套餐。",
-        )}
-      </p>
+      <h3>{tr("billing.stripeEmbedded.updatePaymentMethod")}</h3>
+      <p>{tr("billing.stripeEmbedded.yourNewMethodWillBeUsed")}</p>
       {!ready && !error && (
         <WorkspaceLoading
-          label={tr("Loading secure form…", "正在加载安全表单…")}
+          label={tr("billing.stripeEmbedded.loadingSecureForm")}
           variant="compact"
         />
       )}
@@ -270,14 +249,16 @@ function LivePaymentMethod({ session, locale, tr, onSaved, onClose }: MethodProp
       {error && <p role="alert">{error}</p>}
       <footer>
         <button type="button" className="raSettingsButton" disabled={busy} onClick={onClose}>
-          {tr("Close", "关闭")}
+          {tr("billing.stripeEmbedded.close")}
         </button>
         <button
           className="raSettingsButton raSettingsButtonPrimary"
           type="submit"
           disabled={!ready || busy}
         >
-          {busy ? tr("Verifying…", "验证中…") : tr("Save payment method", "保存付款方式")}
+          {busy
+            ? tr("billing.stripeEmbedded.verifying")
+            : tr("billing.stripeEmbedded.savePaymentMethod")}
         </button>
       </footer>
     </form>
@@ -426,24 +407,12 @@ function LiveElementsCheckout({ session, locale, tr, onComplete, summary }: Elem
       const result = await confirm();
       if (result.type === "error") {
         if (live.current)
-          setError(
-            result.error.message ||
-              tr(
-                "The payment did not go through. Check your details and try again.",
-                "付款未完成，请检查信息后重试。",
-              ),
-          );
+          setError(result.error.message || tr("billing.stripeEmbedded.thePaymentDidNotGoThrough"));
         return;
       }
       if (live.current) completed.current();
     } catch {
-      if (live.current)
-        setError(
-          tr(
-            "The payment did not go through. Check your details and try again.",
-            "付款未完成，请检查信息后重试。",
-          ),
-        );
+      if (live.current) setError(tr("billing.stripeEmbedded.thePaymentDidNotGoThrough"));
     } finally {
       lock.current = false;
       if (live.current) setBusy(false);
@@ -479,24 +448,19 @@ function LiveElementsCheckout({ session, locale, tr, onComplete, summary }: Elem
           <>
             {!ready && !failed && (
               <WorkspaceLoading
-                label={tr("Loading secure payment…", "正在加载安全付款表单…")}
+                label={tr("billing.stripeEmbedded.loadingSecurePayment")}
                 variant="compact"
               />
             )}
             {failed && (
               <div className="arcElementsError" role="alert">
-                <p>
-                  {tr(
-                    "The payment form could not load. Your order is saved.",
-                    "付款表单未能加载，订单已保留。",
-                  )}
-                </p>
+                <p>{tr("billing.stripeEmbedded.thePaymentFormCouldNotLoad")}</p>
                 <button
                   type="button"
                   className="raSettingsButton"
                   onClick={() => setRetry((value) => value + 1)}
                 >
-                  {tr("Reload payment form", "重新加载付款表单")}
+                  {tr("billing.stripeEmbedded.reloadPaymentForm")}
                 </button>
               </div>
             )}

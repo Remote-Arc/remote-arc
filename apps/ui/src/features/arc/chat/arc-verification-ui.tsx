@@ -1,40 +1,41 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { canonicalErrorEnvelope } from "../../../../../../packages/protocol/src/error-codes.js";
 import { WorkspaceLoading } from "../../../components/workspace-loading.js";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import type { ArcVerification, ArcReceipt } from "@remotearc/protocol";
-type Tr = (en: string, zh: string) => string;
+type Tr = Translate;
 export const verificationLabel = (scope: ArcVerification, tr: Tr) =>
   scope.kind === "inbox"
-    ? tr(`Read up to ${scope.limit} inbox excerpts`, `读取最多 ${scope.limit} 封邮箱摘录`)
+    ? tr("arc.chat.arcVerificationUi.readUpToInboxExcerpts", { limit: scope.limit })
     : scope.kind === "github_issue"
-      ? tr(`Create and read back an issue in ${scope.repo}`, `在 ${scope.repo} 创建 Issue 并回读`)
-      : tr(`Check deployment ${scope.deploymentId}`, `检查部署 ${scope.deploymentId}`);
+      ? tr("arc.chat.arcVerificationUi.createAndReadBackAnIssue", { repo: scope.repo })
+      : tr("arc.chat.arcVerificationUi.checkDeployment", { deploymentId: scope.deploymentId });
 export function ArcVerificationScope({ scope, tr }: { scope: ArcVerification; tr: Tr }) {
   return (
     <details className="arcVerificationScope">
       <summary>
-        {tr("Verification scope", "验证范围")} · {verificationLabel(scope, tr)}
+        {tr("arc.chat.arcVerificationUi.verificationScope")} · {verificationLabel(scope, tr)}
       </summary>
       <dl>
-        <dt>{tr("Account connection", "账户连接")}</dt>
+        <dt>{tr("arc.chat.arcVerificationUi.accountConnection")}</dt>
         <dd>
           <code>{scope.connectionId}</code>
         </dd>
         {scope.kind === "github_issue" ? (
           <>
-            <dt>{tr("Title", "标题")}</dt>
+            <dt>{tr("arc.chat.arcVerificationUi.title")}</dt>
             <dd>{scope.title}</dd>
-            <dt>{tr("Body", "正文")}</dt>
+            <dt>{tr("arc.chat.arcVerificationUi.body")}</dt>
             <dd className="arcVerificationBody">{scope.body}</dd>
           </>
         ) : scope.kind === "inbox" ? (
           <>
-            <dt>{tr("Query", "查询")}</dt>
-            <dd>{scope.query || tr("Inbox / recent messages", "收件箱／近期邮件")}</dd>
+            <dt>{tr("arc.chat.arcVerificationUi.query")}</dt>
+            <dd>{scope.query || tr("arc.chat.arcVerificationUi.inboxRecentMessages")}</dd>
           </>
         ) : scope.teamId ? (
           <>
-            <dt>{tr("Team", "团队")}</dt>
+            <dt>{tr("arc.chat.arcVerificationUi.team")}</dt>
             <dd>{scope.teamId}</dd>
           </>
         ) : null}
@@ -44,38 +45,29 @@ export function ArcVerificationScope({ scope, tr }: { scope: ArcVerification; tr
 }
 const checkLabel = (code: string, tr: Tr) =>
   ({
-    inbox_excerpts_read: tr("Requested message bodies were read", "已读取所选范围的邮件正文"),
-    issue_acknowledged: tr("Provider acknowledged the issue", "服务商已确认 Issue 创建"),
-    issue_readback_matches: tr("Read-back title and body match", "回读标题和正文一致"),
-    deployment_ready: tr("Exact deployment is READY with a URL", "指定部署已就绪并返回 URL"),
+    inbox_excerpts_read: tr("arc.chat.arcVerificationUi.requestedMessageBodiesWereRead"),
+    issue_acknowledged: tr("arc.chat.arcVerificationUi.providerAcknowledgedTheIssue"),
+    issue_readback_matches: tr("arc.chat.arcVerificationUi.readBackTitleAndBodyMatch"),
+    deployment_ready: tr("arc.chat.arcVerificationUi.exactDeploymentIsReadyWithA"),
   })[code] || code;
 export function ArcRunReceipt({ receipt, tr }: { receipt: ArcReceipt; tr: Tr }) {
   const title = {
-    completed: tr("Declared checks passed", "声明的检查已通过"),
-    partial: tr("Partially completed", "部分完成"),
-    pending_verification: tr("Pending verification", "待验证"),
-    failed: tr("Verification incomplete", "验证未完成"),
+    completed: tr("arc.chat.arcVerificationUi.declaredChecksPassed"),
+    partial: tr("arc.chat.arcVerificationUi.partiallyCompleted"),
+    pending_verification: tr("arc.chat.arcVerificationUi.pendingVerification"),
+    failed: tr("arc.chat.arcVerificationUi.verificationIncomplete"),
   }[receipt.status];
   const next = {
-    none: tr("Review the evidence when you need it.", "可按需核对下方证据。"),
-    inspect_before_retry: tr(
-      "Inspect the last action before repeating it; its effect is uncertain.",
-      "最后一次操作效果不明，重复执行前请先核对。",
-    ),
-    review_remaining: tr(
-      "Review the acknowledged changes and the remaining checks before continuing.",
-      "继续前请核对已确认的变更和未通过的检查。",
-    ),
-    verify_result: tr(
-      "Check the actual result before relying on completion.",
-      "请核对实际结果后再确认目标完成。",
-    ),
+    none: tr("arc.chat.arcVerificationUi.reviewTheEvidenceWhenYouNeed"),
+    inspect_before_retry: tr("arc.chat.arcVerificationUi.inspectTheLastActionBeforeRepeating"),
+    review_remaining: tr("arc.chat.arcVerificationUi.reviewTheAcknowledgedChangesAndThe"),
+    verify_result: tr("arc.chat.arcVerificationUi.checkTheActualResultBeforeRelying"),
   }[receipt.next];
   return (
     <section
       className="arcRunReceipt"
       data-state={receipt.status}
-      aria-label={tr("Execution receipt", "执行回执")}
+      aria-label={tr("arc.chat.arcVerificationUi.executionReceipt")}
     >
       <strong>{title}</strong>
       {receipt.scope ? (
@@ -90,63 +82,42 @@ export function ArcRunReceipt({ receipt, tr }: { receipt: ArcReceipt; tr: Tr }) 
                 </span>
                 <small>
                   {check.status === "passed"
-                    ? tr("Passed", "通过")
+                    ? tr("arc.chat.arcVerificationUi.passed")
                     : check.status === "failed"
-                      ? tr("Failed", "未通过")
-                      : tr("Pending", "待验证")}
+                      ? tr("arc.chat.arcVerificationUi.failed")
+                      : tr("arc.chat.arcVerificationUi.pending")}
                 </small>
               </li>
             ))}
           </ul>
         </>
       ) : (
-        <p>
-          {tr(
-            "The run ended. No explicit goal checks were selected.",
-            "运行已结束，本轮未选择明确的目标检查。",
-          )}
-        </p>
+        <p>{tr("arc.chat.arcVerificationUi.theRunEndedNoExplicitGoal")}</p>
       )}
       <p>
         {receipt.changes.length
-          ? tr(
-              `${receipt.changes.length} acknowledged change(s).`,
-              `${receipt.changes.length} 项已确认变更。`,
-            )
-          : tr(
-              "No acknowledged App writes in this receipt.",
-              "此回执中没有已确认的 App 写入。",
-            )}{" "}
+          ? tr("arc.chat.arcVerificationUi.acknowledgedChangeS", { length: receipt.changes.length })
+          : tr("arc.chat.arcVerificationUi.noAcknowledgedAppWritesInThis")}{" "}
         {next}
       </p>
       {receipt.scope?.kind === "inbox" && (
-        <p>
-          {tr(
-            "Checks cover source retrieval. Summary accuracy and judgment still need review.",
-            "检查覆盖来源读取，摘要准确性和判断仍需核对。",
-          )}
-        </p>
+        <p>{tr("arc.chat.arcVerificationUi.checksCoverSourceRetrievalSummaryAccuracy")}</p>
       )}
       {receipt.scope?.kind === "github_issue" &&
         receipt.changes.length > 0 &&
         receipt.status !== "completed" && (
-          <p>
-            {tr(
-              "The issue may remain open. Inspect its link; ask to close it if needed.",
-              "已创建的 Issue 可能仍然开放，请先查看链接，需要时可另行要求关闭。",
-            )}
-          </p>
+          <p>{tr("arc.chat.arcVerificationUi.theIssueMayRemainOpenInspect")}</p>
         )}
       <details>
         <summary>
-          {tr("Evidence and changes", "证据与变更")} · {receipt.evidence.length}
+          {tr("arc.chat.arcVerificationUi.evidenceAndChanges")} · {receipt.evidence.length}
         </summary>
         {receipt.evidence.map((item) => (
           <div className="arcReceiptEvidence" key={item.id}>
             <code>{item.tool}</code> · <span>{item.status}</span>
             {item.url && (
               <a href={item.url} target="_blank" rel="noopener noreferrer">
-                {item.resource || tr("Open result", "查看结果")}
+                {item.resource || tr("arc.chat.arcVerificationUi.openResult")}
               </a>
             )}
             <small>
@@ -201,12 +172,7 @@ export function ArcVerifiedTaskForm({ connections, tr, busy, onRun }: FormProps)
       kind === "github_issue" &&
       (!title.trim() || !body || body.length > 4000 || new TextEncoder().encode(body).length > 6000)
     ) {
-      setFormError(
-        tr(
-          "Enter a title and body, up to 4,000 characters and 6 KB.",
-          "请填写标题和正文，正文最多 4,000 字符、6 KB。",
-        ),
-      );
+      setFormError(tr("arc.chat.arcVerificationUi.enterATitleAndBodyUp"));
       return;
     }
     if (kind === "inbox" && (!Number.isInteger(limit) || limit < 1 || limit > 5)) return;
@@ -227,7 +193,7 @@ export function ArcVerifiedTaskForm({ connections, tr, busy, onRun }: FormProps)
   return (
     <form className="arcVerifiedTaskForm" onSubmit={submit}>
       <fieldset disabled={busy}>
-        <label htmlFor={prefix + "-kind"}>{tr("Task", "任务")}</label>
+        <label htmlFor={prefix + "-kind"}>{tr("arc.chat.arcVerificationUi.task")}</label>
         <select
           id={prefix + "-kind"}
           value={kind}
@@ -236,22 +202,22 @@ export function ArcVerifiedTaskForm({ connections, tr, busy, onRun }: FormProps)
             setConnection("");
           }}
         >
-          <option value="inbox">{tr("Read inbox excerpts", "读取邮箱摘录")}</option>
+          <option value="inbox">{tr("arc.chat.arcVerificationUi.readInboxExcerpts")}</option>
           <option value="github_issue">
-            {tr("Create and verify a GitHub issue", "创建并核验 GitHub Issue")}
+            {tr("arc.chat.arcVerificationUi.createAndVerifyAGithubIssue")}
           </option>
           <option value="deployment">
-            {tr("Verify deployment readiness", "核验部署就绪状态")}
+            {tr("arc.chat.arcVerificationUi.verifyDeploymentReadiness")}
           </option>
         </select>
-        <label htmlFor={prefix + "-account"}>{tr("Account", "账户")}</label>
+        <label htmlFor={prefix + "-account"}>{tr("arc.chat.arcVerificationUi.account")}</label>
         <select
           id={prefix + "-account"}
           required
           value={connection}
           onChange={(event) => setConnection(event.target.value)}
         >
-          <option value="">{tr("Choose a connected account", "选择已连接账户")}</option>
+          <option value="">{tr("arc.chat.arcVerificationUi.chooseAConnectedAccount")}</option>
           {choices.map((c) => (
             <option key={c.id} value={c.id}>
               {c.accountLabel} · {c.provider}
@@ -260,7 +226,9 @@ export function ArcVerifiedTaskForm({ connections, tr, busy, onRun }: FormProps)
         </select>
         {kind === "inbox" ? (
           <>
-            <label htmlFor={prefix + "-limit"}>{tr("Maximum messages", "最多邮件数")}</label>
+            <label htmlFor={prefix + "-limit"}>
+              {tr("arc.chat.arcVerificationUi.maximumMessages")}
+            </label>
             <input
               id={prefix + "-limit"}
               type="number"
@@ -271,7 +239,7 @@ export function ArcVerifiedTaskForm({ connections, tr, busy, onRun }: FormProps)
               onChange={(event) => setLimit(Number(event.target.value))}
             />
             <label htmlFor={prefix + "-query"}>
-              {tr("Optional provider search", "可选：服务商查询条件")}
+              {tr("arc.chat.arcVerificationUi.optionalProviderSearch")}
             </label>
             <input
               id={prefix + "-query"}
@@ -279,17 +247,12 @@ export function ArcVerifiedTaskForm({ connections, tr, busy, onRun }: FormProps)
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
-            <p>
-              {tr(
-                "Reads message excerpts only. No sending, deleting or opening attachments. Retrieval checks do not grade the summary.",
-                "仅读取邮件摘录，不发送、删除或打开附件；读取检查不评价摘要质量。",
-              )}
-            </p>
+            <p>{tr("arc.chat.arcVerificationUi.readsMessageExcerptsOnlyNoSending")}</p>
           </>
         ) : kind === "github_issue" ? (
           <>
             <label htmlFor={prefix + "-repo"}>
-              {tr("Repository (owner/repo)", "仓库（owner/repo）")}
+              {tr("arc.chat.arcVerificationUi.repositoryOwnerRepo")}
             </label>
             <input
               id={prefix + "-repo"}
@@ -299,7 +262,9 @@ export function ArcVerifiedTaskForm({ connections, tr, busy, onRun }: FormProps)
               value={repo}
               onChange={(event) => setRepo(event.target.value)}
             />
-            <label htmlFor={prefix + "-title"}>{tr("Exact issue title", "Issue 准确标题")}</label>
+            <label htmlFor={prefix + "-title"}>
+              {tr("arc.chat.arcVerificationUi.exactIssueTitle")}
+            </label>
             <input
               id={prefix + "-title"}
               required
@@ -307,7 +272,9 @@ export function ArcVerifiedTaskForm({ connections, tr, busy, onRun }: FormProps)
               value={title}
               onChange={(event) => setTitle(event.target.value)}
             />
-            <label htmlFor={prefix + "-body"}>{tr("Exact issue body", "Issue 准确正文")}</label>
+            <label htmlFor={prefix + "-body"}>
+              {tr("arc.chat.arcVerificationUi.exactIssueBody")}
+            </label>
             <textarea
               id={prefix + "-body"}
               required
@@ -316,16 +283,13 @@ export function ArcVerifiedTaskForm({ connections, tr, busy, onRun }: FormProps)
               value={body}
               onChange={(event) => setBody(event.target.value)}
             />
-            <p>
-              {tr(
-                "Creates one issue with these exact fields, then reads it back. The issue follows the repository’s visibility and notification settings.",
-                "将按上述字段创建一个 Issue 并回读核验。Issue 遵循仓库的可见性和通知设置。",
-              )}
-            </p>
+            <p>{tr("arc.chat.arcVerificationUi.createsOneIssueWithTheseExact")}</p>
           </>
         ) : (
           <>
-            <label htmlFor={prefix + "-deployment"}>{tr("Deployment ID", "部署 ID")}</label>
+            <label htmlFor={prefix + "-deployment"}>
+              {tr("arc.chat.arcVerificationUi.deploymentId")}
+            </label>
             <input
               id={prefix + "-deployment"}
               required
@@ -334,7 +298,9 @@ export function ArcVerifiedTaskForm({ connections, tr, busy, onRun }: FormProps)
               value={deploymentId}
               onChange={(event) => setDeploymentId(event.target.value)}
             />
-            <label htmlFor={prefix + "-team"}>{tr("Optional team ID", "可选：团队 ID")}</label>
+            <label htmlFor={prefix + "-team"}>
+              {tr("arc.chat.arcVerificationUi.optionalTeamId")}
+            </label>
             <input
               id={prefix + "-team"}
               maxLength={160}
@@ -342,21 +308,16 @@ export function ArcVerifiedTaskForm({ connections, tr, busy, onRun }: FormProps)
               value={teamId}
               onChange={(event) => setTeamId(event.target.value)}
             />
-            <p>
-              {tr(
-                "Reads this Vercel deployment only. READY and a deployment URL are required; this does not test application behavior.",
-                "仅读取此 Vercel 部署。需要 READY 和部署 URL；不代表应用功能测试已通过。",
-              )}
-            </p>
+            <p>{tr("arc.chat.arcVerificationUi.readsThisVercelDeploymentOnlyReady")}</p>
           </>
         )}
         {formError && <p role="alert">{formError}</p>}
         <button type="submit" disabled={!connection || busy}>
           {busy
-            ? tr("Starting…", "正在启动…")
+            ? tr("arc.chat.arcVerificationUi.starting")
             : kind === "github_issue"
-              ? tr("Create issue and verify", "创建 Issue 并核验")
-              : tr("Run verification", "开始核验")}
+              ? tr("arc.chat.arcVerificationUi.createIssueAndVerify")
+              : tr("arc.chat.arcVerificationUi.runVerification")}
         </button>
       </fieldset>
     </form>
@@ -422,19 +383,10 @@ export function ArcVerifiedTaskLauncher({
     try {
       const text =
         scope.kind === "inbox"
-          ? tr(
-              "Read the inbox excerpts in the selected verification scope and summarize what needs attention.",
-              "读取所选验证范围的邮箱摘录，并汇总需要关注的事项。",
-            )
+          ? tr("arc.chat.arcVerificationUi.readTheInboxExcerptsInThe")
           : scope.kind === "github_issue"
-            ? tr(
-                "Create the exact GitHub issue in the selected verification scope, read it back, and report the actual issue link.",
-                "按所选验证范围创建准确的 GitHub Issue，回读后返回实际链接。",
-              )
-            : tr(
-                "Check the exact deployment in the selected verification scope and report its actual readiness and URL.",
-                "检查所选验证范围的指定部署，返回实际就绪状态和 URL。",
-              );
+            ? tr("arc.chat.arcVerificationUi.createTheExactGithubIssueIn")
+            : tr("arc.chat.arcVerificationUi.checkTheExactDeploymentInThe");
       if (await onSend(text, scope)) setOpen(false);
     } finally {
       setBusy(false);
@@ -443,7 +395,7 @@ export function ArcVerifiedTaskLauncher({
   return (
     <div className="arcVerifiedTaskLauncher">
       <button ref={trigger} type="button" disabled={disabled} onClick={() => setOpen(true)}>
-        {tr("Verified task", "核验任务")}
+        {tr("arc.chat.arcVerificationUi.verifiedTask")}
       </button>
       {open && (
         <dialog
@@ -456,21 +408,19 @@ export function ArcVerifiedTaskLauncher({
           }}
         >
           <div className="arcVerifiedDialogHeader">
-            <h2 id={titleId}>{tr("Choose the result to verify", "选择要核验的结果")}</h2>
-            <button type="button" disabled={busy} onClick={close} aria-label={tr("Close", "关闭")}>
+            <h2 id={titleId}>{tr("arc.chat.arcVerificationUi.chooseTheResultToVerify")}</h2>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={close}
+              aria-label={tr("arc.chat.arcVerificationUi.close")}
+            >
               ×
             </button>
           </div>
-          <p>
-            {tr(
-              "Review the account and exact action before sending. This scope applies to one run within your current usage limits.",
-              "发送前核对账户和具体动作。此范围仅适用于本轮，沿用当前用量限制。",
-            )}
-          </p>
+          <p>{tr("arc.chat.arcVerificationUi.reviewTheAccountAndExactAction")}</p>
           {error ? (
-            <p role="alert">
-              {tr("Could not load accounts. Close and try again.", "无法加载账户，请关闭后重试。")}
-            </p>
+            <p role="alert">{tr("arc.chat.arcVerificationUi.couldNotLoadAccountsCloseAnd")}</p>
           ) : connections ? (
             <ArcVerifiedTaskForm
               connections={connections}
@@ -479,7 +429,10 @@ export function ArcVerifiedTaskLauncher({
               onRun={run}
             />
           ) : (
-            <WorkspaceLoading label={tr("Loading accounts…", "正在加载账户…")} variant="rows" />
+            <WorkspaceLoading
+              label={tr("arc.chat.arcVerificationUi.loadingAccounts")}
+              variant="rows"
+            />
           )}
           {errorMessage && <p role="alert">{errorMessage}</p>}
           <button
@@ -490,7 +443,7 @@ export function ArcVerifiedTaskLauncher({
               onManageApps();
             }}
           >
-            {tr("Manage app connections", "管理应用连接")}
+            {tr("arc.chat.arcVerificationUi.manageAppConnections")}
           </button>
         </dialog>
       )}

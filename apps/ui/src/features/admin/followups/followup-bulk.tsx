@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
 import { FOLLOWUP_TEMPLATES } from "../../../../../../packages/protocol/src/followup-templates.js";
 import {
   DEFAULT_FOLLOWUP_DESIGN,
@@ -29,7 +29,7 @@ export function FollowupBulk({
   const [subject, setSubject] = useState<string>(initial.subject[0]),
     [body, setBody] = useState<string>(initial.body[0]);
   const [title, setTitle] = useState(
-    tr("Follow-up", "用户回访") + " · " + new Date().toISOString().slice(0, 10),
+    tr("admin.followups.followupBulk.followUp") + " · " + new Date().toISOString().slice(0, 10),
   );
   const [design, setDesign] = useState<FollowupDesign>({
     ...DEFAULT_FOLLOWUP_DESIGN,
@@ -64,12 +64,7 @@ export function FollowupBulk({
   async function prepare() {
     setError("");
     if (!title.trim() || !subject.trim() || body.trim().length < 20) {
-      setError(
-        tr(
-          "Enter a batch name, subject and message of at least 20 characters.",
-          "请填写任务名称、主题和至少 20 个字的正文。",
-        ),
-      );
+      setError(tr("admin.followups.followupBulk.enterABatchNameSubjectAnd"));
       return;
     }
     const content = {
@@ -150,20 +145,23 @@ export function FollowupBulk({
     <FollowupDialog
       title={
         detail
-          ? tr("Review bulk follow-up", "确认群发内容")
-          : tr("Compose bulk follow-up", "撰写群发邮件")
+          ? tr("admin.followups.followupBulk.reviewBulkFollowUp")
+          : tr("admin.followups.followupBulk.composeBulkFollowUp")
       }
       busy={busy}
       onClose={onClose}
       className="followupBatchDialog"
     >
       <div className="followupReviewBody followupBulkBody">
-        <ol className="followupBatchSteps" aria-label={tr("Bulk follow-up steps", "群发步骤")}>
-          <li data-active={!detail}>1 · {tr("Compose", "撰写")}</li>
+        <ol
+          className="followupBatchSteps"
+          aria-label={tr("admin.followups.followupBulk.bulkFollowUpSteps")}
+        >
+          <li data-active={!detail}>1 · {tr("admin.followups.followupBulk.compose")}</li>
           <li data-active={Boolean(detail)}>
-            2 · {tr("Review recipients & content", "检查用户与内容")}
+            2 · {tr("admin.followups.followupBulk.reviewRecipientsContent")}
           </li>
-          <li>3 · {tr("Send in background", "后台发送")}</li>
+          <li>3 · {tr("admin.followups.followupBulk.sendInBackground")}</li>
         </ol>
         {error && (
           <p className="adminAlert" role="alert">
@@ -173,29 +171,21 @@ export function FollowupBulk({
         {!detail ? (
           <>
             <p className="followupBulkIntro">
-              {tr(
-                "A separate, personalized email for each selected user.",
-                "为每位已选用户单独发送个性化邮件。",
-              )}{" "}
+              {tr("admin.followups.followupBulk.aSeparatePersonalizedEmailForEach")}{" "}
               <strong>
-                {userIds.length} {tr("selected", "位用户")}
+                {userIds.length} {tr("admin.followups.followupBulk.selected")}
               </strong>
             </p>
             {replacement && (
               <div className="followupTemplateChange" role="status">
-                <p>
-                  {tr(
-                    "Replace the current subject and message with this template?",
-                    "使用新模板替换当前主题和正文？",
-                  )}
-                </p>
+                <p>{tr("admin.followups.followupBulk.replaceTheCurrentSubjectAndMessage")}</p>
                 <div>
                   <button
                     type="button"
                     className="adminOutlineBtn"
                     onClick={() => setReplacement(null)}
                   >
-                    {tr("Keep current text", "保留当前内容")}
+                    {tr("admin.followups.followupBulk.keepCurrentText")}
                   </button>
                   <button
                     type="button"
@@ -205,14 +195,14 @@ export function FollowupBulk({
                       setReplacement(null);
                     }}
                   >
-                    {tr("Use new template", "使用新模板")}
+                    {tr("admin.followups.followupBulk.useNewTemplate")}
                   </button>
                 </div>
               </div>
             )}
             <fieldset className="followupEditor" disabled={busy}>
               <label>
-                {tr("Batch name", "群发任务名称")}
+                {tr("admin.followups.followupBulk.batchName")}
                 <input
                   value={title}
                   maxLength={120}
@@ -221,9 +211,9 @@ export function FollowupBulk({
               </label>
               <div className="adminFollowupTwo">
                 <label>
-                  {tr("Template", "模板")}
+                  {tr("admin.followups.followupBulk.template")}
                   <select
-                    aria-label={tr("Bulk template", "群发模板")}
+                    aria-label={tr("admin.followups.followupBulk.bulkTemplate")}
                     value={templateId}
                     onChange={(event) => chooseTemplate(event.target.value, language)}
                   >
@@ -235,7 +225,7 @@ export function FollowupBulk({
                   </select>
                 </label>
                 <label>
-                  {tr("Email language", "邮件语言")}
+                  {tr("admin.followups.followupBulk.emailLanguage")}
                   <select
                     value={language}
                     onChange={(event) =>
@@ -248,18 +238,18 @@ export function FollowupBulk({
                 </label>
               </div>
               <label>
-                {tr("Subject", "主题")}
+                {tr("admin.followups.followupBulk.subject")}
                 <input
-                  aria-label={tr("Bulk subject", "群发主题")}
+                  aria-label={tr("admin.followups.followupBulk.bulkSubject")}
                   value={subject}
                   maxLength={200}
                   onChange={(event) => setSubject(event.target.value)}
                 />
               </label>
               <label>
-                {tr("Message", "正文")}
+                {tr("admin.followups.followupBulk.message")}
                 <textarea
-                  aria-label={tr("Bulk message", "群发正文")}
+                  aria-label={tr("admin.followups.followupBulk.bulkMessage")}
                   value={body}
                   rows={10}
                   maxLength={6000}
@@ -267,19 +257,21 @@ export function FollowupBulk({
                 />
               </label>
               <p className="followupTokenHelp">
-                {tr("Personalization:", "个性化变量：")} <code>{"{{name}}"}</code>{" "}
-                {tr("user name", "用户称呼")} · <code>{"{{feedbackUrl}}"}</code>{" "}
-                {tr("personal feedback link", "个人反馈链接")} · <code>{"{{setupUrl}}"}</code>{" "}
-                {tr("setup guide", "连接指南")} · <code>{"{{installCommand}}"}</code>{" "}
-                {tr("install command", "安装命令")} · <code>{"{{downloadsUrl}}"}</code>{" "}
-                {tr("downloads page", "下载页")} · <code>{"{{upgradeUrl}}"}</code>{" "}
-                {tr("upgrade options", "升级方案")}
+                {tr("admin.followups.followupBulk.personalization")} <code>{"{{name}}"}</code>{" "}
+                {tr("admin.followups.followupBulk.userName")} · <code>{"{{feedbackUrl}}"}</code>{" "}
+                {tr("admin.followups.followupBulk.personalFeedbackLink")} ·{" "}
+                <code>{"{{setupUrl}}"}</code> {tr("admin.followups.followupBulk.setupGuide")} ·{" "}
+                <code>{"{{installCommand}}"}</code>{" "}
+                {tr("admin.followups.followupBulk.installCommand")} ·{" "}
+                <code>{"{{downloadsUrl}}"}</code> {tr("admin.followups.followupBulk.downloadsPage")}{" "}
+                · <code>{"{{upgradeUrl}}"}</code>{" "}
+                {tr("admin.followups.followupBulk.upgradeOptions")}
               </p>
               <details className="adminFollowupDesign">
-                <summary>{tr("Email appearance", "邮件样式")}</summary>
+                <summary>{tr("admin.followups.followupBulk.emailAppearance")}</summary>
                 <div className="adminFollowupTwo">
                   <label>
-                    {tr("Layout", "版式")}
+                    {tr("admin.followups.followupBulk.layout")}
                     <select
                       value={design.layout}
                       onChange={(event) =>
@@ -289,13 +281,15 @@ export function FollowupBulk({
                         }))
                       }
                     >
-                      <option value="spotlight">{tr("Spotlight", "品牌主视觉")}</option>
-                      <option value="letter">{tr("Letter", "简洁书信")}</option>
-                      <option value="digest">{tr("Digest", "内容摘要")}</option>
+                      <option value="spotlight">
+                        {tr("admin.followups.followupBulk.spotlight")}
+                      </option>
+                      <option value="letter">{tr("admin.followups.followupBulk.letter")}</option>
+                      <option value="digest">{tr("admin.followups.followupBulk.digest")}</option>
                     </select>
                   </label>
                   <label>
-                    {tr("Brand color", "品牌颜色")}
+                    {tr("admin.followups.followupBulk.brandColor")}
                     <input
                       type="color"
                       value={design.accent}
@@ -306,7 +300,7 @@ export function FollowupBulk({
                   </label>
                 </div>
                 <label>
-                  {tr("Headline", "主标题")}
+                  {tr("admin.followups.followupBulk.headline")}
                   <input
                     value={design.headline}
                     maxLength={200}
@@ -316,7 +310,7 @@ export function FollowupBulk({
                   />
                 </label>
                 <label>
-                  {tr("Introduction", "导语")}
+                  {tr("admin.followups.followupBulk.introduction")}
                   <textarea
                     rows={2}
                     value={design.intro}
@@ -329,41 +323,34 @@ export function FollowupBulk({
               </details>
               <div className="followupBulkBasis">
                 <label>
-                  {tr("Contact basis for this group (optional)", "本组用户的联系依据（可选）")}
+                  {tr("admin.followups.followupBulk.contactBasisForThisGroupOptional")}
                   <select
-                    aria-label={tr("Bulk contact basis", "群发联系依据")}
+                    aria-label={tr("admin.followups.followupBulk.bulkContactBasis")}
                     value={basis}
                     onChange={(event) => setBasis(event.target.value)}
                   >
                     <option value="">
-                      {tr("Not recorded · continue without adding a basis", "暂不记录，直接继续")}
+                      {tr("admin.followups.followupBulk.notRecordedContinueWithoutAddingA")}
                     </option>
                     <option value="existing">
-                      {tr("Use each user’s existing recorded basis", "使用各用户已有的联系依据")}
+                      {tr("admin.followups.followupBulk.useEachUserSExistingRecorded")}
                     </option>
                     <option value="support">
-                      {tr(
-                        "These users requested installation or product support",
-                        "这些用户请求过安装或使用支持",
-                      )}
+                      {tr("admin.followups.followupBulk.theseUsersRequestedInstallationOrProduct")}
                     </option>
                     <option value="agreed">
-                      {tr(
-                        "These users agreed to this product follow-up",
-                        "这些用户已同意本次产品回访",
-                      )}
+                      {tr("admin.followups.followupBulk.theseUsersAgreedToThisProduct")}
                     </option>
                   </select>
                 </label>
                 <label>
-                  {tr("Source note (optional)", "来源备注（可选）")}
+                  {tr("admin.followups.followupBulk.sourceNoteOptional")}
                   <input
                     value={basisNote}
                     maxLength={500}
                     onChange={(event) => setBasisNote(event.target.value)}
                     placeholder={tr(
-                      "For example, support request or conversation record",
-                      "例如：支持请求或沟通记录",
+                      "admin.followups.followupBulk.forExampleSupportRequestOrConversation",
                     )}
                   />
                 </label>
@@ -375,35 +362,33 @@ export function FollowupBulk({
             <div className="followupBatchReviewStats">
               <div>
                 <strong>{eligible}</strong>
-                <span>{tr("Ready to send", "可发送")}</span>
+                <span>{tr("admin.followups.followupBulk.readyToSend")}</span>
               </div>
               <div>
                 <strong>{detail.batch.skipped}</strong>
-                <span>{tr("Excluded", "已排除")}</span>
+                <span>{tr("admin.followups.followupBulk.excluded")}</span>
               </div>
               <div>
                 <strong>{detail.batch.total}</strong>
-                <span>{tr("Selected users", "已选用户")}</span>
+                <span>{tr("admin.followups.followupBulk.selectedUsers")}</span>
               </div>
             </div>
             {remaining !== undefined && eligible > remaining && (
               <p className="followupBudgetNote" role="status">
-                {tr(
-                  `${remaining} of these can go out now. Sign-in codes have priority and can use the remaining capacity. Queued follow-ups resume when capacity returns.`,
-                  `当前还能发 ${remaining} 封，剩余额度优先保障登录验证码，排队的跟进邮件会在额度恢复后继续发送。`,
-                )}
+                {tr("admin.followups.followupBulk.ofTheseCanGoOutNow", { remaining })}
               </p>
             )}
             <dl>
-              <dt>{tr("From", "发件人")}</dt>
+              <dt>{tr("admin.followups.followupBulk.from")}</dt>
               <dd>{detail.sender.from}</dd>
-              <dt>{tr("Reply to", "回复地址")}</dt>
+              <dt>{tr("admin.followups.followupBulk.replyTo")}</dt>
               <dd>{detail.sender.replyTo}</dd>
             </dl>
             {detail.recipients.some((person) => person.status === "skipped") && (
               <details className="followupExcluded">
                 <summary>
-                  {tr("Why some users are excluded", "查看排除原因")} · {detail.batch.skipped}
+                  {tr("admin.followups.followupBulk.whySomeUsersAreExcluded")} ·{" "}
+                  {detail.batch.skipped}
                 </summary>
                 <ul>
                   {detail.recipients
@@ -420,9 +405,9 @@ export function FollowupBulk({
             {detail.preview ? (
               <>
                 <label className="followupPreviewRecipient">
-                  {tr("Preview as recipient", "查看用户收到的邮件")}
+                  {tr("admin.followups.followupBulk.previewAsRecipient")}
                   <select
-                    aria-label={tr("Preview recipient", "预览收件人")}
+                    aria-label={tr("admin.followups.followupBulk.previewRecipient")}
                     disabled={busy}
                     value={detail.preview.user_id}
                     onChange={(event) => void preview(event.target.value)}
@@ -441,22 +426,16 @@ export function FollowupBulk({
                 </p>
                 <FollowupEmailPreview
                   html={detail.preview.html_body}
-                  title={tr("Personalized bulk email", "个性化群发邮件")}
+                  title={tr("admin.followups.followupBulk.personalizedBulkEmail")}
                 />
               </>
             ) : (
               <p className="adminNoData">
-                {tr(
-                  "No recipients are eligible. Review the exclusion reasons above.",
-                  "暂无可发送用户，请查看上方排除原因。",
-                )}
+                {tr("admin.followups.followupBulk.noRecipientsAreEligibleReviewThe")}
               </p>
             )}
             <p className="followupBulkIntro">
-              {tr(
-                "Sending continues in the background after you close this page. Follow each result in Bulk history.",
-                "关闭页面后仍会在后台发送，可在群发记录中查看每位用户的结果。",
-              )}
+              {tr("admin.followups.followupBulk.sendingContinuesInTheBackgroundAfter")}
             </p>
           </>
         )}
@@ -470,7 +449,7 @@ export function FollowupBulk({
               disabled={busy}
               onClick={() => void edit()}
             >
-              {tr("Back to editing", "返回编辑")}
+              {tr("admin.followups.followupBulk.backToEditing")}
             </button>
             <button
               type="button"
@@ -481,16 +460,18 @@ export function FollowupBulk({
               onClick={() => void queue()}
             >
               {busy
-                ? tr("Queueing…", "正在提交…")
-                : tr("Confirm & send ", "确认群发 ") +
+                ? tr("admin.followups.followupBulk.queueing")
+                : tr("admin.followups.followupBulk.confirmSend") +
                   eligible +
-                  tr(eligible === 1 ? " email" : " emails", " 封邮件")}
+                  (eligible === 1
+                    ? tr("admin.followups.followupBulk.email")
+                    : tr("admin.followups.followupBulk.emails"))}
             </button>
           </>
         ) : (
           <>
             <button type="button" className="adminOutlineBtn" disabled={busy} onClick={onClose}>
-              {tr("Close", "关闭")}
+              {tr("admin.followups.followupBulk.close")}
             </button>
             <button
               type="button"
@@ -499,8 +480,8 @@ export function FollowupBulk({
               onClick={() => void prepare()}
             >
               {busy
-                ? tr("Preparing…", "正在准备…")
-                : tr("Review recipients & emails", "检查用户与邮件")}
+                ? tr("admin.followups.followupBulk.preparing")
+                : tr("admin.followups.followupBulk.reviewRecipientsEmails")}
             </button>
           </>
         )}

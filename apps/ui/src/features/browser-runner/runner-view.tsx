@@ -1,18 +1,10 @@
-import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
+import { useRunnerAttention, type Attention } from "../../hooks/use-runner-attention.js";
+import { requestJSON, RunnerRequestError } from "./runner-requests.js";
 import React, { useEffect, useRef, useState } from "react";
-import { useI18n } from "../../app/i18n.js";
-import "./runner-view.css";
+import { useI18n } from "../../hooks/use-i18n.js";
+import "../../styles/browser-runner/runner-view.css";
 import { RunnerVideoPlayer } from "./runner-video.js";
 
-type Attention = {
-  id: string;
-  device_id: string;
-  device_name: string;
-  session_id: string;
-  kind: string;
-  origin: string;
-  availability?: "live" | "unavailable";
-};
 type Status = {
   state?: string;
   needs_user?: string;
@@ -27,103 +19,6 @@ type Status = {
 };
 const viewPath = (row: Pick<Attention, "device_id" | "session_id">) =>
   `/dashboard/browser/${encodeURIComponent(row.device_id)}/${encodeURIComponent(row.session_id)}`;
-class RunnerRequestError extends Error {
-  constructor(readonly code: string) {
-    super(code);
-  }
-}
-async function requestJSON(path: string, init?: RequestInit) {
-  const response = await fetch(path, {
-    ...init,
-    credentials: "same-origin",
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    const result = await response
-      .json()
-      .then(canonicalErrorEnvelope)
-      .catch(() => ({}));
-    throw new RunnerRequestError(
-      typeof result.error === "string" ? result.error : "request_failed",
-    );
-  }
-  return response.json().then(canonicalErrorEnvelope);
-}
-
-export function useRunnerAttention({
-  enabled = true,
-  arcSessionId,
-}: {
-  enabled?: boolean;
-  arcSessionId?: string;
-} = {}) {
-  const [rows, setRows] = useState<Attention[] | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [hidden, setHidden] = useState<string[]>([]);
-  useEffect(() => {
-    if (!enabled) return;
-    let timer: ReturnType<typeof setTimeout>;
-    let request: AbortController | undefined;
-    const stop = () => {
-      clearTimeout(timer);
-      request?.abort();
-      request = undefined;
-    };
-    const load = async () => {
-      if (document.hidden || request) return;
-      clearTimeout(timer);
-      const current = new AbortController();
-      request = current;
-      try {
-        const data = await requestJSON(
-          "/api/runner/attention" +
-            (arcSessionId ? "?arc_session_id=" + encodeURIComponent(arcSessionId) : ""),
-          { signal: current.signal },
-        );
-        if (!Array.isArray(data.attention)) throw new Error("Invalid browser task list");
-        if (!current.signal.aborted) {
-          const incoming: Attention[] = data.attention;
-          setRows(incoming);
-          setFailed(false);
-          setHidden((ids) =>
-            ids.filter((id) =>
-              incoming.some((row) => row.id === id && row.availability === "unavailable"),
-            ),
-          );
-        }
-      } catch {
-        if (!current.signal.aborted) {
-          setFailed(true);
-          setRows(
-            (previous) => previous?.map((row) => ({ ...row, availability: "unavailable" })) ?? null,
-          );
-        }
-      } finally {
-        if (request === current) {
-          request = undefined;
-          timer = setTimeout(load, 5000);
-        }
-      }
-    };
-    const syncVisibility = () => {
-      if (document.hidden) stop();
-      else void load();
-    };
-    document.addEventListener("visibilitychange", syncVisibility);
-    syncVisibility();
-    return () => {
-      document.removeEventListener("visibilitychange", syncVisibility);
-      stop();
-    };
-  }, [arcSessionId, enabled]);
-  return {
-    rows: rows?.filter((row) => row.availability !== "unavailable" || !hidden.includes(row.id)),
-    failed,
-    hideUnavailable: (id: string) => setHidden((ids) => [...ids, id]),
-    remove: (id: string) => setRows((current) => current?.filter((row) => row.id !== id) ?? null),
-  };
-}
-
 export function RunnerAttentionList({
   arcSessionId,
   deviceId,
@@ -150,17 +45,17 @@ export function RunnerAttentionInbox({
   const { rows, failed, hideUnavailable, remove } = attention;
   return (
     <section className="runnerAttentionInbox" aria-labelledby="runner-attention-heading">
-      <h3 id="runner-attention-heading">{tr("Browser tasks", "浏览器任务")}</h3>
+      <h3 id="runner-attention-heading">{tr("browserRunner.runnerView.browserTasks")}</h3>
       {failed && (
         <p className="runnerNotice" role="status">
-          {tr("Could not refresh browser tasks.", "暂无法刷新浏览器任务。")}
+          {tr("browserRunner.runnerView.couldNotRefreshBrowserTasks")}
         </p>
       )}
       {!failed && !rows?.length && (
         <p className="runnerNotice">
           {rows
-            ? tr("No browser tasks need your attention.", "暂无需要你处理的浏览器任务。")
-            : tr("Loading browser tasks…", "正在加载浏览器任务…")}
+            ? tr("browserRunner.runnerView.noBrowserTasksNeedYourAttention")
+            : tr("browserRunner.runnerView.loadingBrowserTasks")}
         </p>
       )}
       <RunnerAttentionRows
@@ -199,28 +94,14 @@ function RunnerAttentionRows({
         remove(row.id);
         setNotice(
           result.state === "not_running"
-            ? tr(
-                "This task browser is closed. Its reminder has been removed.",
-                "此任务浏览器已关闭，已移除提醒。",
-              )
+            ? tr("browserRunner.runnerView.thisTaskBrowserIsClosedIts")
             : result.state === "not_needed" || result.state === "already_resolved"
-              ? tr("This step no longer needs your attention.", "此步骤已无需处理。")
-              : tr("Checked. Your task can continue.", "已检查，任务可以继续。"),
+              ? tr("browserRunner.runnerView.thisStepNoLongerNeedsYour")
+              : tr("browserRunner.runnerView.checkedYourTaskCanContinue"),
         );
-      } else
-        setNotice(
-          tr(
-            "This step still needs you. Finish it in the browser window, then try again.",
-            "页面仍需要你处理。请在电脑的浏览器窗口里完成后重试。",
-          ),
-        );
+      } else setNotice(tr("browserRunner.runnerView.thisStepStillNeedsYouFinish"));
     } catch {
-      setNotice(
-        tr(
-          "Could not check this task. Check the computer connection and browser task permission, then retry.",
-          "暂时无法检查此任务，请检查电脑连接和浏览器任务权限后重试。",
-        ),
-      );
+      setNotice(tr("browserRunner.runnerView.couldNotCheckThisTaskCheck"));
     } finally {
       setPending(null);
     }
@@ -235,35 +116,36 @@ function RunnerAttentionRows({
         <strong>{new URL(row.origin).hostname}</strong>
         <span>
           {row.kind === "captcha"
-            ? tr("Needs you to complete a verification", "需要你完成人机验证")
+            ? tr("browserRunner.runnerView.needsYouToCompleteAVerification")
             : row.kind === "otp"
-              ? tr("Needs a verification code", "需要你输入验证码")
+              ? tr("browserRunner.runnerView.needsAVerificationCode")
               : row.kind === "scope"
-                ? tr("Needs a site permission", "需要你确认网站权限")
-                : tr("Needs you to sign in", "需要你登录")}{" "}
+                ? tr("browserRunner.runnerView.needsASitePermission")
+                : tr("browserRunner.runnerView.needsYouToSignIn")}{" "}
           · {row.device_name}
         </span>
         {row.availability === "unavailable" && (
           <small role="status">
-            {tr(
-              "Waiting for the computer to reconnect or restore browser task access.",
-              "等待电脑重新连接或恢复浏览器任务权限。",
-            )}
+            {tr("browserRunner.runnerView.waitingForTheComputerToReconnect")}
           </small>
         )}
       </div>
       {row.availability !== "unavailable" ? (
         <div className="runnerAttentionActions">
-          {showLiveView && <a href={viewPath(row)}>{tr("Open live view", "打开实时画面")} ↗</a>}
+          {showLiveView && (
+            <a href={viewPath(row)}>{tr("browserRunner.runnerView.openLiveView")} ↗</a>
+          )}
           <button type="button" disabled={pending !== null} onClick={() => void done(row)}>
-            {pending === row.id ? tr("Checking…", "检查中…") : tr("I'm done", "我已处理完")}
+            {pending === row.id
+              ? tr("browserRunner.runnerView.checking")
+              : tr("browserRunner.runnerView.iMDone")}
           </button>
         </div>
       ) : (
         hideUnavailable && (
           <div className="runnerAttentionActions">
             <button type="button" onClick={() => hideUnavailable(row.id)}>
-              {tr("Hide reminder", "隐藏提醒")}
+              {tr("browserRunner.runnerView.hideReminder")}
             </button>
           </div>
         )
@@ -273,13 +155,13 @@ function RunnerAttentionRows({
   return (
     <div
       className="runnerAttentionList"
-      aria-label={tr("Browser tasks needing you", "需要你处理的浏览器任务")}
+      aria-label={tr("browserRunner.runnerView.browserTasksNeedingYou")}
     >
       {active.map(renderRow)}
       {waiting.length > 0 && (
         <details className="runnerAttentionWaiting">
           <summary>
-            {tr("Waiting for access", "等待恢复连接或权限")} · {waiting.length}
+            {tr("browserRunner.runnerView.waitingForAccess")} · {waiting.length}
           </summary>
           {waiting.map(renderRow)}
         </details>
@@ -329,19 +211,19 @@ export function RunnerAttentionSetting({ deviceId }: { deviceId: string }) {
   return (
     <div className="runnerSetting">
       <label>
-        <span>{tr("When a browser task needs me", "浏览器任务需要我时")}</span>
+        <span>{tr("browserRunner.runnerView.whenABrowserTaskNeedsMe")}</span>
         <select
           value={mode}
           disabled={saving}
           onChange={(event) => void change(event.target.value)}
         >
-          <option value="show_and_notify">{tr("Show window and notify", "弹出窗口并通知")}</option>
-          <option value="notify_only">{tr("Notify only", "只通知，不弹窗")}</option>
+          <option value="show_and_notify">
+            {tr("browserRunner.runnerView.showWindowAndNotify")}
+          </option>
+          <option value="notify_only">{tr("browserRunner.runnerView.notifyOnly")}</option>
         </select>
       </label>
-      {failed && (
-        <small role="alert">{tr("Could not save. Try again.", "保存失败，请重试。")}</small>
-      )}
+      {failed && <small role="alert">{tr("browserRunner.runnerView.couldNotSaveTryAgain")}</small>}
     </div>
   );
 }
@@ -448,19 +330,19 @@ function LiveScreen({
   return (
     <section
       className="runnerScreen"
-      aria-label={tr("Task browser live view", "任务浏览器实时画面")}
+      aria-label={tr("browserRunner.runnerView.taskBrowserLiveView")}
     >
       <div className="runnerScreenBar">
         <span className={connection === "live" ? "runnerLive" : ""}>
           {preview
-            ? tr("Preview · sample browser", "预览 · 示例浏览器")
+            ? tr("browserRunner.runnerView.previewSampleBrowser")
             : connection === "live"
-              ? tr("Live", "实时画面")
+              ? tr("browserRunner.runnerView.live")
               : connection === "disconnected"
-                ? tr("Disconnected", "连接已断开")
-                : tr("Waiting for screen…", "正在等待画面…")}
+                ? tr("browserRunner.runnerView.disconnected")
+                : tr("browserRunner.runnerView.waitingForScreen")}
         </span>
-        <span>{tr("View only", "仅查看")}</span>
+        <span>{tr("browserRunner.runnerView.viewOnly")}</span>
       </div>
       {!preview && (
         <video
@@ -469,50 +351,34 @@ function LiveScreen({
           muted
           playsInline
           hidden={!videoLive}
-          aria-label={tr("Current task browser screen", "任务浏览器当前画面")}
+          aria-label={tr("browserRunner.runnerView.currentTaskBrowserScreen")}
         />
       )}
       {preview ? (
         <div className="runnerSample">
           <div className="runnerSampleForm">
             <span className="runnerSampleBrand">ACME / CAREERS</span>
-            <h2>{tr("One last step", "最后一步")}</h2>
-            <p>
-              {tr(
-                "Your application is ready. Complete the verification in the browser window on your computer.",
-                "申请已准备好，请在电脑的浏览器窗口里完成验证。",
-              )}
-            </p>
+            <h2>{tr("browserRunner.runnerView.oneLastStep")}</h2>
+            <p>{tr("browserRunner.runnerView.yourApplicationIsReadyCompleteThe")}</p>
             <div className="runnerSampleCheck">
               <span aria-hidden="true">○</span>
-              {tr("Please verify you are human", "请完成人机验证")}
+              {tr("browserRunner.runnerView.pleaseVerifyYouAreHuman")}
             </div>
-            <small>
-              {tr(
-                "Your details and upload are saved in this window.",
-                "填写的内容和上传的文件仍保留在这个窗口中。",
-              )}
-            </small>
+            <small>{tr("browserRunner.runnerView.yourDetailsAndUploadAreSaved")}</small>
           </div>
         </div>
       ) : videoLive ? null : frame ? (
-        <img src={frame} alt={tr("Current task browser screen", "任务浏览器当前画面")} />
+        <img src={frame} alt={tr("browserRunner.runnerView.currentTaskBrowserScreen")} />
       ) : (
         <div className="runnerScreenEmpty">
           <p>
             {connection === "disconnected"
-              ? tr(
-                  "The live view is unavailable. Check that your computer and task browser are running.",
-                  "实时画面暂不可用，请确认电脑已连接、任务浏览器仍在运行。",
-                )
-              : tr(
-                  "The task browser will appear here when connected.",
-                  "连接成功后，任务浏览器画面会显示在这里。",
-                )}
+              ? tr("browserRunner.runnerView.theLiveViewIsUnavailableCheck")
+              : tr("browserRunner.runnerView.theTaskBrowserWillAppearHere")}
           </p>
           {connection === "disconnected" && (
             <button type="button" onClick={() => setAttempt((value) => value + 1)}>
-              {tr("Reconnect", "重新连接")}
+              {tr("browserRunner.runnerView.reconnect")}
             </button>
           )}
         </div>
@@ -564,17 +430,12 @@ export function DeviceBrowserSessions({ deviceId }: { deviceId: string }) {
       onToggle={(event) => setExpanded(event.currentTarget.open)}
     >
       <summary>
-        <span>{tr("Browser live view", "浏览器实时画面")}</span>
-        <span>{tr("View running tasks", "查看运行中的任务")}</span>
+        <span>{tr("browserRunner.runnerView.browserLiveView")}</span>
+        <span>{tr("browserRunner.runnerView.viewRunningTasks")}</span>
       </summary>
       <div className="deviceBrowserSessionList" aria-live="polite">
         {error ? (
-          <p role="status">
-            {tr(
-              "Could not load browser sessions. Check the device connection and permission.",
-              "获取浏览器会话失败，请检查设备连接和权限。",
-            )}
-          </p>
+          <p role="status">{tr("browserRunner.runnerView.couldNotLoadBrowserSessionsCheck")}</p>
         ) : sessions.length ? (
           sessions.map((session) => (
             <a
@@ -583,24 +444,21 @@ export function DeviceBrowserSessions({ deviceId }: { deviceId: string }) {
               title={session.session_id}
             >
               <span>
-                <strong>{session.hostname || tr("Task browser", "任务浏览器")}</strong>
+                <strong>{session.hostname || tr("browserRunner.runnerView.taskBrowser")}</strong>
                 <small>
                   {session.state === "needs_user"
-                    ? tr("Needs attention", "等待人工处理")
-                    : tr("Running", "运行中")}
+                    ? tr("browserRunner.runnerView.needsAttention")
+                    : tr("browserRunner.runnerView.running")}
                 </small>
               </span>
-              <span>{tr("Watch", "查看画面")} ↗</span>
+              <span>{tr("browserRunner.runnerView.watch")} ↗</span>
             </a>
           ))
         ) : (
           <p>
             {loading
-              ? tr("Finding running browsers…", "正在查询运行中的浏览器…")
-              : tr(
-                  "No running browser tasks on this device.",
-                  "这台设备暂时没有运行中的浏览器任务。",
-                )}
+              ? tr("browserRunner.runnerView.findingRunningBrowsers")
+              : tr("browserRunner.runnerView.noRunningBrowserTasksOnThis")}
           </p>
         )}
       </div>
@@ -657,31 +515,25 @@ export function RunnerView({
     <main className="runnerView">
       <header className="runnerViewHeader">
         <a className="runnerBack" href="/devices">
-          ← {tr("Your computers", "我的电脑")}
+          ← {tr("browserRunner.runnerView.yourComputers")}
         </a>
         <a href="/dashboard" aria-label="Remote Arc">
           <img src="/remote-arc.svg" alt="" width="28" height="28" />
         </a>
       </header>
       <div className="runnerViewIntro">
-        <span>{tr("BROWSER TASK", "浏览器任务")}</span>
+        <span>{tr("browserRunner.runnerView.browserTask")}</span>
         <h1>
           {status?.browser_running === false
-            ? tr("This task browser is closed", "此任务浏览器已关闭")
+            ? tr("browserRunner.runnerView.thisTaskBrowserIsClosed")
             : status?.state === "needs_user"
-              ? tr("A quick step needs you", "有一步需要你来完成")
-              : tr("Your task browser", "任务浏览器")}
+              ? tr("browserRunner.runnerView.aQuickStepNeedsYou")
+              : tr("browserRunner.runnerView.yourTaskBrowser")}
         </h1>
         <p>
           {status?.browser_running === false
-            ? tr(
-                "There is no live screen for this task. Open a running browser task from Your computers.",
-                "此任务当前没有实时画面，请从“我的电脑”打开运行中的浏览器任务。",
-              )
-            : tr(
-                "Complete this step in the browser window on your computer. Your AI can continue once it is done.",
-                "请在电脑上的浏览器窗口中完成这一步，处理完后 AI 就可以继续。",
-              )}
+            ? tr("browserRunner.runnerView.thereIsNoLiveScreenFor")
+            : tr("browserRunner.runnerView.completeThisStepInTheBrowser")}
         </p>
       </div>
       {!unavailable &&
@@ -694,24 +546,16 @@ export function RunnerView({
       ) : (
         <p className="runnerNotice" role="status">
           {status?.browser_running === false
-            ? tr("No running browser task to view.", "没有可查看的运行中浏览器任务。")
+            ? tr("browserRunner.runnerView.noRunningBrowserTaskToView")
             : unavailable
-              ? tr(
-                  "Could not load this task. Check the computer connection and browser task permission.",
-                  "暂时无法获取任务状态，请检查电脑连接和浏览器任务权限。",
-                )
-              : tr("Checking task status…", "正在检查任务状态…")}
+              ? tr("browserRunner.runnerView.couldNotLoadThisTaskCheck")
+              : tr("browserRunner.runnerView.checkingTaskStatus")}
         </p>
       )}
-      <p className="runnerViewFootnote">
-        {tr(
-          "Live while this page is open. Screen images are not saved. “I'm done” checks the page; it does not submit anything.",
-          "仅在此页打开时传输实时画面，不保存画面。“我已处理完”只检查页面，不会提交任何内容。",
-        )}
-      </p>
+      <p className="runnerViewFootnote">{tr("browserRunner.runnerView.liveWhileThisPageIsOpen")}</p>
       {status?.recent_receipts?.length ? (
         <details className="runnerReceipts">
-          <summary>{tr("Recent activity", "最近活动")}</summary>
+          <summary>{tr("browserRunner.runnerView.recentActivity")}</summary>
           <ol>
             {status.recent_receipts.slice(-8).map((receipt, index) => (
               <li key={receipt.seq ?? index}>

@@ -1,6 +1,10 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { RunnerAttentionList } from "../../browser-runner/runner-view.js";
 import { ArcTaskCard } from "../workspace/arc-task-card.js";
-import { useArcComposerInputs, ARC_MESSAGE_MAX_LENGTH } from "../composer/arc-composer-inputs.js";
+import {
+  useArcComposerInputs,
+  ARC_MESSAGE_MAX_LENGTH,
+} from "../../../hooks/arc/use-arc-composer-inputs.js";
 import {
   ArcComposerMenu,
   ArcComposerAttachments,
@@ -22,19 +26,19 @@ import {
 import { createPortal } from "react-dom";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useArcChat } from "./use-arc-chat.js";
+import { useArcChat } from "../../../hooks/arc/use-arc-chat.js";
 import { ProductIcon as Icon, type ProductIconName } from "../../../components/product-icon.js";
-import "./agent-chat-workspace.css";
+import "../../../styles/arc/chat/agent-chat-workspace.css";
 import { OverviewGreeting } from "../../../components/overview-greeting.js";
 import { ArcHomeBrief } from "./arc-home-brief.js";
 import { ArcModelPicker } from "./arc-model-picker.js";
 import { arcTranscript } from "./arc-transcript.js";
-import { useArcSkillMentions, type ArcMention } from "../composer/arc-skill-mentions.js";
+import { useArcSkillMentions, type ArcMention } from "../../../hooks/arc/use-arc-skill-mentions.js";
 import { ArcVerificationScope, ArcRunReceipt } from "./arc-verification-ui.js";
 import { ArcTurnWork } from "./arc-turn-work.js";
 import { WorkspaceLoading } from "../../../components/workspace-loading.js";
-import "./arc-chat-surface.css";
-import "./arc-verification.css";
+import "../../../styles/arc/chat/arc-chat-surface.css";
+import "../../../styles/arc/chat/arc-verification.css";
 import { billingRecovery } from "../../../../../../packages/protocol/src/billing-recovery.js";
 import { BillingRecoveryActions } from "../../billing/billing-recovery-actions.js";
 
@@ -43,7 +47,7 @@ type Props = {
   onNavigationChange: (open: boolean) => void;
   activeTab: string;
   onOpenChat: () => void;
-  tr: (en: string, zh: string) => string;
+  tr: Translate;
   accountId: string;
   accountName?: string | null;
   onlineDevices: number;
@@ -201,39 +205,27 @@ export function ArcNativeChat({
   const examples: { icon: ProductIconName; title: string; detail: string; text: string }[] = [
     {
       icon: "tasks",
-      title: tr("Move a project forward", "推进项目工作"),
-      detail: tr("Code, tests & a clear result", "代码、测试与清晰结果"),
-      text: tr(
-        "Inspect my project, identify a useful next step, do the work and verify the result.",
-        "检查我的项目，找到下一步最有用的工作，完成后验证结果。",
-      ),
+      title: tr("arc.chat.arcNativeChat.moveAProjectForward"),
+      detail: tr("arc.chat.arcNativeChat.codeTestsAClearResult"),
+      text: tr("arc.chat.arcNativeChat.inspectMyProjectIdentifyAUseful"),
     },
     {
       icon: "routine",
-      title: tr("Start a morning routine", "安排晨间例行工作"),
-      detail: tr("A daily head start", "每天早上先行一步"),
-      text: tr(
-        "Every morning at 9, summarize my email and calendar. Reuse the timezone and accounts already established in this conversation, and ask only for missing essential information.",
-        "每天早上 9 点汇总我的邮件和日程，沿用对话里已确定的时区和账号，缺少必要信息时再问我。",
-      ),
+      title: tr("arc.chat.arcNativeChat.startAMorningRoutine"),
+      detail: tr("arc.chat.arcNativeChat.aDailyHeadStart"),
+      text: tr("arc.chat.arcNativeChat.everyMorningAtSummarizeMyEmail"),
     },
     {
       icon: "apps",
-      title: tr("Bring my apps together", "串联应用工作"),
-      detail: tr("GitHub, Slack & more", "GitHub、Slack 等应用"),
-      text: tr(
-        "Look at my connected apps and turn recent project updates into a useful summary.",
-        "查看已连接的应用，将项目最近的进展整理成有用的摘要。",
-      ),
+      title: tr("arc.chat.arcNativeChat.bringMyAppsTogether"),
+      detail: tr("arc.chat.arcNativeChat.githubSlackMore"),
+      text: tr("arc.chat.arcNativeChat.lookAtMyConnectedAppsAnd"),
     },
     {
       icon: "users",
-      title: tr("Bring a team to the goal", "让智能体协作"),
-      detail: tr("One goal, coordinated work", "一个目标，协作完成"),
-      text: tr(
-        "Create a developer, designer, business agent and domain researcher. Organize them into a team, discuss Remote Arc’s product direction, and return their actual findings in this chat.",
-        "创建开发、设计、商务和领域专家四个智能体，组队讨论 Remote Arc 的产品方向，把各自的实际分析和建议带回这个对话。",
-      ),
+      title: tr("arc.chat.arcNativeChat.bringATeamToTheGoal"),
+      detail: tr("arc.chat.arcNativeChat.oneGoalCoordinatedWork"),
+      text: tr("arc.chat.arcNativeChat.createADeveloperDesignerBusinessAgent"),
     },
   ];
   const filtered = chat.sessions.filter((s) =>
@@ -242,41 +234,41 @@ export function ArcNativeChat({
   const sidebar = (mobile: boolean) => (
     <nav
       className={"arcChatNavigation" + (mobile ? " arcChatNavigationMobile" : "")}
-      aria-label={tr("Arc navigation", "Arc 导航")}
+      aria-label={tr("arc.chat.arcNativeChat.arcNavigation")}
     >
-      <div className="arcSidebarSectionTitle">{tr("WORKSPACE", "工作空间")}</div>
+      <div className="arcSidebarSectionTitle">{tr("arc.chat.arcNativeChat.workspace")}</div>
       <button
         type="button"
         className="arcSidebarPrimary"
-        aria-label={tr("New chat", "新对话")}
-        title={tr("New chat", "新对话")}
+        aria-label={tr("arc.chat.arcNativeChat.newChat")}
+        title={tr("arc.chat.arcNativeChat.newChat")}
         onClick={beginNew}
       >
         <Icon name="add" />
-        <span>{tr("New chat", "新对话")}</span>
+        <span>{tr("arc.chat.arcNativeChat.newChat")}</span>
       </button>
       <button
         type="button"
         className="arcSidebarAction"
-        aria-label={tr("Tasks", "任务")}
-        title={tr("Tasks", "任务")}
+        aria-label={tr("arc.chat.arcNativeChat.tasks")}
+        title={tr("arc.chat.arcNativeChat.tasks")}
         aria-current={activeTab === "agent-goals" ? "page" : undefined}
         onClick={() => navigate(onOpenGoals)}
       >
         <Icon name="tasks" />
-        <span>{tr("Tasks", "任务")}</span>
+        <span>{tr("arc.chat.arcNativeChat.tasks")}</span>
       </button>
 
       <button
         type="button"
         className="arcSidebarAction"
-        aria-label={tr("Activity", "活动")}
-        title={tr("Activity", "活动")}
+        aria-label={tr("arc.chat.arcNativeChat.activity")}
+        title={tr("arc.chat.arcNativeChat.activity")}
         aria-current={activeTab === "agent-activity" ? "page" : undefined}
         onClick={() => navigate(onOpenActivity)}
       >
         <Icon name="activity" />
-        <span>{tr("Activity", "活动")}</span>
+        <span>{tr("arc.chat.arcNativeChat.activity")}</span>
       </button>
       <button
         type="button"
@@ -285,49 +277,49 @@ export function ArcNativeChat({
         onClick={() => navigate(onManageTeams || onOpenSettings)}
       >
         <Icon name="users" />
-        <span>{tr("Agents", "智能体")}</span>
+        <span>{tr("arc.chat.arcNativeChat.agents")}</span>
       </button>
-      <div className="arcSidebarSectionTitle">{tr("TOOLS", "工具")}</div>
+      <div className="arcSidebarSectionTitle">{tr("arc.chat.arcNativeChat.tools")}</div>
       <button
         type="button"
         className="arcSidebarAction"
-        aria-label={tr("Apps", "应用")}
-        title={tr("Apps", "应用")}
+        aria-label={tr("arc.chat.arcNativeChat.apps")}
+        title={tr("arc.chat.arcNativeChat.apps")}
         aria-current={activeTab === "agent-apps" ? "page" : undefined}
         onClick={() => navigate(onManageApps)}
       >
         <Icon name="apps" />
-        <span>{tr("Apps", "应用")}</span>
+        <span>{tr("arc.chat.arcNativeChat.apps")}</span>
       </button>
       <button
         type="button"
         className="arcSidebarAction"
-        aria-label={tr("Devices", "设备")}
-        title={tr("Devices", "设备")}
+        aria-label={tr("arc.chat.arcNativeChat.devices")}
+        title={tr("arc.chat.arcNativeChat.devices")}
         aria-current={activeTab === "agent-devices" ? "page" : undefined}
         onClick={() => navigate(onManageDevices)}
       >
         <Icon name="device" />
-        <span>{tr("Devices", "设备")}</span>
+        <span>{tr("arc.chat.arcNativeChat.devices")}</span>
       </button>
       {onManageSkills && (
         <button
           type="button"
           className="arcSidebarAction"
-          aria-label={tr("Skills", "技能")}
-          title={tr("Skills", "技能")}
+          aria-label={tr("arc.chat.arcNativeChat.skills")}
+          title={tr("arc.chat.arcNativeChat.skills")}
           aria-current={activeTab === "agent-skills" ? "page" : undefined}
           onClick={() => navigate(onManageSkills)}
         >
           <Icon name="spark" />
-          <span>{tr("Skills", "技能")}</span>
+          <span>{tr("arc.chat.arcNativeChat.skills")}</span>
         </button>
       )}
       <div className="arcSidebarHistoryHeading">
-        <span className="arcSidebarSectionTitle">{tr("RECENT CHATS", "最近对话")}</span>
+        <span className="arcSidebarSectionTitle">{tr("arc.chat.arcNativeChat.recentChats")}</span>
         <button
           type="button"
-          aria-label={tr("Search chat history", "搜索对话历史")}
+          aria-label={tr("arc.chat.arcNativeChat.searchChatHistory")}
           aria-expanded={searchOpen}
           onClick={() => setSearchOpen(!searchOpen)}
         >
@@ -337,11 +329,11 @@ export function ArcNativeChat({
       {searchOpen && (
         <label className="arcSidebarSearch">
           <Icon name="search" size={14} />
-          <span className="arcSrOnly">{tr("Search your chats", "搜索你的对话")}</span>
+          <span className="arcSrOnly">{tr("arc.chat.arcNativeChat.searchYourChats")}</span>
           <input
             autoFocus
             type="search"
-            placeholder={tr("Find a conversation…", "查找对话…")}
+            placeholder={tr("arc.chat.arcNativeChat.findAConversation")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -376,14 +368,14 @@ export function ArcNativeChat({
                 <Icon name={s.automationId ? "routine" : "chat"} />
                 <span className="arcSessionTitle">{s.title}</span>
                 {s.automationId && (
-                  <small className="arcSessionTaskBadge">{tr("Task", "任务")}</small>
+                  <small className="arcSessionTaskBadge">{tr("arc.chat.arcNativeChat.task")}</small>
                 )}
               </button>
               {!s.automationId && (
                 <button
                   type="button"
                   className="arcSessionDelete"
-                  aria-label={tr("Delete chat", "删除对话") + ": " + s.title}
+                  aria-label={tr("arc.chat.arcNativeChat.deleteChat") + ": " + s.title}
                   onClick={() => void chat.remove(s.id)}
                 >
                   <Icon name="trash" />
@@ -394,15 +386,15 @@ export function ArcNativeChat({
         ) : (
           <div className="arcSidebarEmpty">
             {search
-              ? tr("No matching chats", "没有匹配的对话")
-              : tr("Your conversations will appear here", "你的对话会出现在这里")}
+              ? tr("arc.chat.arcNativeChat.noMatchingChats")
+              : tr("arc.chat.arcNativeChat.yourConversationsWillAppearHere")}
           </div>
         )}
       </div>
       {mobile && (
         <button type="button" className="arcSidebarAction" onClick={() => navigate(onOpenSettings)}>
           <Icon name="settings" />
-          <span>{tr("Settings", "设置")}</span>
+          <span>{tr("arc.chat.arcNativeChat.settings")}</span>
         </button>
       )}
     </nav>
@@ -411,102 +403,47 @@ export function ArcNativeChat({
     const recovery = billingRecovery(code);
     if (recovery) return tr(...recovery.message);
     if (code === "ARC_DEVICE_REQUIREMENTS_UNMET")
-      return tr(
-        "No connected computer meets this request’s requirements. Review available tools, platform and workspace access.",
-        "当前没有电脑符合这次任务的工具、系统和目录要求，请检查可用设备与权限。",
-      );
+      return tr("arc.chat.arcNativeChat.noConnectedComputerMeetsThisRequest");
     if (code === "ARC_VERIFICATION_PENDING")
-      return tr(
-        "The selected result could not be verified. Review the receipt before continuing.",
-        "所选结果尚未核验完成，请查看回执后再继续。",
-      );
+      return tr("arc.chat.arcNativeChat.theSelectedResultCouldNotBe");
     if (code === "ARC_VERIFICATION_FAILED")
-      return tr(
-        "A required check did not pass. Review the evidence and any acknowledged changes.",
-        "必要检查未通过，请核对证据与已确认的变更。",
-      );
+      return tr("arc.chat.arcNativeChat.aRequiredCheckDidNotPass");
     if (code === "ARC_VERIFICATION_CONNECTION_REQUIRED")
-      return tr("Choose an active account for this task.", "请为此任务选择有效的已连接账户。");
+      return tr("arc.chat.arcNativeChat.chooseAnActiveAccountForThis");
     if (code === "MODEL_ALREADY_DISPATCHED")
-      return tr(
-        "This request stopped before a new model call could start. Refresh your allowance, then send a new message.",
-        "这次请求未能启动新的模型调用。刷新额度后，可以发送新消息继续。",
-      );
-    if (/ARC_FUNDING/.test(code))
-      return tr(
-        "Arc’s shared model allowance is temporarily unavailable. Your conversation is saved.",
-        "Arc 的共享模型额度暂不可用，对话已保存。",
-      );
+      return tr("arc.chat.arcNativeChat.thisRequestStoppedBeforeANew");
+    if (/ARC_FUNDING/.test(code)) return tr("arc.chat.arcNativeChat.arcSSharedModelAllowanceIs");
     if (code === "ARC_PLAN_EXCLUDES_HOSTED")
-      return tr(
-        "Your Arc trial has ended. Connect Unlimited keeps your own AI working through Connect; upgrade to Plus to keep using Arc.",
-        "Arc 试用已结束。Connect Unlimited 仍可通过 Connect 使用你自己的 AI；升级到 Plus 可继续使用 Arc。",
-      );
+      return tr("arc.chat.arcNativeChat.yourArcTrialHasEndedConnect");
     if (/ARC_TRIAL_EXPIRED/.test(code))
-      return tr(
-        "Your trial has ended. Your conversations and connections are saved.",
-        "试用已结束，对话与连接仍保留。",
-      );
+      return tr("arc.chat.arcNativeChat.yourTrialHasEndedYourConversations");
     if (/ARC_TRIAL_REQUIRED/.test(code))
-      return tr("Activate your trial to work with Arc.", "开启试用，让 Arc 开始工作。");
-    if (/PAID_MODEL/.test(code))
-      return tr(
-        "This model needs a paid model allowance. Choose Auto to continue.",
-        "此模型需要付费模型额度，可以选择 Auto 继续。",
-      );
+      return tr("arc.chat.arcNativeChat.activateYourTrialToWorkWith");
+    if (/PAID_MODEL/.test(code)) return tr("arc.chat.arcNativeChat.thisModelNeedsAPaidModel");
     if (/NOT_CONFIGURED|MODEL_AUTH|CHAT_UNAVAILABLE/.test(code))
-      return tr(
-        "Arc is not ready in this workspace yet. Your administrator needs to finish platform setup.",
-        "此工作空间的 Arc 尚未就绪，需要管理员完成平台配置。",
-      );
+      return tr("arc.chat.arcNativeChat.arcIsNotReadyInThis");
     if (code === "MODEL_INCOMPLETE_RESPONSE")
-      return tr(
-        "The model did not return a complete next step. Saved actions and observations remain available below.",
-        "模型未返回完整的下一步，已执行的操作与实际返回仍保留在下方记录中。",
-      );
+      return tr("arc.chat.arcNativeChat.theModelDidNotReturnA");
     if (code === "ARC_TOKEN_LIMIT")
-      return tr(
-        "This run used its token allowance. Your results are saved; send a new message to continue.",
-        "本次运行的 token 额度已用完。结果已保留，可以发送新消息继续。",
-      );
+      return tr("arc.chat.arcNativeChat.thisRunUsedItsTokenAllowance");
     if (code === "ARC_CREDITS_EXHAUSTED" || code === "BILLING_CREDITS_EXHAUSTED")
-      return tr(
-        "Your available Credits have been used. Choose a plan or top up to continue.",
-        "可用 Credits 已用完，可选择套餐或补充额度后继续。",
-      );
-    if (/BUDGET|QUOTA/.test(code))
-      return tr(
-        "A usage budget or provider limit was reached. Your results are saved. Check your allowance before continuing.",
-        "触发了用量预算或服务商限制。结果已保留，请核对额度后继续。",
-      );
+      return tr("arc.chat.arcNativeChat.yourAvailableCreditsHaveBeenUsed");
+    if (/BUDGET|QUOTA/.test(code)) return tr("arc.chat.arcNativeChat.aUsageBudgetOrProviderLimit");
     if (/TIME_LIMIT|STEP_LIMIT/.test(code))
-      return tr(
-        "This run reached its work limit. The results above are saved; you can continue in a new message.",
-        "本次运行已达到工作上限。上方结果已保存，可以发送新消息继续。",
-      );
+      return tr("arc.chat.arcNativeChat.thisRunReachedItsWorkLimit");
     if (/INTERRUPTED|UNKNOWN/.test(code))
-      return tr(
-        "The last action could not be confirmed. Check its result before repeating it.",
-        "无法确认最后一次操作的结果，请核实后再决定是否重复。",
-      );
-    if (/BUSY/.test(code))
-      return tr(
-        "A run is already working in this chat. Let it finish or stop it before sending another message.",
-        "此对话已有工作正在执行，请等待完成或停止后再发送。",
-      );
-    return tr(
-      "Arc could not complete this request. Your conversation is saved.",
-      "Arc 暂时无法完成这次请求，对话已保存。",
-    );
+      return tr("arc.chat.arcNativeChat.theLastActionCouldNotBe");
+    if (/BUSY/.test(code)) return tr("arc.chat.arcNativeChat.aRunIsAlreadyWorkingIn");
+    return tr("arc.chat.arcNativeChat.arcCouldNotCompleteThisRequest");
   };
   async function submit(event: FormEvent) {
     event.preventDefault();
     const value =
       draft.trim() ||
       (inputs.attachmentIds.length
-        ? tr("Please review the attached files.", "请查看所附文件。")
+        ? tr("arc.chat.arcNativeChat.pleaseReviewTheAttachedFiles")
         : inputs.location
-          ? tr("Please use the attached place for this request.", "请结合所附地点处理这次请求。")
+          ? tr("arc.chat.arcNativeChat.pleaseUseTheAttachedPlaceFor")
           : "");
     const revision = draftRevision.current,
       references = mentions.selected,
@@ -565,7 +502,7 @@ export function ArcNativeChat({
         }}
       >
         <label className="arcSrOnly" htmlFor="arc-chat-input">
-          {tr("Message Arc", "发送消息给 Arc")}
+          {tr("arc.chat.arcNativeChat.messageArc")}
         </label>
         {mentions.menu}
         <ArcComposerAttachments inputs={inputs} tr={tr} />
@@ -576,7 +513,7 @@ export function ArcNativeChat({
           rows={2}
           maxLength={ARC_MESSAGE_MAX_LENGTH}
           value={draft}
-          placeholder={tr("Tell Arc what you want to get done.", "把你想完成的事告诉 Arc。")}
+          placeholder={tr("arc.chat.arcNativeChat.tellArcWhatYouWantTo")}
           onChange={(e) => mentions.onChange(e.target.value, e.target.selectionStart)}
           onPaste={(e) => {
             if (e.clipboardData.files.length) {
@@ -606,10 +543,13 @@ export function ArcNativeChat({
             <button
               type="button"
               onClick={onManageDevices}
-              title={tr("Manage computers", "管理电脑")}
+              title={tr("arc.chat.arcNativeChat.manageComputers")}
             >
               <Icon name="device" size={14} />
-              {onlineDevices} {tr(onlineDevices === 1 ? "device" : "devices", "台设备")}
+              {onlineDevices}{" "}
+              {onlineDevices === 1
+                ? tr("arc.chat.arcNativeChat.device")
+                : tr("arc.chat.arcNativeChat.devices2")}
             </button>
           </div>
           <div className="arcComposerActions">
@@ -621,13 +561,13 @@ export function ArcNativeChat({
               onClick={inputs.toggleVoice}
               aria-label={
                 inputs.listening
-                  ? tr("Stop voice input", "停止语音输入")
-                  : tr("Voice input", "语音输入")
+                  ? tr("arc.chat.arcNativeChat.stopVoiceInput")
+                  : tr("arc.chat.arcNativeChat.voiceInput")
               }
               title={
                 inputs.voiceSupported
-                  ? tr("Voice input", "语音输入")
-                  : tr("Voice input is not supported by this browser", "此浏览器暂不支持语音输入")
+                  ? tr("arc.chat.arcNativeChat.voiceInput")
+                  : tr("arc.chat.arcNativeChat.voiceInputIsNotSupportedBy")
               }
             >
               <ComposerGlyph name="mic" />
@@ -637,7 +577,7 @@ export function ArcNativeChat({
                 type="button"
                 className="arcChatSend arcChatStop"
                 onClick={() => void chat.cancel()}
-                aria-label={tr("Stop run", "停止运行")}
+                aria-label={tr("arc.chat.arcNativeChat.stopRun")}
               >
                 <Icon name="stop" />
               </button>
@@ -652,7 +592,7 @@ export function ArcNativeChat({
                   !chat.service?.enabled ||
                   !chat.service.access.canUse
                 }
-                aria-label={tr("Send message", "发送消息")}
+                aria-label={tr("arc.chat.arcNativeChat.sendMessage")}
               >
                 <Icon name="arrowUp" />
               </button>
@@ -662,19 +602,10 @@ export function ArcNativeChat({
       </form>
       <p className="arcChatDisclaimer">
         {chat.service?.access.status === "eligible"
-          ? tr(
-              "Start your free trial above to send your first message. No card needed.",
-              "请先点击上方“开启免费试用”，即可发送首条消息，无需银行卡。",
-            )
+          ? tr("arc.chat.arcNativeChat.startYourFreeTrialAboveTo")
           : chat.service?.preview
-            ? tr(
-                "Interactive preview · simulated replies · no real tools or charges.",
-                "交互预览 · 模拟回复 · 不执行真实工具或产生费用。",
-              )
-            : tr(
-                "Arc carries out your request and brings the results back here.",
-                "Arc 会推进工作，并把结果带回这里。",
-              )}
+            ? tr("arc.chat.arcNativeChat.interactivePreviewSimulatedRepliesNoReal")
+            : tr("arc.chat.arcNativeChat.arcCarriesOutYourRequestAnd")}
       </p>
     </div>
   );
@@ -687,44 +618,27 @@ export function ArcNativeChat({
           <strong>
             {access.status === "eligible"
               ? access.trialDays
-                ? tr(
-                    `Your next ${access.trialDays} days, with Arc.`,
-                    `接下来的 ${access.trialDays} 天，与 Arc 一起。`,
-                  )
-                : tr("Your work, with Arc.", "让 Arc 和你一起工作。")
+                ? tr("arc.chat.arcNativeChat.yourNextDaysWithArc", { trialDays: access.trialDays })
+                : tr("arc.chat.arcNativeChat.yourWorkWithArc")
               : access.status === "active"
-                ? tr(
-                    `${access.daysRemaining} days left in your trial`,
-                    `试用剩余 ${access.daysRemaining} 天`,
-                  )
+                ? tr("arc.chat.arcNativeChat.daysLeftInYourTrial", {
+                    daysRemaining: access.daysRemaining,
+                  })
                 : access.status === "paid"
-                  ? tr("Arc workspace is active", "Arc 工作空间已启用")
+                  ? tr("arc.chat.arcNativeChat.arcWorkspaceIsActive")
                   : access.status === "excluded"
-                    ? tr("Your Arc trial has ended", "Arc 试用已结束")
-                    : tr("Your trial has ended", "试用已结束")}
+                    ? tr("arc.chat.arcNativeChat.yourArcTrialHasEnded")
+                    : tr("arc.chat.arcNativeChat.yourTrialHasEnded")}
           </strong>
           {access.status === "excluded" && (
-            <small>
-              {tr(
-                "Connect Unlimited keeps running your own ChatGPT, Claude or Codex on your computers. Continuing with Arc needs Plus. Your conversations and remaining Credits are saved.",
-                "Connect Unlimited 仍会在你的电脑上运行你自己的 ChatGPT、Claude 或 Codex；继续使用 Arc 需要 Plus。对话与剩余 Credits 均已保存。",
-              )}
-            </small>
+            <small>{tr("arc.chat.arcNativeChat.connectUnlimitedKeepsRunningYourOwn")}</small>
           )}
           {access.status === "eligible" && (
-            <small>
-              {tr(
-                "No card. No model API key. Starts when you activate it.",
-                "无需银行卡或模型 API Key，主动开启后才计时。",
-              )}
-            </small>
+            <small>{tr("arc.chat.arcNativeChat.noCardNoModelApiKey")}</small>
           )}
           {access.status === "expired" && (
             <small>
-              {tr(
-                "Your remaining Credits, conversations, results and connections are saved.",
-                "剩余 Credits、对话、结果与连接仍然保留。",
-              )}
+              {tr("arc.chat.arcNativeChat.yourRemainingCreditsConversationsResultsAnd")}
             </small>
           )}
         </span>
@@ -736,41 +650,40 @@ export function ArcNativeChat({
           disabled={!chat.service?.enabled || chat.busy}
           onClick={() => void chat.startTrial()}
         >
-          {tr("Start free trial", "开启免费试用")}
+          {tr("arc.chat.arcNativeChat.startFreeTrial")}
           <Icon name="arrowUpRight" size={14} />
         </button>
       ) : access.status === "active" && access.daysRemaining <= 3 ? (
         <a href="/checkout">
-          {tr("Keep working with Arc", "继续使用 Arc")}
+          {tr("arc.chat.arcNativeChat.keepWorkingWithArc")}
           <Icon name="arrowUpRight" size={14} />
         </a>
       ) : access.creditsAvailable != null &&
         access.creditsAvailable < Math.max(5, (access.trialCredits || 0) / 10) ? (
         <a href="/checkout">
-          {tr(
-            `${formatCredits(access.creditsAvailable)} Credits left`,
-            `剩余 ${formatCredits(access.creditsAvailable)} Credits`,
-          )}
+          {tr("arc.chat.arcNativeChat.creditsLeft", {
+            creditsAvailable: formatCredits(access.creditsAvailable),
+          })}
           <Icon name="arrowUpRight" size={14} />
         </a>
       ) : access.canUse ? (
         <span>
           {access.creditsAvailable != null ? (
-            tr(
-              `${formatCredits(access.creditsAvailable)} Credits left · today ${access.dailyUsedPercent}%`,
-              `剩余 ${formatCredits(access.creditsAvailable)} Credits · 今日 ${access.dailyUsedPercent}%`,
-            )
+            tr("arc.chat.arcNativeChat.creditsLeftToday", {
+              creditsAvailable: formatCredits(access.creditsAvailable),
+              dailyUsedPercent: access.dailyUsedPercent,
+            })
           ) : (
             <>
-              {tr("Daily usage", "今日用量")} · {access.dailyUsedPercent}%
+              {tr("arc.chat.arcNativeChat.dailyUsage")} · {access.dailyUsedPercent}%
             </>
           )}
         </span>
       ) : (
         <a href={access.status === "excluded" ? "/checkout?product=arc-plus-v1" : "/checkout"}>
           {access.status === "excluded"
-            ? tr("Upgrade to Plus", "升级到 Plus")
-            : tr("View plans", "查看套餐")}
+            ? tr("arc.chat.arcNativeChat.upgradeToPlus")
+            : tr("arc.chat.arcNativeChat.viewPlans")}
           <Icon name="arrowUpRight" size={14} />
         </a>
       )}
@@ -815,17 +728,17 @@ export function ArcNativeChat({
         {errorText(failure)}
         {/PAID_MODEL/.test(failure) && (
           <a href="/checkout">
-            {tr("View plans", "查看套餐")} <Icon name="arrowUpRight" size={13} />
+            {tr("arc.chat.arcNativeChat.viewPlans")} <Icon name="arrowUpRight" size={13} />
           </a>
         )}
       </p>
       <BillingRecoveryActions code={failure} tr={tr} />
       <details className="arcChatErrorDetails">
-        <summary>{tr("Error details", "错误详情")}</summary>
+        <summary>{tr("arc.chat.arcNativeChat.errorDetails")}</summary>
         <code>{failureCode}</code>
         {chat.run?.id && (
           <small>
-            {tr("Run", "运行")} · {chat.run.id}
+            {tr("arc.chat.arcNativeChat.run")} · {chat.run.id}
           </small>
         )}
       </details>
@@ -835,7 +748,7 @@ export function ArcNativeChat({
     <section
       className="arcChatShell"
       data-state={chat.current ? "conversation" : loadingConversation ? "loading" : "welcome"}
-      aria-label={tr("Arc chat", "Arc 对话")}
+      aria-label={tr("arc.chat.arcNativeChat.arcChat")}
     >
       {sidebarMount && createPortal(sidebar(false), sidebarMount)}
       <div className="arcChatAtmosphere" aria-hidden="true">
@@ -875,24 +788,24 @@ export function ArcNativeChat({
           <button
             type="button"
             className="arcChatMobileMenu"
-            aria-label={tr("Open chat history", "打开对话历史")}
+            aria-label={tr("arc.chat.arcNativeChat.openChatHistory")}
             onClick={() => setMobileOpen(true)}
           >
             <Icon name="menu" />
           </button>
           <span className="arcChatBrand">Arc</span>
-          <span className="arcChatBeta">{tr("Personal agent", "个人智能体")}</span>
+          <span className="arcChatBeta">{tr("arc.chat.arcNativeChat.personalAgent")}</span>
         </div>
         <div className="arcChatTopRight">
           <button type="button" className="arcChatTopLink" onClick={onOpenGoals}>
             <Icon name="tasks" />
-            {tr("Tasks", "任务")}
+            {tr("arc.chat.arcNativeChat.tasks")}
           </button>
           <button
             type="button"
             className="arcChatTopNew"
             onClick={beginNew}
-            aria-label={tr("New chat", "新对话")}
+            aria-label={tr("arc.chat.arcNativeChat.newChat")}
           >
             <Icon name="add" />
           </button>
@@ -903,13 +816,13 @@ export function ArcNativeChat({
           <Icon name="routine" size={16} />
           <span>
             {chat.current?.work?.find((task) => task.conversationId === chat.current?.session.id)
-              ?.name || tr("Tasks linked to this conversation", "此对话关联的任务")}
+              ?.name || tr("arc.chat.arcNativeChat.tasksLinkedToThisConversation")}
           </span>
           <button
             type="button"
             onClick={() => scrollArea.current?.scrollTo({ top: 0, behavior: "instant" })}
           >
-            {tr("View tasks", "查看任务")} · {chat.current?.work?.length}
+            {tr("arc.chat.arcNativeChat.viewTasks")} · {chat.current?.work?.length}
           </button>
         </div>
       )}
@@ -931,17 +844,17 @@ export function ArcNativeChat({
           <div className="arcConversationLoading" aria-busy={chat.opening}>
             {chat.opening || !chat.error ? (
               <WorkspaceLoading
-                label={tr("Opening conversation…", "正在打开对话…")}
+                label={tr("arc.chat.arcNativeChat.openingConversation")}
                 variant="rows"
               />
             ) : (
               <>
-                <p>{tr("Could not load this conversation.", "无法加载此对话。")}</p>
+                <p>{tr("arc.chat.arcNativeChat.couldNotLoadThisConversation")}</p>
                 <button
                   type="button"
                   onClick={() => void chat.open(chat.selectedSessionId || initialSessionId!)}
                 >
-                  {tr("Try again", "重试")}
+                  {tr("arc.chat.arcNativeChat.tryAgain")}
                 </button>
               </>
             )}
@@ -952,15 +865,10 @@ export function ArcNativeChat({
               <img src="/remote-arc.svg" alt="" />
             </div>
             <span className="arcChatWelcomeEyebrow">
-              {tr("A LITTLE LESS BUSYWORK", "少一点琐事，多一点进展")}
+              {tr("arc.chat.arcNativeChat.aLittleLessBusywork")}
             </span>
             <OverviewGreeting name={accountName || null} tr={tr} />
-            <p>
-              {tr(
-                "Tell Arc your goal. It organizes the work and brings the results back here.",
-                "交代目标，让 Arc 组织工作并交付结果。",
-              )}
-            </p>
+            <p>{tr("arc.chat.arcNativeChat.tellArcYourGoalItOrganizes")}</p>
             {access?.status === "eligible" && trial}
             {composer}
             <ArcHomeBrief
@@ -1004,13 +912,17 @@ export function ArcNativeChat({
             </div>
           </div>
         ) : (
-          <div className="arcChatMessages" role="log" aria-label={tr("Chat messages", "对话消息")}>
+          <div
+            className="arcChatMessages"
+            role="log"
+            aria-label={tr("arc.chat.arcNativeChat.chatMessages")}
+          >
             {Boolean(chat.current?.work?.length) && (
               <section
                 className="arcChatTaskCards"
-                aria-label={tr("Tasks in this conversation", "此对话中的任务")}
+                aria-label={tr("arc.chat.arcNativeChat.tasksInThisConversation")}
               >
-                <h2>{tr("TASKS IN THIS CONVERSATION", "此对话中的任务")}</h2>
+                <h2>{tr("arc.chat.arcNativeChat.tasksInThisConversation2")}</h2>
                 {chat.current?.work?.map((task) => (
                   <ArcTaskCard
                     key={task.id}
@@ -1035,8 +947,8 @@ export function ArcNativeChat({
                 onClick={() => void loadEarlier()}
               >
                 {chat.loadingHistory
-                  ? tr("Loading earlier messages…", "正在加载更早消息…")
-                  : tr("Load earlier messages", "加载更早消息")}
+                  ? tr("arc.chat.arcNativeChat.loadingEarlierMessages")
+                  : tr("arc.chat.arcNativeChat.loadEarlierMessages")}
               </button>
             )}
             {transcript.map((entry) => {
@@ -1107,10 +1019,7 @@ export function ArcNativeChat({
       {!chat.current && failureNotice}
       {chat.service && !chat.service.enabled && !chat.service.preview && !chat.error && (
         <div className="arcChatServiceNotice" role="status">
-          {tr(
-            "Arc is being set up for this workspace. Your connected apps and computers are available in Connect.",
-            "此工作空间正在配置 Arc。已连接的应用和电脑仍可在 Connect 中使用。",
-          )}
+          {tr("arc.chat.arcNativeChat.arcIsBeingSetUpFor")}
         </div>
       )}
       {(chat.current || access?.status !== "eligible") && trial}
@@ -1127,14 +1036,14 @@ export function ArcNativeChat({
               className="arcChatMobileDrawer"
               role="dialog"
               aria-modal="true"
-              aria-label={tr("Chat history", "对话历史")}
+              aria-label={tr("arc.chat.arcNativeChat.chatHistory")}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="arcMobileDrawerHeader">
                 <strong>Arc</strong>
                 <button
                   type="button"
-                  aria-label={tr("Close", "关闭")}
+                  aria-label={tr("arc.chat.arcNativeChat.close")}
                   onClick={() => setMobileOpen(false)}
                 >
                   <Icon name="close" />

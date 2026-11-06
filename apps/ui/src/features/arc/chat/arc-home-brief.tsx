@@ -1,7 +1,8 @@
+import type { Translate } from "../../../locales/locale-catalog.js";
 import { useEffect, useState } from "react";
-import { arcRequest } from "./use-arc-chat.js";
+import { arcRequest } from "../../../hooks/arc/use-arc-chat.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
-import "./arc-home-brief.css";
+import "../../../styles/arc/chat/arc-home-brief.css";
 
 type Work = {
   id: string;
@@ -22,7 +23,7 @@ type Props = {
   enabled: boolean;
   onlineDevices: number;
   totalDevices: number;
-  tr: (en: string, zh: string) => string;
+  tr: Translate;
   onTasks: () => void;
   onRoutines: () => void;
   onDevices: () => void;
@@ -65,16 +66,16 @@ export function ArcHomeBrief({
   if (error)
     return (
       <div className="arcHomeBriefStatus" role="status">
-        <span>{tr("Your work summary is temporarily unavailable.", "暂时无法加载工作摘要。")}</span>
+        <span>{tr("arc.chat.arcHomeBrief.yourWorkSummaryIsTemporarilyUnavailable")}</span>
         <button type="button" onClick={() => setRevision((value) => value + 1)}>
-          {tr("Try again", "重试")}
+          {tr("arc.chat.arcHomeBrief.tryAgain")}
         </button>
       </div>
     );
   if (!brief)
     return (
       <div className="arcHomeBriefStatus" role="status">
-        {tr("Checking what needs your attention…", "正在整理需要你关注的工作…")}
+        {tr("arc.chat.arcHomeBrief.checkingWhatNeedsYourAttention")}
       </div>
     );
   const workAttention = brief.work.filter((item) => needsAttention(item.status));
@@ -88,25 +89,25 @@ export function ArcHomeBrief({
   const attentionCount = workAttention.length + runAttention.length;
   const offline = Math.max(0, totalDevices - onlineDevices);
   return (
-    <section className="arcHomeBrief" aria-label={tr("Your work at a glance", "工作概览")}>
+    <section className="arcHomeBrief" aria-label={tr("arc.chat.arcHomeBrief.yourWorkAtAGlance")}>
       <div className="arcHomeMetrics">
         <button type="button" onClick={onTasks}>
           <Icon name="tasks" size={16} />
-          <span>{tr("Active tasks", "进行中的任务")}</span>
+          <span>{tr("arc.chat.arcHomeBrief.activeTasks")}</span>
           <strong>
             {brief.work.filter((item) => item.kind === "task" && ongoing(item.status)).length}
           </strong>
         </button>
         <button type="button" onClick={onRoutines}>
           <Icon name="routine" size={16} />
-          <span>{tr("Scheduled routines", "已安排的 Routine")}</span>
+          <span>{tr("arc.chat.arcHomeBrief.scheduledRoutines")}</span>
           <strong>
             {brief.work.filter((item) => item.kind === "routine" && ongoing(item.status)).length}
           </strong>
         </button>
         <button type="button" onClick={onDevices}>
           <Icon name="device" size={16} />
-          <span>{tr("Computers online", "在线电脑")}</span>
+          <span>{tr("arc.chat.arcHomeBrief.computersOnline")}</span>
           <strong>
             {onlineDevices}
             <small> / {totalDevices}</small>
@@ -117,7 +118,7 @@ export function ArcHomeBrief({
         <div className="arcHomeAttention">
           <header>
             <Icon name="inbox" size={15} />
-            <strong>{tr("Pick up where you left off", "接着处理这些事")}</strong>
+            <strong>{tr("arc.chat.arcHomeBrief.pickUpWhereYouLeftOff")}</strong>
             <span>{attentionCount + (offline ? 1 : 0)}</span>
           </header>
           {workAttention.slice(0, 3).map((item) => (
@@ -126,10 +127,11 @@ export function ArcHomeBrief({
               key={item.id}
               onClick={() =>
                 onReview(
-                  tr(
-                    `Review my ${item.kind} "${item.name}" (ID ${item.id}). Read its current status and results before proposing the next step.`,
-                    `检查“${item.name}”（ID ${item.id}）的当前状态与结果，再建议下一步。`,
-                  ),
+                  tr("arc.chat.arcHomeBrief.reviewMyIdReadItsCurrent", {
+                    kind: item.kind,
+                    name: item.name,
+                    id: item.id,
+                  }),
                   item.conversationId || undefined,
                 )
               }
@@ -139,13 +141,10 @@ export function ArcHomeBrief({
                 <strong>{item.name}</strong>
                 <small>
                   {item.status === "unknown"
-                    ? tr(
-                        "Check the result before repeating this work",
-                        "先核实结果，再决定是否重试",
-                      )
+                    ? tr("arc.chat.arcHomeBrief.checkTheResultBeforeRepeatingThis")
                     : item.status === "paused"
-                      ? tr("Paused · review before continuing", "已暂停 · 检查后再继续")
-                      : tr("Needs your attention", "需要关注")}
+                      ? tr("arc.chat.arcHomeBrief.pausedReviewBeforeContinuing")
+                      : tr("arc.chat.arcHomeBrief.needsYourAttention")}
                 </small>
               </span>
               <Icon name="arrowUpRight" size={14} />
@@ -156,22 +155,16 @@ export function ArcHomeBrief({
               type="button"
               key={run.id}
               onClick={() =>
-                onReview(
-                  tr(
-                    "Review the last run and its actual results before continuing.",
-                    "先检查上次执行及实际结果，再继续处理。",
-                  ),
-                  run.session_id,
-                )
+                onReview(tr("arc.chat.arcHomeBrief.reviewTheLastRunAndIts"), run.session_id)
               }
             >
               <Icon name="history" size={16} />
               <span>
-                <strong>{run.title || tr("A conversation to revisit", "待继续的对话")}</strong>
+                <strong>{run.title || tr("arc.chat.arcHomeBrief.aConversationToRevisit")}</strong>
                 <small>
                   {run.status === "unknown"
-                    ? tr("The last action needs verification", "上次操作的结果需要核实")
-                    : tr("Review the last run", "检查上次执行")}
+                    ? tr("arc.chat.arcHomeBrief.theLastActionNeedsVerification")
+                    : tr("arc.chat.arcHomeBrief.reviewTheLastRun")}
                 </small>
               </span>
               <Icon name="arrowUpRight" size={14} />
@@ -182,14 +175,12 @@ export function ArcHomeBrief({
               <Icon name="device" size={16} />
               <span>
                 <strong>
-                  {tr(
-                    `${offline} computer${offline === 1 ? "" : "s"} offline`,
-                    `${offline} 台电脑离线`,
-                  )}
+                  {tr("arc.chat.arcHomeBrief.computerOffline", {
+                    offline,
+                    s: offline === 1 ? "" : "s",
+                  })}
                 </strong>
-                <small>
-                  {tr("Computer work needs an available device", "电脑上的工作需要设备在线")}
-                </small>
+                <small>{tr("arc.chat.arcHomeBrief.computerWorkNeedsAnAvailableDevice")}</small>
               </span>
               <Icon name="arrowUpRight" size={14} />
             </button>

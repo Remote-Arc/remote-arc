@@ -1,6 +1,7 @@
+import type { Translate } from "../../locales/locale-catalog.js";
 import type { FormEvent, ReactNode } from "react";
 import { ProductIcon } from "../../components/product-icon.js";
-type Tr = (en: string, zh: string) => string;
+type Tr = Translate;
 export type ElementsSummary = {
   label: string;
   subtotal: string;
@@ -43,13 +44,10 @@ export function ElementsShell({
     <div className="arcElementsCheckout">
       <form className="arcElementsPay" onSubmit={onSubmit} aria-busy={busy} noValidate>
         <header>
-          <h3>{tr("Payment details", "付款信息")}</h3>
+          <h3>{tr("billing.checkoutElementsShell.paymentDetails")}</h3>
           <p>
             <ProductIcon name="shield" size={14} />
-            {tr(
-              "Card details go directly to Stripe. Remote Arc never sees or stores your card number.",
-              "卡片信息直接提交给 Stripe，Remote Arc 不会看到或保存你的卡号。",
-            )}
+            {tr("billing.checkoutElementsShell.cardDetailsGoDirectlyToStripe")}
           </p>
         </header>
         {status}
@@ -62,7 +60,7 @@ export function ElementsShell({
           >
             {express}
             <p className="arcElementsDivider">
-              <span>{tr("Or pay with card", "或使用银行卡付款")}</span>
+              <span>{tr("billing.checkoutElementsShell.orPayWithCard")}</span>
             </p>
           </div>
         )}
@@ -78,20 +76,18 @@ export function ElementsShell({
           disabled={!canPay || busy}
         >
           {busy
-            ? tr("Processing payment…", "正在处理付款…")
-            : (submitLabel ?? tr("Pay ", "支付 ") + summary.total)}
+            ? tr("billing.checkoutElementsShell.processingPayment")
+            : (submitLabel ?? tr("billing.checkoutElementsShell.pay") + summary.total)}
         </button>
-        {footer ?? (
-          <small>
-            {tr(
-              "Your bank may ask you to confirm this payment.",
-              "你的银行可能会要求确认这笔付款。",
-            )}
-          </small>
-        )}
+        {footer ?? <small>{tr("billing.checkoutElementsShell.yourBankMayAskYouTo")}</small>}
       </form>
-      <aside className="arcElementsSummary" aria-label={tr("Order summary", "订单摘要")}>
-        <span className="raSettingsFieldLabel">{tr("ORDER SUMMARY", "订单摘要")}</span>
+      <aside
+        className="arcElementsSummary"
+        aria-label={tr("billing.checkoutElementsShell.orderSummary")}
+      >
+        <span className="raSettingsFieldLabel">
+          {tr("billing.checkoutElementsShell.orderSummary2")}
+        </span>
         <dl>
           <div>
             <dt>{summary.label}</dt>
@@ -99,18 +95,18 @@ export function ElementsShell({
           </div>
           {summary.discount && (
             <div>
-              <dt>{tr("Discount", "优惠")}</dt>
+              <dt>{tr("billing.checkoutElementsShell.discount")}</dt>
               <dd>−{summary.discount}</dd>
             </div>
           )}
           {summary.tax && (
             <div>
-              <dt>{tr("Tax", "税费")}</dt>
+              <dt>{tr("billing.checkoutElementsShell.tax")}</dt>
               <dd>{summary.tax}</dd>
             </div>
           )}
           <div className="arcElementsTotal">
-            <dt>{tr("Due today", "今日应付")}</dt>
+            <dt>{tr("billing.checkoutElementsShell.dueToday")}</dt>
             <dd>
               {summary.total}
               <small>{summary.cadence}</small>

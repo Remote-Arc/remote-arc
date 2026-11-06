@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from "react";
-import { useI18n } from "../app/i18n.js";
+import { useI18n } from "../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../lib/marketing-paths.js";
-import "./install-commands.css";
+import "../styles/components/install-commands.css";
 
 const methods = [
   { id: "npx", label: "npx", command: "npx remotelink@latest" },
@@ -86,20 +86,23 @@ export function InstallCommands({
 
   const requirements =
     method.id === "npx"
-      ? tr("Node.js 20+ · Windows, macOS & Linux", "Node.js 20+ · Windows、macOS、Linux")
-      : tr("No Node.js · macOS, Linux & WSL", "无需 Node.js · macOS、Linux、WSL");
+      ? tr("components.installCommands.nodeJsWindowsMacosLinux")
+      : tr("components.installCommands.noNodeJsMacosLinuxWsl");
 
   return (
-    <section className="installCommands" aria-label={tr("Install Remote Arc", "安装 Remote Arc")}>
+    <section
+      className="installCommands"
+      aria-label={tr("components.installCommands.installRemoteArc")}
+    >
       <div className="installCommandsHeader">
         <span className="installCommandsLabel">
-          {tr("Install on your computer", "在你的电脑上安装")}
+          {tr("components.installCommands.installOnYourComputer")}
         </span>
         <div className="installCommandsMethods">
           <div
             className="installCommandsTabs"
             role="tablist"
-            aria-label={tr("Installation method", "安装方式")}
+            aria-label={tr("components.installCommands.installationMethod")}
           >
             {methods.map((item, index) => (
               <button
@@ -124,7 +127,7 @@ export function InstallCommands({
             className="installCommandsDownload"
             href={downloadHref ?? localizedWebsiteHref("/downloads", locale)}
           >
-            {tr("Download", "直接下载")}
+            {tr("components.installCommands.download")}
           </a>
         </div>
       </div>
@@ -147,16 +150,17 @@ export function InstallCommands({
               className="installCommandsCopy"
               type="button"
               onClick={() => void copy()}
-              aria-label={tr(
-                "Copy " + method.label + " commands",
-                "复制 " + method.label + " 命令",
-              )}
+              aria-label={tr("components.installCommands.copyCommands", { label: method.label })}
             >
               <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <rect x="7" y="7" width="9" height="10" rx="2" />
                 <path d="M12 4V3H3v10h1" />
               </svg>
-              <span>{feedback?.ok ? tr("Copied", "已复制") : tr("Copy", "复制")}</span>
+              <span>
+                {feedback?.ok
+                  ? tr("components.installCommands.copied")
+                  : tr("components.installCommands.copy")}
+              </span>
             </button>
           </div>
         </div>
@@ -164,19 +168,13 @@ export function InstallCommands({
       <p className="installCommandsRequirements" role="status" aria-live="polite">
         {feedback
           ? feedback.ok
-            ? tr("Commands copied.", "命令已复制。")
-            : tr(
-                "Clipboard blocked. Select and copy the command.",
-                "剪贴板不可用，请选中命令手动复制。",
-              )
+            ? tr("components.installCommands.commandsCopied")
+            : tr("components.installCommands.clipboardBlockedSelectAndCopyThe")
           : requirements}
       </p>
       {method.id === "curl" && (
         <p className="installCommandsNext">
-          {tr(
-            "Then run the startup command shown in Terminal to pair your computer.",
-            "安装完成后，运行终端提示的启动命令，配对你的电脑。",
-          )}
+          {tr("components.installCommands.thenRunTheStartupCommandShown")}
         </p>
       )}
     </section>

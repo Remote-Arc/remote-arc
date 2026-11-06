@@ -1,8 +1,8 @@
 import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
 import { useEffect, useState } from "react";
-import { useI18n } from "../../app/i18n.js";
+import { useI18n } from "../../hooks/use-i18n.js";
 import { UI_PREVIEW } from "../../preview/preview-mode.js";
-import "./slack-bot-panel.css";
+import "../../styles/apps/slack-bot-panel.css";
 
 type Link = {
   team_id: string;
@@ -38,7 +38,7 @@ export function SlackBotPanel() {
       })
       .catch(() => {
         if (!controller.signal.aborted)
-          setError(tr("Could not load Slack Bot settings.", "无法加载 Slack Bot 设置。"));
+          setError(tr("apps.slackBotPanel.couldNotLoadSlackBotSettings"));
       });
     return () => controller.abort();
   }, [revision, tr]);
@@ -59,12 +59,7 @@ export function SlackBotPanel() {
         throw Error();
       location.assign(url.href);
     } catch {
-      setError(
-        tr(
-          "Slack Bot installation could not start. Please try again.",
-          "无法开始安装 Slack Bot，请重试。",
-        ),
-      );
+      setError(tr("apps.slackBotPanel.slackBotInstallationCouldNotStart"));
       setBusy(false);
     }
   }
@@ -81,7 +76,7 @@ export function SlackBotPanel() {
       if (!response.ok) throw Error();
       setRevision((value) => value + 1);
     } catch {
-      setError(tr("Could not disconnect this Slack identity.", "无法解除此 Slack 身份的关联。"));
+      setError(tr("apps.slackBotPanel.couldNotDisconnectThisSlackIdentity"));
     } finally {
       setBusy(false);
     }
@@ -99,30 +94,17 @@ export function SlackBotPanel() {
       if (!response.ok) throw Error();
       setRevision((value) => value + 1);
     } catch {
-      setError(
-        tr(
-          "Could not change the Slack model. Check your plan and try again.",
-          "无法更改 Slack 模型，请检查套餐后重试。",
-        ),
-      );
+      setError(tr("apps.slackBotPanel.couldNotChangeTheSlackModel"));
     } finally {
       setBusy(false);
     }
   }
   return (
-    <section
-      className="slackBotPanel"
-      aria-label={tr("Remote Arc Bot in Slack", "Slack 中的 Remote Arc Bot")}
-    >
+    <section className="slackBotPanel" aria-label={tr("apps.slackBotPanel.remoteArcBotInSlack")}>
       <header>
         <div>
-          <h3>{tr("Chat with Remote Arc in Slack", "在 Slack 中与 Remote Arc 对话")}</h3>
-          <p>
-            {tr(
-              "Uses your Arc plan, credits and connected tools.",
-              "使用你自己的 Arc 套餐、额度和已连接工具。",
-            )}
-          </p>
+          <h3>{tr("apps.slackBotPanel.chatWithRemoteArcInSlack")}</h3>
+          <p>{tr("apps.slackBotPanel.usesYourArcPlanCreditsAnd")}</p>
         </div>
         <button
           className="appsManagerRefresh"
@@ -130,15 +112,15 @@ export function SlackBotPanel() {
           disabled={busy}
           onClick={() => setRevision((value) => value + 1)}
         >
-          {tr("Refresh", "刷新")}
+          {tr("apps.slackBotPanel.refresh")}
         </button>
       </header>
       {error && <p role="alert">{error}</p>}
-      {!state && !error && <p role="status">{tr("Loading…", "正在加载…")}</p>}
+      {!state && !error && <p role="status">{tr("apps.slackBotPanel.loading")}</p>}
       {state && (
         <>
           <label className="slackBotModel">
-            {tr("Model for Slack conversations", "Slack 对话模型")}
+            {tr("apps.slackBotPanel.modelForSlackConversations")}
             <select
               value={state.modelId || "auto"}
               disabled={busy || UI_PREVIEW || !state.canSelectModel}
@@ -152,11 +134,8 @@ export function SlackBotPanel() {
             </select>
             <small>
               {state.canSelectModel
-                ? tr("Applies to new Slack requests.", "对新的 Slack 请求生效。")
-                : tr(
-                    "Free trial uses Auto. Plus and higher plans can choose other models.",
-                    "免费试用使用 Auto。Plus 及以上套餐可以选择其他模型。",
-                  )}
+                ? tr("apps.slackBotPanel.appliesToNewSlackRequests")
+                : tr("apps.slackBotPanel.freeTrialUsesAutoPlusAnd")}
             </small>
           </label>
           <div className="slackBotLinks">
@@ -167,8 +146,8 @@ export function SlackBotPanel() {
                   <small>
                     {link.slack_user_id} ·{" "}
                     {link.installation_status === "active"
-                      ? tr("Linked", "已关联")
-                      : tr("Reinstall required", "需要重新安装")}
+                      ? tr("apps.slackBotPanel.linked")
+                      : tr("apps.slackBotPanel.reinstallRequired")}
                   </small>
                 </div>
                 <div>
@@ -183,7 +162,7 @@ export function SlackBotPanel() {
                       target="_blank"
                       rel="noreferrer"
                     >
-                      {tr("Open chat", "打开对话")} ↗
+                      {tr("apps.slackBotPanel.openChat")} ↗
                     </a>
                   )}
                   <button
@@ -191,7 +170,7 @@ export function SlackBotPanel() {
                     disabled={busy || UI_PREVIEW}
                     onClick={() => void unlink(link)}
                   >
-                    {tr("Disconnect identity", "解除身份关联")}
+                    {tr("apps.slackBotPanel.disconnectIdentity")}
                   </button>
                 </div>
               </article>
@@ -205,12 +184,7 @@ export function SlackBotPanel() {
                 <article key={installation.team_id}>
                   <div>
                     <strong>{installation.team_name}</strong>
-                    <small>
-                      {tr(
-                        "Installed · send a message to link your account",
-                        "已安装 · 发送消息关联你的账号",
-                      )}
-                    </small>
+                    <small>{tr("apps.slackBotPanel.installedSendAMessageToLink")}</small>
                   </div>
                   <a
                     href={
@@ -222,29 +196,22 @@ export function SlackBotPanel() {
                     target="_blank"
                     rel="noreferrer"
                   >
-                    {tr("Open chat", "打开对话")} ↗
+                    {tr("apps.slackBotPanel.openChat")} ↗
                   </a>
                 </article>
               ))}
           </div>
-          {!state.links.length && (
-            <p>
-              {tr(
-                "Install the Bot, open Remote Arc in Slack Apps and send a message to link your account.",
-                "安装 Bot 后，在 Slack 的应用中打开 Remote Arc，发送消息即可关联你的账号。",
-              )}
-            </p>
-          )}
+          {!state.links.length && <p>{tr("apps.slackBotPanel.installTheBotOpenRemoteArc")}</p>}
           <button
             type="button"
             className="appsManagerPrimary"
             disabled={busy || UI_PREVIEW || !state.configured}
             onClick={() => void install()}
           >
-            {tr("Add Remote Arc Bot to Slack", "把 Remote Arc Bot 添加到 Slack")}
+            {tr("apps.slackBotPanel.addRemoteArcBotToSlack")}
           </button>
           {!state.configured && (
-            <small>{tr("Slack Bot setup is not complete yet.", "Slack Bot 配置尚未完成。")}</small>
+            <small>{tr("apps.slackBotPanel.slackBotSetupIsNotComplete")}</small>
           )}
         </>
       )}

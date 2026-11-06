@@ -1,11 +1,12 @@
-import { findAppWorkflow, translateCopy } from "./app-workflow-examples.js";
+import type { Translate } from "../../../locales/locale-catalog.js";
+import { findAppWorkflow } from "./app-workflow-examples.js";
 import { findLocalCreative } from "./local-creative-examples.js";
 import { LocalCreativeResult } from "./local-creative-demo.js";
 import { DemoResultCard } from "./landing-demo-result.js";
 import React, { useEffect, useRef, useState } from "react";
-import { useI18n } from "../../../app/i18n.js";
+import { useI18n } from "../../../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../../../lib/marketing-paths.js";
-import "./landing-interactive-demo.css";
+import "../../../styles/marketing/home/landing-interactive-demo.css";
 
 type DemoScenario = {
   id: string;
@@ -194,21 +195,21 @@ function ScenarioIcon({ id }: { id: string }) {
   );
 }
 
-function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEvent[] {
+function eventsFor(id: string, tr: Translate): DemoEvent[] {
   const workflow = findAppWorkflow(id);
   const creative = findLocalCreative(id);
   if (creative)
     return creative.traces.map((trace) => ({
       tool: trace.tool,
       arguments: JSON.stringify(trace.input),
-      output: translateCopy(trace.output, tr),
+      output: tr(trace.output),
       duration: "example",
     }));
   if (workflow)
     return workflow.traces.map((trace) => ({
       tool: trace.tool + (trace.provider ? " · " + trace.provider : ""),
       arguments: JSON.stringify(trace.input),
-      output: translateCopy(trace.output, tr),
+      output: tr(trace.output),
       duration: "example",
     }));
   switch (id) {
@@ -217,10 +218,7 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
         {
           tool: "list_apps",
           arguments: "{}",
-          output: tr(
-            "Gmail / Outlook · connected email accounts",
-            "Gmail / Outlook · 已连接的邮箱",
-          ),
+          output: tr("marketing.home.landingInteractiveDemo.gmailOutlookConnectedEmailAccounts"),
           duration: "25ms",
         },
         {
@@ -228,22 +226,21 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
           arguments:
             '{"operation":"messages.list","arguments":{"query":"is:unread subject:launch","limit":10}}',
           output: tr(
-            "3 matching threads · selected launch discussion",
-            "3 个相关讨论 · 选中发布邮件",
+            "marketing.home.landingInteractiveDemo.matchingThreadsSelectedLaunchDiscussion",
           ),
           duration: "129ms",
         },
         {
           tool: "call_app · Gmail",
           arguments: '{"operation":"messages.get","arguments":{"id":"example-thread-message"}}',
-          output: tr("Original message and participants read", "已读取原邮件与参与者"),
+          output: tr("marketing.home.landingInteractiveDemo.originalMessageAndParticipantsRead"),
           duration: "93ms",
         },
         {
           tool: "call_app · Gmail",
           arguments:
             '{"operation":"drafts.create","arguments":{"to":["team@example.com"],"subject":"Re: Launch","body":"Thanks — here is the update…"}}',
-          output: tr("Reply draft created · message not sent", "回复草稿已创建 · 未发送邮件"),
+          output: tr("marketing.home.landingInteractiveDemo.replyDraftCreatedMessageNotSent"),
           duration: "21ms",
         },
       ];
@@ -253,26 +250,21 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
           tool: "list_apps",
           arguments: "{}",
           output: tr(
-            "Google Calendar + Outlook Calendar · read access",
-            "Google Calendar + Outlook Calendar · 读取权限",
+            "marketing.home.landingInteractiveDemo.googleCalendarOutlookCalendarReadAccess",
           ),
           duration: "26ms",
         },
         {
           tool: "call_app · Google Calendar",
           arguments: '{"operation":"events.list","arguments":{"calendar":"primary","limit":30}}',
-          output: tr(
-            "Tomorrow’s events read · 10:00–10:30 is open",
-            "已读取明日安排 · 10:00–10:30 空闲",
-          ),
+          output: tr("marketing.home.landingInteractiveDemo.tomorrowSEventsReadIsOpen"),
           duration: "118ms",
         },
         {
           tool: "call_app · Outlook Calendar",
           arguments: '{"operation":"events.list","arguments":{"calendar":"primary","limit":30}}',
           output: tr(
-            "Second calendar checked · no overlapping event",
-            "已核对第二个日历 · 没有冲突",
+            "marketing.home.landingInteractiveDemo.secondCalendarCheckedNoOverlappingEvent",
           ),
           duration: "104ms",
         },
@@ -280,10 +272,7 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
           tool: "call_app · Google Calendar",
           arguments:
             '{"operation":"events.create","arguments":{"calendar":"primary","event":{"summary":"Project review","start":"2026-10-20T10:00:00+13:00","end":"2026-10-20T10:30:00+13:00"}}}',
-          output: tr(
-            "Project review event created · 10:00–10:30",
-            "项目评审会议已创建 · 10:00–10:30",
-          ),
+          output: tr("marketing.home.landingInteractiveDemo.projectReviewEventCreated"),
           duration: "23ms",
         },
       ];
@@ -292,19 +281,19 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
         {
           tool: "start_process",
           arguments: '{"command":"node export-report.js","background":true}',
-          output: tr("process_id: proc_demo_01 · running", "process_id: proc_demo_01 · 运行中"),
+          output: tr("marketing.home.landingInteractiveDemo.processIdProcDemoRunning"),
           duration: "164ms",
         },
         {
           tool: "process_status",
           arguments: '{"process_id":"proc_demo_01"}',
-          output: tr("status: exited · exit_code: 0", "状态：已结束 · 退出码：0"),
+          output: tr("marketing.home.landingInteractiveDemo.statusExitedExitCode"),
           duration: "19ms",
         },
         {
           tool: "get_file_info",
           arguments: '{"path":"~/reports/export.csv"}',
-          output: tr("export.csv · file exists", "export.csv · 文件已生成"),
+          output: tr("marketing.home.landingInteractiveDemo.exportCsvFileExists"),
           duration: "12ms",
         },
       ];
@@ -313,19 +302,19 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
         {
           tool: "list_devices",
           arguments: "{}",
-          output: tr("home-server · available", "home-server · 可用"),
+          output: tr("marketing.home.landingInteractiveDemo.homeServerAvailable"),
           duration: "24ms",
         },
         {
           tool: "create_automation",
           arguments: '{"device":"home-server","type":"schedule"}',
-          output: tr("schedule saved · awaiting due time", "计划已保存 · 等待执行时间"),
+          output: tr("marketing.home.landingInteractiveDemo.scheduleSavedAwaitingDueTime"),
           duration: "88ms",
         },
         {
           tool: "get_automation",
           arguments: '{"id":"example_schedule"}',
-          output: tr("status: scheduled · no service restart", "状态：已计划 · 不重启服务"),
+          output: tr("marketing.home.landingInteractiveDemo.statusScheduledNoServiceRestart"),
           duration: "16ms",
         },
       ];
@@ -334,22 +323,19 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
         {
           tool: "read_file",
           arguments: '{"path":"~/slides/outline.md"}',
-          output: tr("Outline and references read", "已读取大纲与引用素材"),
+          output: tr("marketing.home.landingInteractiveDemo.outlineAndReferencesRead"),
           duration: "31ms",
         },
         {
           tool: "start_process",
           arguments: '{"command":"node scripts/build-deck.js --verify","cwd":"~/slides"}',
-          output: tr(
-            "PPTX generated · 12 slides verified · exit_code: 0",
-            "PPTX 已生成 · 已核验 12 页 · 退出码 0",
-          ),
+          output: tr("marketing.home.landingInteractiveDemo.pptxGeneratedSlidesVerifiedExitCode"),
           duration: "2.3s",
         },
         {
           tool: "get_file_info",
           arguments: '{"path":"~/slides/review.pptx"}',
-          output: tr("review.pptx · output file exists", "review.pptx · 输出文件已确认存在"),
+          output: tr("marketing.home.landingInteractiveDemo.reviewPptxOutputFileExists"),
           duration: "18ms",
         },
       ];
@@ -358,19 +344,19 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
         {
           tool: "list_directory",
           arguments: '{"path":"~/reports/2026"}',
-          output: tr("Monthly CSV inputs located", "找到月度 CSV 输入文件"),
+          output: tr("marketing.home.landingInteractiveDemo.monthlyCsvInputsLocated"),
           duration: "23ms",
         },
         {
           tool: "start_process",
           arguments: '{"command":"python make_workbook.py","cwd":"~/reports"}',
-          output: tr("Workbook generated · totals reconciled", "已生成工作簿 · 合计已核对"),
+          output: tr("marketing.home.landingInteractiveDemo.workbookGeneratedTotalsReconciled"),
           duration: "2.8s",
         },
         {
           tool: "get_file_info",
           arguments: '{"path":"~/reports/output/summary.xlsx"}',
-          output: tr("summary.xlsx · file exists", "summary.xlsx · 文件已生成"),
+          output: tr("marketing.home.landingInteractiveDemo.summaryXlsxFileExists"),
           duration: "12ms",
         },
       ];
@@ -379,19 +365,21 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
         {
           tool: "list_processes",
           arguments: '{"device":"mini-pc"}',
-          output: tr("node service found · pid 2048", "已找到 Node 服务 · pid 2048"),
+          output: tr("marketing.home.landingInteractiveDemo.nodeServiceFoundPid"),
           duration: "36ms",
         },
         {
           tool: "read_file",
           arguments: '{"path":"~/app/logs/server.log","length":80}',
-          output: tr("Found repeated connection timeout warnings", "发现重复的连接超时警告"),
+          output: tr(
+            "marketing.home.landingInteractiveDemo.foundRepeatedConnectionTimeoutWarnings",
+          ),
           duration: "27ms",
         },
         {
           tool: "get_file_info",
           arguments: '{"path":"~/app/logs/server.log"}',
-          output: tr("Log readable · no files modified", "日志可读 · 未修改文件"),
+          output: tr("marketing.home.landingInteractiveDemo.logReadableNoFilesModified"),
           duration: "14ms",
         },
       ];
@@ -400,13 +388,13 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
         {
           tool: "list_directory",
           arguments: '{"path":"~/projects/app"}',
-          output: tr("14 entries · source and tests located", "14 项 · 已定位源代码与测试"),
+          output: tr("marketing.home.landingInteractiveDemo.entriesSourceAndTestsLocated"),
           duration: "32ms",
         },
         {
           tool: "read_file",
           arguments: '{"path":"~/projects/app/src/format.ts"}',
-          output: tr("84 lines read · failing edge case located", "已读取 84 行 · 定位边界条件"),
+          output: tr("marketing.home.landingInteractiveDemo.linesReadFailingEdgeCaseLocated"),
           duration: "21ms",
         },
         {
@@ -417,13 +405,13 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
             new_string: 'return value == null ? "—" : String(value);',
             expected_replacements: 1,
           }),
-          output: tr("1 replacement · local undo available", "完成 1 处替换 · 可本地撤销"),
+          output: tr("marketing.home.landingInteractiveDemo.replacementLocalUndoAvailable"),
           duration: "55ms",
         },
         {
           tool: "start_process",
           arguments: '{"command":"npm test","cwd":"~/projects/app"}',
-          output: tr("PASS · 24 tests · exit_code: 0", "通过 · 24 项测试 · 退出码：0"),
+          output: tr("marketing.home.landingInteractiveDemo.passTestsExitCode"),
           duration: "2.4s",
         },
       ];
@@ -432,183 +420,156 @@ function eventsFor(id: string, tr: (en: string, zh: string) => string): DemoEven
 
 type DemoProgress = { working: string; done: string };
 
-function progressFor(id: string, tr: (en: string, zh: string) => string): DemoProgress[] {
+function progressFor(id: string, tr: Translate): DemoProgress[] {
   const workflow = findAppWorkflow(id);
   const creative = findLocalCreative(id);
   if (creative)
     return creative.traces.map((trace) => ({
-      working: translateCopy(trace.working, tr),
-      done: translateCopy(trace.output, tr),
+      working: tr(trace.working),
+      done: tr(trace.output),
     }));
   if (workflow)
     return workflow.traces.map((trace) => ({
-      working: translateCopy(trace.working, tr),
-      done: translateCopy(trace.output, tr),
+      working: tr(trace.working),
+      done: tr(trace.output),
     }));
   switch (id) {
     case "mail":
       return [
         {
-          working: tr("Checking your connected email accounts…", "正在检查已连接的邮箱…"),
-          done: tr(
-            "Your Gmail and Outlook connections are available.",
-            "Gmail 与 Outlook 连接已就绪。",
-          ),
+          working: tr("marketing.home.landingInteractiveDemo.checkingYourConnectedEmailAccounts"),
+          done: tr("marketing.home.landingInteractiveDemo.yourGmailAndOutlookConnectionsAre"),
         },
         {
-          working: tr("Finding the launch conversation…", "正在查找发布讨论邮件…"),
-          done: tr("Found the thread that needs your response.", "已找到需要回复的邮件。"),
+          working: tr("marketing.home.landingInteractiveDemo.findingTheLaunchConversation"),
+          done: tr("marketing.home.landingInteractiveDemo.foundTheThreadThatNeedsYour"),
         },
         {
-          working: tr("Reading the original message for context…", "正在读取原邮件上下文…"),
-          done: tr("Reply grounded in the original conversation.", "回复依据原始邮件内容拟定。"),
+          working: tr("marketing.home.landingInteractiveDemo.readingTheOriginalMessageForContext"),
+          done: tr("marketing.home.landingInteractiveDemo.replyGroundedInTheOriginalConversation"),
         },
         {
-          working: tr("Saving the reply as a draft…", "正在保存回复草稿…"),
-          done: tr("Reply draft saved to your mailbox.", "回复草稿已保存到邮箱。"),
+          working: tr("marketing.home.landingInteractiveDemo.savingTheReplyAsADraft"),
+          done: tr("marketing.home.landingInteractiveDemo.replyDraftSavedToYourMailbox"),
         },
       ];
     case "calendar":
       return [
         {
-          working: tr("Checking both calendar connections…", "正在检查两种日历连接…"),
-          done: tr(
-            "Google Calendar and Outlook Calendar are connected.",
-            "Google Calendar 与 Outlook Calendar 已连接。",
-          ),
+          working: tr("marketing.home.landingInteractiveDemo.checkingBothCalendarConnections"),
+          done: tr("marketing.home.landingInteractiveDemo.googleCalendarAndOutlookCalendarAre"),
         },
         {
-          working: tr("Reading your Google Calendar…", "正在读取 Google Calendar…"),
-          done: tr(
-            "Found a 30-minute opening in your Google calendar.",
-            "已在 Google 日历中找到 30 分钟空档。",
-          ),
+          working: tr("marketing.home.landingInteractiveDemo.readingYourGoogleCalendar"),
+          done: tr("marketing.home.landingInteractiveDemo.foundAMinuteOpeningInYour"),
         },
         {
-          working: tr("Cross-checking your Outlook Calendar…", "正在交叉核对 Outlook Calendar…"),
-          done: tr(
-            "The proposed time is clear in both calendars.",
-            "建议时间在两种日历中都没有冲突。",
-          ),
+          working: tr("marketing.home.landingInteractiveDemo.crossCheckingYourOutlookCalendar"),
+          done: tr("marketing.home.landingInteractiveDemo.theProposedTimeIsClearIn"),
         },
         {
-          working: tr("Creating the project review event…", "正在创建项目评审会议…"),
-          done: tr("Meeting created in the available time slot.", "已在空闲时段创建会议。"),
+          working: tr("marketing.home.landingInteractiveDemo.creatingTheProjectReviewEvent"),
+          done: tr("marketing.home.landingInteractiveDemo.meetingCreatedInTheAvailableTime"),
         },
       ];
     case "job":
       return [
         {
-          working: tr("Starting the report export…", "正在启动报表导出…"),
-          done: tr("Report export started in the background.", "报表已在后台开始导出。"),
+          working: tr("marketing.home.landingInteractiveDemo.startingTheReportExport"),
+          done: tr("marketing.home.landingInteractiveDemo.reportExportStartedInTheBackground"),
         },
         {
-          working: tr("Checking whether the process finished…", "正在检查进程是否完成…"),
-          done: tr("The export process exited successfully.", "导出进程已成功结束。"),
+          working: tr("marketing.home.landingInteractiveDemo.checkingWhetherTheProcessFinished"),
+          done: tr("marketing.home.landingInteractiveDemo.theExportProcessExitedSuccessfully"),
         },
         {
-          working: tr("Verifying the output file…", "正在验证输出文件…"),
-          done: tr("Confirmed that export.csv was created.", "已确认 export.csv 文件生成。"),
+          working: tr("marketing.home.landingInteractiveDemo.verifyingTheOutputFile"),
+          done: tr("marketing.home.landingInteractiveDemo.confirmedThatExportCsvWasCreated"),
         },
       ];
     case "schedule":
       return [
         {
-          working: tr("Checking the available computer…", "正在检查可用电脑…"),
-          done: tr("The home server is available.", "家庭服务器已就绪。"),
+          working: tr("marketing.home.landingInteractiveDemo.checkingTheAvailableComputer"),
+          done: tr("marketing.home.landingInteractiveDemo.theHomeServerIsAvailable"),
         },
         {
-          working: tr("Saving the health-check schedule…", "正在保存健康检查计划…"),
-          done: tr("The health check is scheduled.", "健康检查任务已安排。"),
+          working: tr("marketing.home.landingInteractiveDemo.savingTheHealthCheckSchedule"),
+          done: tr("marketing.home.landingInteractiveDemo.theHealthCheckIsScheduled"),
         },
         {
-          working: tr("Checking the saved task settings…", "正在核对已保存的任务…"),
-          done: tr(
-            "Confirmed: status only, no service restart.",
-            "已确认只检查状态，不会重启服务。",
-          ),
+          working: tr("marketing.home.landingInteractiveDemo.checkingTheSavedTaskSettings"),
+          done: tr("marketing.home.landingInteractiveDemo.confirmedStatusOnlyNoServiceRestart"),
         },
       ];
     case "slides":
       return [
         {
-          working: tr("Reading the presentation materials…", "正在读取演示素材…"),
-          done: tr("Found the outline and local charts.", "已读取本机大纲与图表。"),
+          working: tr("marketing.home.landingInteractiveDemo.readingThePresentationMaterials"),
+          done: tr("marketing.home.landingInteractiveDemo.foundTheOutlineAndLocalCharts"),
         },
         {
           working: tr(
-            "Generating and verifying the editable presentation…",
-            "正在生成并验证可编辑 PPT…",
+            "marketing.home.landingInteractiveDemo.generatingAndVerifyingTheEditablePresentation",
           ),
-          done: tr(
-            "The local script generated and verified all 12 slides.",
-            "本机脚本已生成并核验全部 12 页。",
-          ),
+          done: tr("marketing.home.landingInteractiveDemo.theLocalScriptGeneratedAndVerified"),
         },
         {
-          working: tr("Checking the saved output file…", "正在检查已保存的输出文件…"),
-          done: tr(
-            "Confirmed that review.pptx is saved on your computer.",
-            "已确认 review.pptx 保存在你的电脑上。",
-          ),
+          working: tr("marketing.home.landingInteractiveDemo.checkingTheSavedOutputFile"),
+          done: tr("marketing.home.landingInteractiveDemo.confirmedThatReviewPptxIsSaved"),
         },
       ];
     case "excel":
       return [
         {
-          working: tr("Reading the monthly CSV files…", "正在读取月度 CSV…"),
-          done: tr("Found the source files and columns.", "已定位输入文件和字段。"),
+          working: tr("marketing.home.landingInteractiveDemo.readingTheMonthlyCsvFiles"),
+          done: tr("marketing.home.landingInteractiveDemo.foundTheSourceFilesAndColumns"),
         },
         {
-          working: tr("Generating the workbook and checking totals…", "正在生成 Excel 并核对合计…"),
-          done: tr("The workbook and reconciliation were generated.", "工作簿及核对结果已生成。"),
+          working: tr(
+            "marketing.home.landingInteractiveDemo.generatingTheWorkbookAndCheckingTotals",
+          ),
+          done: tr(
+            "marketing.home.landingInteractiveDemo.theWorkbookAndReconciliationWereGenerated",
+          ),
         },
         {
-          working: tr("Verifying the output file…", "正在检查输出文件…"),
-          done: tr("Confirmed that summary.xlsx exists.", "已确认 summary.xlsx 存在。"),
+          working: tr("marketing.home.landingInteractiveDemo.verifyingTheOutputFile2"),
+          done: tr("marketing.home.landingInteractiveDemo.confirmedThatSummaryXlsxExists"),
         },
       ];
     case "inspect":
       return [
         {
-          working: tr("Locating the running service…", "正在定位运行中的服务…"),
-          done: tr("Found the running Node.js service.", "已找到正在运行的 Node.js 服务。"),
+          working: tr("marketing.home.landingInteractiveDemo.locatingTheRunningService"),
+          done: tr("marketing.home.landingInteractiveDemo.foundTheRunningNodeJsService"),
         },
         {
-          working: tr("Reading the recent server logs…", "正在读取最近的服务器日志…"),
-          done: tr(
-            "Repeated connection timeouts appear in the logs.",
-            "日志中出现了重复的连接超时。",
-          ),
+          working: tr("marketing.home.landingInteractiveDemo.readingTheRecentServerLogs"),
+          done: tr("marketing.home.landingInteractiveDemo.repeatedConnectionTimeoutsAppearInThe"),
         },
         {
-          working: tr("Confirming read-only access…", "正在确认只读操作…"),
-          done: tr(
-            "Log inspection is complete; nothing was changed.",
-            "日志检查完成，没有修改任何文件。",
-          ),
+          working: tr("marketing.home.landingInteractiveDemo.confirmingReadOnlyAccess"),
+          done: tr("marketing.home.landingInteractiveDemo.logInspectionIsCompleteNothingWas"),
         },
       ];
     default:
       return [
         {
-          working: tr("Finding the relevant files and tests…", "正在定位相关代码和测试…"),
-          done: tr("Located the source file and its tests.", "找到了目标源文件和相关测试。"),
+          working: tr("marketing.home.landingInteractiveDemo.findingTheRelevantFilesAndTests"),
+          done: tr("marketing.home.landingInteractiveDemo.locatedTheSourceFileAndIts"),
         },
         {
-          working: tr("Checking the failing edge case…", "正在检查失败的边界情况…"),
-          done: tr("Identified the formatting edge case.", "定位了格式化逻辑中的边界问题。"),
+          working: tr("marketing.home.landingInteractiveDemo.checkingTheFailingEdgeCase"),
+          done: tr("marketing.home.landingInteractiveDemo.identifiedTheFormattingEdgeCase"),
         },
         {
-          working: tr("Applying a focused, reversible fix…", "正在进行可撤销的针对性修改…"),
-          done: tr(
-            "Updated the formatter; local undo is available.",
-            "已修复格式化逻辑，支持本地撤销。",
-          ),
+          working: tr("marketing.home.landingInteractiveDemo.applyingAFocusedReversibleFix"),
+          done: tr("marketing.home.landingInteractiveDemo.updatedTheFormatterLocalUndoIs"),
         },
         {
-          working: tr("Running the test suite…", "正在运行测试套件…"),
-          done: tr("All 24 tests passed.", "24 项测试全部通过。"),
+          working: tr("marketing.home.landingInteractiveDemo.runningTheTestSuite"),
+          done: tr("marketing.home.landingInteractiveDemo.allTestsPassed"),
         },
       ];
   }
@@ -681,33 +642,17 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
     isAppScenario || isCreativeScenario
       ? scenario.result
       : scenarios[selected]?.id === "code"
-        ? tr(
-            "I fixed the formatting edge case and reran the tests: 24 passed. The diff is ready for review.",
-            "我修复了格式化的边界问题并重新运行测试：24 项全部通过。修改内容已准备好供你检查。",
-          )
+        ? tr("marketing.home.landingInteractiveDemo.iFixedTheFormattingEdgeCase")
         : scenarios[selected]?.id === "inspect"
-          ? tr(
-              "The logs point to repeated connection timeouts. I haven't changed any files or restarted the service.",
-              "日志显示反复发生连接超时。我没有修改任何文件，也没有重启服务。",
-            )
+          ? tr("marketing.home.landingInteractiveDemo.theLogsPointToRepeatedConnection")
           : scenarios[selected]?.id === "schedule"
-            ? tr(
-                "The health check is scheduled. It will collect status only; no service restart is included.",
-                "健康检查已安排，届时只采集状态，不包含重启服务。",
-              )
+            ? tr("marketing.home.landingInteractiveDemo.theHealthCheckIsScheduledIt")
             : scenarios[selected]?.id === "slides"
-              ? tr(
-                  "The local script generated review.pptx with 12 slides. Please visually review the layout before sharing.",
-                  "本机脚本已生成 12 页的 review.pptx。分享前请检查每页的实际版式。",
-                )
+              ? tr("marketing.home.landingInteractiveDemo.theLocalScriptGeneratedReviewPptx")
               : scenarios[selected]?.id === "excel"
-                ? tr(
-                    "The local script generated summary.xlsx and checked the totals. Review the workbook before delivery.",
-                    "本机脚本已生成 summary.xlsx 并核对合计，请检查工作簿后再交付。",
-                  )
+                ? tr("marketing.home.landingInteractiveDemo.theLocalScriptGeneratedSummaryXlsx")
                 : tr(
-                    "The export finished successfully. The result and task status are available to inspect when you return.",
-                    "报表导出已成功完成，稍后回来可以查看结果与任务状态。",
+                    "marketing.home.landingInteractiveDemo.theExportFinishedSuccessfullyTheResult",
                   );
 
   const pickScenario = (index: number) => {
@@ -724,12 +669,13 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
   const progress = progressFor(scenario.id, tr);
   const progressIndex = Math.min(progress.length - 1, Math.max(0, Math.floor(step / 2)));
   const progressTitle = finished
-    ? tr("Finished working on your request", "已完成本次任务")
+    ? tr("marketing.home.landingInteractiveDemo.finishedWorkingOnYourRequest")
     : step < 1
-      ? tr("Thinking through the next steps…", "正在规划执行步骤…")
+      ? tr("marketing.home.landingInteractiveDemo.thinkingThroughTheNextSteps")
       : step >= progress.length * 2
-        ? tr("Preparing the result…", "正在整理执行结果…")
-        : (progress[progressIndex]?.working ?? tr("Working on your request…", "正在执行任务…"));
+        ? tr("marketing.home.landingInteractiveDemo.preparingTheResult")
+        : (progress[progressIndex]?.working ??
+          tr("marketing.home.landingInteractiveDemo.workingOnYourRequest"));
   const prompt = scenario.request.replace(/^“|”$/g, "");
   const workflow = findAppWorkflow(scenario.id);
   const workflowHref = workflow
@@ -744,7 +690,10 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
       data-state={finished ? "complete" : active ? "working" : "ready"}
     >
       <div className="homeDemoToolbar">
-        <div className="homeDemoExamples" aria-label={tr("Try an example request", "选择示例任务")}>
+        <div
+          className="homeDemoExamples"
+          aria-label={tr("marketing.home.landingInteractiveDemo.tryAnExampleRequest")}
+        >
           {scenarios.map((example, index) => (
             <button
               key={example.id}
@@ -760,9 +709,9 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
         </div>
         <div
           className="homeDemoClientSwitch"
-          aria-label={tr("Preview the conversation in an AI client", "切换 AI 客户端界面")}
+          aria-label={tr("marketing.home.landingInteractiveDemo.previewTheConversationInAnAi")}
         >
-          <span>{tr("CHAT VIEW", "对话界面")}</span>
+          <span>{tr("marketing.home.landingInteractiveDemo.chatView")}</span>
           {(["ChatGPT", "Claude", "Cursor"] as const).map((name) => (
             <button
               type="button"
@@ -781,7 +730,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
       <div className="homeDemoSurface">
         <section
           className={"homeDemoChat homeDemoChat--" + client.toLowerCase()}
-          aria-label={tr("Example conversation in " + client, client + " 对话示例")}
+          aria-label={tr("marketing.home.landingInteractiveDemo.exampleConversationIn", { client })}
         >
           {client !== "Cursor" && (
             <aside className="homeDemoChatRail" aria-hidden="true">
@@ -846,7 +795,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
               {client === "Cursor" && (
                 <div className="homeDemoCursorContext">
                   <DemoGlyph name="sidebar" size={14} />
-                  <span>{tr("New chat", "新对话")}</span>
+                  <span>{tr("marketing.home.landingInteractiveDemo.newChat")}</span>
                   <span className="homeDemoCursorContextModel">Auto</span>
                 </div>
               )}
@@ -867,14 +816,8 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
                   {client !== "Cursor" && (
                     <p className="homeDemoAssistantIntro">
                       {isAppScenario
-                        ? tr(
-                            "I’ll use your connected Apps to carry this out and check the result.",
-                            "我会通过你已连接的应用执行任务，并检查结果。",
-                          )
-                        : tr(
-                            "I'll use Remote Arc to check this on your computer.",
-                            "我会通过 Remote Arc 在你的电脑上检查并处理。",
-                          )}
+                        ? tr("marketing.home.landingInteractiveDemo.iLlUseYourConnectedApps")
+                        : tr("marketing.home.landingInteractiveDemo.iLlUseRemoteArcTo")}
                     </p>
                   )}
                   <div className="homeDemoActivity" aria-live="polite" aria-atomic="false">
@@ -893,7 +836,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
                       ) : (
                         <span
                           className="homeDemoMiniSpinner"
-                          aria-label={tr("Working", "正在执行")}
+                          aria-label={tr("marketing.home.landingInteractiveDemo.working")}
                         />
                       )}
                     </header>
@@ -947,7 +890,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
               {client === "ChatGPT" && (
                 <div className="homeDemoComposerBox">
                   <div className="homeDemoComposerPlaceholder">
-                    {tr("Ask anything", "有问题，尽管问")}
+                    {tr("marketing.home.landingInteractiveDemo.askAnything")}
                   </div>
                   <div className="homeDemoComposerRow">
                     <span className="homeDemoComposerRound">
@@ -955,7 +898,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
                     </span>
                     <span className="homeDemoComposerTools">
                       <DemoGlyph name="sparkle" size={16} />
-                      {tr("Tools", "工具")}
+                      {tr("marketing.home.landingInteractiveDemo.tools")}
                     </span>
                     <span className="homeDemoComposerSpacer" />
                     <DemoGlyph name="mic" size={19} />
@@ -968,7 +911,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
               {client === "Claude" && (
                 <div className="homeDemoComposerBox">
                   <div className="homeDemoComposerPlaceholder">
-                    {tr("Reply to Claude…", "回复 Claude…")}
+                    {tr("marketing.home.landingInteractiveDemo.replyToClaude")}
                   </div>
                   <div className="homeDemoComposerRow">
                     <DemoGlyph name="plus" size={20} />
@@ -985,14 +928,16 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
               {client === "Cursor" && (
                 <div className="homeDemoComposerBox">
                   <div className="homeDemoCursorAddContext">
-                    <DemoGlyph name="plus" size={13} /> {tr("Add context", "添加上下文")}
+                    <DemoGlyph name="plus" size={13} />{" "}
+                    {tr("marketing.home.landingInteractiveDemo.addContext")}
                   </div>
                   <div className="homeDemoComposerPlaceholder">
-                    {tr("Plan, search, build anything", "规划、搜索、构建任何内容")}
+                    {tr("marketing.home.landingInteractiveDemo.planSearchBuildAnything")}
                   </div>
                   <div className="homeDemoComposerRow">
                     <span className="homeDemoCursorMode">
-                      ∞ {tr("Agent", "智能体")} <DemoGlyph name="chevron" size={12} />
+                      ∞ {tr("marketing.home.landingInteractiveDemo.agent")}{" "}
+                      <DemoGlyph name="chevron" size={12} />
                     </span>
                     <span className="homeDemoCursorModel">
                       Auto <DemoGlyph name="chevron" size={12} />
@@ -1007,15 +952,11 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
               )}
               <span className="homeDemoComposerDisclaimer">
                 {client === "Cursor"
-                  ? tr("AI-generated code may contain errors.", "AI 生成的代码可能有误。")
+                  ? tr("marketing.home.landingInteractiveDemo.aiGeneratedCodeMayContainErrors")
                   : client === "Claude"
-                    ? tr(
-                        "Claude can make mistakes. Please double-check responses.",
-                        "Claude 可能出错，请核实回复。",
-                      )
+                    ? tr("marketing.home.landingInteractiveDemo.claudeCanMakeMistakesPleaseDouble")
                     : tr(
-                        "ChatGPT can make mistakes. Check important info.",
-                        "ChatGPT 也可能出错。请核查重要信息。",
+                        "marketing.home.landingInteractiveDemo.chatgptCanMakeMistakesCheckImportant",
                       )}
               </span>
             </div>
@@ -1026,8 +967,8 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
           className="homeDemoTerminal"
           aria-label={
             isAppScenario
-              ? tr("Example App activity", "示例应用活动")
-              : tr("Example device execution log", "示例设备执行日志")
+              ? tr("marketing.home.landingInteractiveDemo.exampleAppActivity")
+              : tr("marketing.home.landingInteractiveDemo.exampleDeviceExecutionLog")
           }
         >
           <header className="homeDemoTerminalHeader">
@@ -1038,35 +979,37 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
             </div>
             <span>
               Remote Arc <b>/</b>{" "}
-              {isAppScenario ? tr("app activity", "应用活动") : tr("device activity", "设备活动")}
+              {isAppScenario
+                ? tr("marketing.home.landingInteractiveDemo.appActivity")
+                : tr("marketing.home.landingInteractiveDemo.deviceActivity")}
             </span>
             <span className="homeDemoTerminalDevice">
               <i aria-hidden="true" />
               {isAppScenario
-                ? tr("connected apps", "已连接的应用")
-                : tr("example-workstation", "示例工作站")}
+                ? tr("marketing.home.landingInteractiveDemo.connectedApps")
+                : tr("marketing.home.landingInteractiveDemo.exampleWorkstation")}
             </span>
           </header>
           <div
             className="homeDemoTerminalBody"
             ref={terminalRef}
             role="log"
-            aria-label={tr("Simulated tool call sequence", "模拟工具调用序列")}
+            aria-label={tr("marketing.home.landingInteractiveDemo.simulatedToolCallSequence")}
           >
             <div className="homeDemoTerminalBanner">
               <span className="homeDemoMonoAccent">remote-arc</span>
               <span>
                 {isAppScenario
-                  ? tr(" · cloud apps workflow", " · 云端应用工作流")
-                  : tr(" · local execution", " · 本地执行")}
+                  ? tr("marketing.home.landingInteractiveDemo.cloudAppsWorkflow")
+                  : tr("marketing.home.landingInteractiveDemo.localExecution")}
               </span>
             </div>
             <div className="homeDemoTerminalInfo">
-              ✓ {tr("Secure MCP connection ready", "安全 MCP 连接已就绪")}
+              ✓ {tr("marketing.home.landingInteractiveDemo.secureMcpConnectionReady")}
             </div>
             {step < 0 && (
               <p className="homeDemoTerminalWaiting">
-                {tr("Waiting for a request from your chat…", "等待来自 AI 对话的请求…")}
+                {tr("marketing.home.landingInteractiveDemo.waitingForARequestFromYour")}
               </p>
             )}
             {step >= 0 && (
@@ -1076,10 +1019,9 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
                 <code>
                   {isAppScenario
                     ? tr(
-                        "Connected account scopes checked · executing your request",
-                        "已核对账号授权范围 · 开始执行你的请求",
+                        "marketing.home.landingInteractiveDemo.connectedAccountScopesCheckedExecutingYour",
                       )
-                    : tr("Device policy checked · approved tools", "已检查设备策略 · 已授权工具")}
+                    : tr("marketing.home.landingInteractiveDemo.devicePolicyCheckedApprovedTools")}
                 </code>
               </div>
             )}
@@ -1110,7 +1052,7 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
             })}
             {finished && (
               <div className="homeDemoTerminalFinished">
-                ✓ {tr("Execution complete · response delivered", "执行完成 · 已返回结果")}
+                ✓ {tr("marketing.home.landingInteractiveDemo.executionCompleteResponseDelivered")}
               </div>
             )}
             {active && (
@@ -1121,14 +1063,14 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
           </div>
           <footer className="homeDemoTerminalFooter">
             <span>
-              {tr("Permission", "所需权限")}: {scenario.permission}
+              {tr("marketing.home.landingInteractiveDemo.permission")}: {scenario.permission}
             </span>
             <span>
               {finished
-                ? tr("Complete", "已完成")
+                ? tr("marketing.home.landingInteractiveDemo.complete")
                 : active
-                  ? tr("Executing", "执行中")
-                  : tr("Ready", "就绪")}
+                  ? tr("marketing.home.landingInteractiveDemo.executing")
+                  : tr("marketing.home.landingInteractiveDemo.ready")}
             </span>
           </footer>
         </section>
@@ -1137,22 +1079,15 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
       <div className="homeDemoUnder">
         <p>
           {isCreativeScenario
-            ? tr(
-                "Guided tool-call simulation. The finished video and images shown here were actually rendered on a personal computer; playing this demo does not start a new render.",
-                "工具调用过程为引导式模拟。这里的视频与图片是在个人电脑上实际渲染的作品；播放演示不会启动新的创作任务。",
-              )
+            ? tr("marketing.home.landingInteractiveDemo.guidedToolCallSimulationTheFinished")
             : isAppScenario
               ? tr(
-                  "Interactive simulation with example accounts. Apps require provider setup and user authorization; this preview performs no live actions or paid generation.",
-                  "使用示例账号的交互模拟。Apps 需要平台配置与用户授权；本预览不会操作真实账户或付费生成。",
+                  "marketing.home.landingInteractiveDemo.interactiveSimulationWithExampleAccountsApps",
                 )
-              : tr(
-                  "Guided simulation with example data. No real device is connected and no commands are executed.",
-                  "使用示例数据的引导式模拟，不会连接真实设备，也不会执行命令。",
-                )}
+              : tr("marketing.home.landingInteractiveDemo.guidedSimulationWithExampleDataNo")}
         </p>
         <a href={localizedWebsiteHref(workflowHref, locale)}>
-          {tr("Explore this workflow", "了解这类工作流程")} ↗
+          {tr("marketing.home.landingInteractiveDemo.exploreThisWorkflow")} ↗
         </a>
       </div>
     </div>

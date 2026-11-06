@@ -6,7 +6,7 @@ import { UI_PREVIEW } from "../../../preview/preview-mode.js";
 import { HelpTip } from "../../../components/public-layout.js";
 import { timeAgo } from "../format.js";
 import type { Device } from "../../../types/app-types.js";
-import type { DashboardModel } from "../hooks/use-dashboard-model.js";
+import type { DashboardModel } from "../../../hooks/dashboard/use-dashboard-model.js";
 import type { DeviceFacts } from "./device-card.js";
 
 // Device panel: MCP access, browser tools, file boundaries and Local Undo.
@@ -51,53 +51,48 @@ export function DeviceAccessPanel({
       role="tabpanel"
       id={"device-panel-" + device.id + "-access"}
       aria-labelledby={"device-tab-" + device.id + "-access"}
-      aria-label={tr("Access and files", "权限与文件")}
+      aria-label={tr("dashboard.devices.deviceAccessPanel.accessAndFiles")}
       hidden={devicePanel !== "access"}
     >
       <div className="deviceAccessSummary">
         <div>
-          <span className="eyebrow">{tr("MCP ACCESS", "MCP 权限")}</span>
+          <span className="eyebrow">{tr("dashboard.devices.deviceAccessPanel.mcpAccess")}</span>
           <strong>
             {accessPreset === "safe"
-              ? tr("Safe · read-only", "Safe · 只读")
+              ? tr("dashboard.devices.deviceAccessPanel.safeReadOnly")
               : accessPreset === "developer"
-                ? tr("Developer · files can be edited", "Developer · 可编辑文件")
+                ? tr("dashboard.devices.deviceAccessPanel.developerFilesCanBeEdited")
                 : accessPreset === "full"
-                  ? tr("Full access · terminal enabled", "Full Access · 已启用终端")
-                  : tr("Custom tool policy", "自定义工具权限")}
+                  ? tr("dashboard.devices.deviceAccessPanel.fullAccessTerminalEnabled")
+                  : tr("dashboard.devices.deviceAccessPanel.customToolPolicy")}
           </strong>
-          <p>
-            {tr(
-              "New devices start in Safe. Enable only the skills you want this AI to use.",
-              "新设备默认使用 Safe，只开启你愿意交给 AI 的技能。",
-            )}
-          </p>
+          <p>{tr("dashboard.devices.deviceAccessPanel.newDevicesStartInSafeEnable")}</p>
         </div>
       </div>
 
       <div className="devicePresetRow">
-        <span>{tr("Quick presets", "快捷预设")}</span>
+        <span>{tr("dashboard.devices.deviceAccessPanel.quickPresets")}</span>
         <div>
           <button
             className={accessPreset === "safe" ? "active" : ""}
             onClick={() => void applyDevicePreset(device, "safe")}
           >
             <strong>Safe</strong>
-            <small>{tr("Read only", "只读")}</small>
+            <small>{tr("dashboard.devices.deviceAccessPanel.readOnly")}</small>
           </button>
           <button
             className={accessPreset === "developer" ? "active" : ""}
             onClick={() => void applyDevicePreset(device, "developer")}
           >
             <strong>Developer</strong>
-            <small>{tr("Read + edit", "读写文件")}</small>
+            <small>{tr("dashboard.devices.deviceAccessPanel.readEdit")}</small>
           </button>
           <button
             className={accessPreset === "full" ? "active danger" : "danger"}
             onClick={() => void applyDevicePreset(device, "full")}
           >
             <strong>Full</strong>
-            <small>{tr("Terminal", "含终端")}</small>
+            <small>{tr("dashboard.devices.deviceAccessPanel.terminal")}</small>
           </button>
         </div>
       </div>
@@ -106,7 +101,7 @@ export function DeviceAccessPanel({
         <summary>
           <span className="deviceDisclosureTitle">
             <ProductIcon name="settings" size={16} />
-            {tr("Manage individual skills", "逐项管理技能")}
+            {tr("dashboard.devices.deviceAccessPanel.manageIndividualSkills")}
           </span>
           <span>
             {enabledTools.filter((tool) => !isBrowserRunnerTool(tool)).length +
@@ -134,25 +129,19 @@ export function DeviceAccessPanel({
                 <strong>browser_runner</strong>
               </label>
               <HelpTip
-                label={tr("About browser_runner", "了解 browser_runner")}
+                label={tr("dashboard.devices.deviceAccessPanel.aboutBrowserRunner")}
                 text={
                   runnerAdvertised
-                    ? tr(
-                        "Lets your AI open, read and act on websites, only on the sites each task names. It uses a hidden Remote Arc window (installed Chrome, Edge or Chromium) with its own sign-ins, which appears only when a page needs you and you are ready; your own Chrome is an advanced option used only when you ask for it. Complete sign-in, verification codes and CAPTCHAs in the task browser yourself, then your AI can continue. A submit is never sent twice.",
-                        "允许你的 AI 打开、读取和操作网站，只能访问每个任务指定的网站。使用隐藏的 Remote Arc 窗口（已安装的 Chrome、Edge 或 Chromium），有自己的登录状态，只有页面需要你、且你准备好时才出现；使用你自己的 Chrome 是高级选项，只有你要求时才用。登录、验证码和人机验证需要你在任务浏览器中完成，完成后 AI 可以继续。提交不会重复发送。",
-                      )
-                    : tr(
-                        "Needs Remote Arc Agent 0.6.2-rc.4 or newer and Chrome, Edge or Chromium installed on this computer.",
-                        "需要 Remote Arc Agent 0.6.2-rc.4 或更新版本，并且这台电脑装有 Chrome、Edge 或 Chromium。",
-                      )
+                    ? tr("dashboard.devices.deviceAccessPanel.letsYourAiOpenReadAnd")
+                    : tr("dashboard.devices.deviceAccessPanel.needsRemoteArcAgentRcOr")
                 }
               />
               {runnerEnabled && (
                 <button
                   type="button"
                   className="browserRunnerSettingsButton"
-                  aria-label={tr("Browser Runner settings", "Browser Runner 设置")}
-                  title={tr("Browser Runner settings", "Browser Runner 设置")}
+                  aria-label={tr("dashboard.devices.deviceAccessPanel.browserRunnerSettings")}
+                  title={tr("dashboard.devices.deviceAccessPanel.browserRunnerSettings")}
                   aria-expanded={runnerSettingsOpen}
                   aria-controls={"runner-settings-" + device.id}
                   onClick={() => setRunnerSettingsOpen((open) => !open)}
@@ -167,23 +156,17 @@ export function DeviceAccessPanel({
               className="browserRunnerSettingsPanel"
               id={"runner-settings-" + device.id}
               role="region"
-              aria-label={tr("Browser Runner settings", "Browser Runner 设置")}
+              aria-label={tr("dashboard.devices.deviceAccessPanel.browserRunnerSettings")}
             >
               <RunnerAttentionSetting deviceId={device.id} />
               <p className="browserAuthenticationNotice">
-                {tr(
-                  "Complete sign-in, verification codes and CAPTCHAs in the task browser yourself. Your AI can continue once you are done.",
-                  "登录、验证码和人机验证需要你在任务浏览器中完成，完成后 AI 可以继续。",
-                )}
+                {tr("dashboard.devices.deviceAccessPanel.completeSignInVerificationCodesAnd")}
               </p>
             </div>
           )}
           {device.platform === "browser" && (
             <p className="runnerSetting browserAuthenticationNotice">
-              {tr(
-                "Complete sign-in, verification codes and CAPTCHAs in your browser yourself. Your AI can continue once you are done.",
-                "登录、验证码和人机验证需要你在浏览器中完成，完成后 AI 可以继续。",
-              )}
+              {tr("dashboard.devices.deviceAccessPanel.completeSignInVerificationCodesAnd2")}
             </p>
           )}
           {allTools.map((tool) => {
@@ -196,31 +179,16 @@ export function DeviceAccessPanel({
             const advertised = device.status === "online" ? advertisedTools.includes(tool) : true;
             const description =
               tool === "read_binary_file"
-                ? tr(
-                    "Read bounded binary byte ranges on every plan. This device switch and account authorization are still required.",
-                    "所有套餐均可读取有界的二进制字节区间。仍需账号授权并开启这个设备开关。",
-                  )
+                ? tr("dashboard.devices.deviceAccessPanel.readBoundedBinaryByteRangesOn")
                 : tool === "undo_last_change"
-                  ? tr(
-                      "AI permission: lets the connected AI invoke the newest Local Undo snapshot. Snapshot creation is controlled separately under Recovery below.",
-                      "AI 权限：允许已连接的 AI 调用最新一条 Local Undo 快照。是否创建快照由下方 Recovery 中的 Local Undo 单独控制。",
-                    )
+                  ? tr("dashboard.devices.deviceAccessPanel.aiPermissionLetsTheConnectedAi")
                   : tool === "start_process"
-                    ? tr("Run shell commands on this computer.", "在这台电脑上执行 Shell 命令。")
+                    ? tr("dashboard.devices.deviceAccessPanel.runShellCommandsOnThisComputer")
                     : tool === "process_status" || tool === "process_output"
-                      ? tr(
-                          "Inspect a Remote Arc managed background process.",
-                          "查看由 Remote Arc 管理的后台进程。",
-                        )
+                      ? tr("dashboard.devices.deviceAccessPanel.inspectARemoteArcManagedBackground")
                       : tool === "stop_process"
-                        ? tr(
-                            "Stop a Remote Arc managed background process.",
-                            "停止由 Remote Arc 管理的后台进程。",
-                          )
-                        : tr(
-                            "Allow this AI client to use this native Remote Arc skill.",
-                            "允许 AI 客户端使用这个 Remote Arc 原生技能。",
-                          );
+                        ? tr("dashboard.devices.deviceAccessPanel.stopARemoteArcManagedBackground")
+                        : tr("dashboard.devices.deviceAccessPanel.allowThisAiClientToUse");
             return (
               <label className={"toolToggle" + (!advertised ? " unavailable" : "")} key={tool}>
                 <input
@@ -231,7 +199,10 @@ export function DeviceAccessPanel({
                 />
                 <span className="skillLabel">
                   <strong>{tool}</strong>
-                  <HelpTip label={tr("About " + tool, "了解 " + tool)} text={description} />
+                  <HelpTip
+                    label={tr("dashboard.devices.deviceAccessPanel.about", { tool })}
+                    text={description}
+                  />
                 </span>
               </label>
             );
@@ -239,10 +210,7 @@ export function DeviceAccessPanel({
         </div>
         {device.status === "offline" && (
           <span className="offlineTools">
-            {tr(
-              "Offline: changes are saved now and enforced the next time this device connects.",
-              "设备离线：修改会立即保存，并在设备下次连接时生效。",
-            )}
+            {tr("dashboard.devices.deviceAccessPanel.offlineChangesAreSavedNowAnd")}
           </span>
         )}
       </details>
@@ -251,16 +219,18 @@ export function DeviceAccessPanel({
         <summary>
           <span className="deviceDisclosureTitle">
             <ProductIcon name="shield" size={16} />
-            {tr("File boundaries & recovery", "文件边界与恢复")}
+            {tr("dashboard.devices.deviceAccessPanel.fileBoundariesRecovery")}
           </span>
           <span>
             {(device.protect_sensitive_paths ?? true)
-              ? tr("Sensitive paths protected", "敏感路径已保护")
-              : tr("Sensitive protection off", "敏感路径保护已关闭")}
+              ? tr("dashboard.devices.deviceAccessPanel.sensitivePathsProtected")
+              : tr("dashboard.devices.deviceAccessPanel.sensitiveProtectionOff")}
             {" · "}
             {(device.workspace_roots || []).length
-              ? (device.workspace_roots || []).length + " " + tr("workspaces", "个工作区")
-              : tr("read-only until scoped", "未设范围时仅只读")}
+              ? (device.workspace_roots || []).length +
+                " " +
+                tr("dashboard.devices.deviceAccessPanel.workspaces")
+              : tr("dashboard.devices.deviceAccessPanel.readOnlyUntilScoped")}
             <ProductIcon name="chevron" size={14} />
           </span>
         </summary>
@@ -268,28 +238,21 @@ export function DeviceAccessPanel({
         <div className="deviceSafetyBody">
           {!device.policy_enforcement_available && device.status === "online" && (
             <p className="policyWarning">
-              {tr(
-                "This device is still running an older remotelink client. Policy settings are saved now, but symlink-safe local enforcement activates after you restart it with the latest npm release.",
-                "这台设备仍在运行旧版 remotelink。策略会立即保存，但防符号链接绕过的本机强制执行，需要用最新版 npm 客户端重启后才会生效。",
-              )}
+              {tr("dashboard.devices.deviceAccessPanel.thisDeviceIsStillRunningAn")}
             </p>
           )}
           <div className="policyToggleRow">
             <div className="labelWithHelp">
-              <strong>{tr("Sensitive Path Policy", "敏感路径策略")}</strong>
+              <strong>{tr("dashboard.devices.deviceAccessPanel.sensitivePathPolicy")}</strong>
               <HelpTip
-                label={tr("About Sensitive Path Policy", "了解敏感路径策略")}
-                text={tr(
-                  "Enabled by default. Protects built-in credential locations such as .ssh, .aws, browser profiles and .env files, plus extra protected paths. You can turn it off per device after a warning; prefer a narrow exception whenever possible.",
-                  "默认开启。保护 .ssh、.aws、浏览器配置、.env 等内置敏感位置以及额外配置的保护路径。可以在确认风险后按设备关闭，但建议优先使用窄范围例外。",
-                )}
+                label={tr("dashboard.devices.deviceAccessPanel.aboutSensitivePathPolicy")}
+                text={tr("dashboard.devices.deviceAccessPanel.enabledByDefaultProtectsBuiltIn")}
               />
             </div>
             <label
               className="compactSwitch"
               title={tr(
-                "Sensitive Path Protection (enabled by default)",
-                "敏感路径保护（默认开启）",
+                "dashboard.devices.deviceAccessPanel.sensitivePathProtectionEnabledByDefault",
               )}
             >
               <input
@@ -304,22 +267,16 @@ export function DeviceAccessPanel({
 
           {device.protect_sensitive_paths === false && (
             <p className="policyWarning" role="alert">
-              {tr(
-                "Sensitive Path Protection is OFF. Built-in and extra protected path rules are not applied to file tools. Connected AI clients can access credential paths if other tool and workspace permissions permit. Turn this back on when finished.",
-                "敏感路径保护已关闭。文件工具不再应用内置和额外保护路径规则；如果其他工具及工作区权限允许，已连接的 AI 可能访问凭证文件。使用结束后请重新开启。",
-              )}
+              {tr("dashboard.devices.deviceAccessPanel.sensitivePathProtectionIsOffBuilt")}
             </p>
           )}
           <div className="policyBlock">
             <div className="policyBlockHead">
               <div className="labelWithHelp">
-                <strong>{tr("Trusted Write Locations", "可信写入区域")}</strong>
+                <strong>{tr("dashboard.devices.deviceAccessPanel.trustedWriteLocations")}</strong>
                 <HelpTip
-                  label={tr("About Trusted Write Locations", "了解可信写入区域")}
-                  text={tr(
-                    "These are trusted mutation roots. Read-only tools may inspect other non-sensitive paths, but file changes and terminal execution require a configured workspace.",
-                    "这些目录是长期可信的修改区域。只读工具仍可查看其他非敏感路径，但文件修改与终端执行必须先配置工作区。",
-                  )}
+                  label={tr("dashboard.devices.deviceAccessPanel.aboutTrustedWriteLocations")}
+                  text={tr("dashboard.devices.deviceAccessPanel.theseAreTrustedMutationRootsRead")}
                 />
               </div>
               <div className="policyHeaderActions">
@@ -328,13 +285,13 @@ export function DeviceAccessPanel({
                   disabled={device.status !== "online"}
                   onClick={() => void browseDeviceDirectories(device)}
                 >
-                  {tr("Browse folders", "浏览目录")}
+                  {tr("dashboard.devices.deviceAccessPanel.browseFolders")}
                 </button>
                 <button
                   className="ghostButton small"
                   onClick={() => void addPolicyPath(device, "workspace_roots")}
                 >
-                  + {tr("Enter path", "输入路径")}
+                  + {tr("dashboard.devices.deviceAccessPanel.enterPath")}
                 </button>
               </div>
             </div>
@@ -343,7 +300,7 @@ export function DeviceAccessPanel({
                 <span className="policyPathChip" key={root}>
                   <code>{root}</code>
                   <button
-                    title={tr("Remove", "移除")}
+                    title={tr("dashboard.devices.deviceAccessPanel.remove")}
                     onClick={() => void removePolicyPath(device, "workspace_roots", root)}
                   >
                     ×
@@ -352,19 +309,13 @@ export function DeviceAccessPanel({
               ))}
               {!(device.workspace_roots || []).length && (
                 <span className="policyEmpty">
-                  {tr(
-                    "No trusted write workspace yet. Read-only access to non-sensitive paths still works.",
-                    "尚未设置可信写入工作区；仍可只读访问其他非敏感路径。",
-                  )}
+                  {tr("dashboard.devices.deviceAccessPanel.noTrustedWriteWorkspaceYetRead")}
                 </span>
               )}
             </div>
             {enabledTools.includes("start_process") && !!(device.workspace_roots || []).length && (
               <p className="policyWarning">
-                {tr(
-                  "Full terminal access is not an OS sandbox. Remote Arc requires an in-scope cwd, but shell commands may still reference other paths. Use Developer mode when strict file confinement matters.",
-                  "Full 终端并不是操作系统级沙箱。Remote Arc 会要求 cwd 位于工作区内，但 Shell 命令仍可能引用其他路径；需要严格文件隔离时请使用 Developer 模式。",
-                )}
+                {tr("dashboard.devices.deviceAccessPanel.fullTerminalAccessIsNotAn")}
               </p>
             )}
           </div>
@@ -372,20 +323,17 @@ export function DeviceAccessPanel({
           <div className="policyBlock">
             <div className="policyBlockHead">
               <div className="labelWithHelp">
-                <strong>{tr("Extra protected paths", "额外保护路径")}</strong>
+                <strong>{tr("dashboard.devices.deviceAccessPanel.extraProtectedPaths")}</strong>
                 <HelpTip
-                  label={tr("About extra protected paths", "了解额外保护路径")}
-                  text={tr(
-                    "Add private folders that should remain blocked in addition to Remote Arc's built-in sensitive locations.",
-                    "在内置敏感位置之外，再添加不希望 AI 访问的私有目录。",
-                  )}
+                  label={tr("dashboard.devices.deviceAccessPanel.aboutExtraProtectedPaths")}
+                  text={tr("dashboard.devices.deviceAccessPanel.addPrivateFoldersThatShouldRemain")}
                 />
               </div>
               <button
                 className="ghostButton small"
                 onClick={() => void addPolicyPath(device, "sensitive_paths")}
               >
-                + {tr("Protect path", "保护路径")}
+                + {tr("dashboard.devices.deviceAccessPanel.protectPath")}
               </button>
             </div>
             <div className="policyPathList">
@@ -393,7 +341,7 @@ export function DeviceAccessPanel({
                 <span className="policyPathChip protected" key={root}>
                   <code>{root}</code>
                   <button
-                    title={tr("Remove", "移除")}
+                    title={tr("dashboard.devices.deviceAccessPanel.remove")}
                     onClick={() => void removePolicyPath(device, "sensitive_paths", root)}
                   >
                     ×
@@ -402,7 +350,7 @@ export function DeviceAccessPanel({
               ))}
               {!(device.sensitive_paths || []).length && (
                 <span className="policyEmpty">
-                  {tr("Built-in sensitive paths only.", "当前仅使用内置敏感路径。")}
+                  {tr("dashboard.devices.deviceAccessPanel.builtInSensitivePathsOnly")}
                 </span>
               )}
             </div>
@@ -411,12 +359,11 @@ export function DeviceAccessPanel({
           <div className="policyBlock">
             <div className="policyBlockHead">
               <div className="labelWithHelp">
-                <strong>{tr("Sensitive path exceptions", "敏感路径例外")}</strong>
+                <strong>{tr("dashboard.devices.deviceAccessPanel.sensitivePathExceptions")}</strong>
                 <HelpTip
-                  label={tr("About sensitive path exceptions", "了解敏感路径例外")}
+                  label={tr("dashboard.devices.deviceAccessPanel.aboutSensitivePathExceptions")}
                   text={tr(
-                    "Keep protection enabled globally, but explicitly allow only the sensitive files or folders this device truly needs. A sensitive-path exception grants visibility only; it does not create write authority outside Trusted Write Locations.",
-                    "保持整体敏感路径保护开启，只对确实需要访问的敏感文件或目录做窄范围例外；敏感路径例外只授予可见性，不会自动获得可信写入区域之外的修改权限。",
+                    "dashboard.devices.deviceAccessPanel.keepProtectionEnabledGloballyButExplicitly",
                   )}
                 />
               </div>
@@ -424,7 +371,7 @@ export function DeviceAccessPanel({
                 className="ghostButton small"
                 onClick={() => void addPolicyPath(device, "sensitive_allow_paths")}
               >
-                + {tr("Allow exception", "添加例外")}
+                + {tr("dashboard.devices.deviceAccessPanel.allowException")}
               </button>
             </div>
             <div className="policyPathList">
@@ -432,7 +379,7 @@ export function DeviceAccessPanel({
                 <span className="policyPathChip exception" key={root}>
                   <code>{root}</code>
                   <button
-                    title={tr("Remove", "移除")}
+                    title={tr("dashboard.devices.deviceAccessPanel.remove")}
                     onClick={() => void removePolicyPath(device, "sensitive_allow_paths", root)}
                   >
                     ×
@@ -441,7 +388,7 @@ export function DeviceAccessPanel({
               ))}
               {!(device.sensitive_allow_paths || []).length && (
                 <span className="policyEmpty">
-                  {tr("No sensitive-path exceptions.", "当前没有敏感路径例外。")}
+                  {tr("dashboard.devices.deviceAccessPanel.noSensitivePathExceptions")}
                 </span>
               )}
             </div>
@@ -449,12 +396,11 @@ export function DeviceAccessPanel({
 
           <div className="policyToggleRow undoPolicyToggle">
             <div className="labelWithHelp">
-              <strong>{tr("Create Local Undo snapshots", "创建 Local Undo 快照")}</strong>
+              <strong>{tr("dashboard.devices.deviceAccessPanel.createLocalUndoSnapshots")}</strong>
               <HelpTip
-                label={tr("About Local Undo snapshots", "了解 Local Undo 快照")}
+                label={tr("dashboard.devices.deviceAccessPanel.aboutLocalUndoSnapshots")}
                 text={tr(
-                  "Recovery setting: when enabled, supported file edits save the previous state on this computer. This is separate from the undo_last_change skill, which only controls whether AI may invoke an existing snapshot.",
-                  "恢复设置：开启后，支持的文件修改会先在本机保存修改前状态。它和 undo_last_change 技能是两件事；后者只控制 AI 是否能调用已有快照。",
+                  "dashboard.devices.deviceAccessPanel.recoverySettingWhenEnabledSupportedFile",
                 )}
               />
             </div>
@@ -475,13 +421,10 @@ export function DeviceAccessPanel({
           <div className="undoHistorySection">
             <div className="policyBlockHead">
               <div className="labelWithHelp">
-                <strong>{tr("Undo history", "撤销历史")}</strong>
+                <strong>{tr("dashboard.devices.deviceAccessPanel.undoHistory")}</strong>
                 <HelpTip
-                  label={tr("About Undo history", "了解撤销历史")}
-                  text={tr(
-                    "Loaded directly from the device on demand; this history is not persisted in the cloud.",
-                    "仅在需要时直接从设备读取，历史记录不会持久化到云端。",
-                  )}
+                  label={tr("dashboard.devices.deviceAccessPanel.aboutUndoHistory")}
+                  text={tr("dashboard.devices.deviceAccessPanel.loadedDirectlyFromTheDeviceOn")}
                 />
               </div>
               <button
@@ -493,16 +436,15 @@ export function DeviceAccessPanel({
                 }
                 onClick={() => void loadUndoHistory(device)}
               >
-                {undoLoading === device.id ? tr("Loading…", "加载中…") : tr("Refresh", "刷新")}
+                {undoLoading === device.id
+                  ? tr("dashboard.devices.deviceAccessPanel.loading")
+                  : tr("dashboard.devices.deviceAccessPanel.refresh")}
               </button>
             </div>
 
             {!device.undo_history_available && (
               <p className="policyNotice">
-                {tr(
-                  "Undo history UI requires the latest remotelink client. Restart this device with the current npm release after the update is published.",
-                  "撤销历史 UI 需要最新版 remotelink 客户端。新版本发布后，请用最新 npm 版本重启这台设备。",
-                )}
+                {tr("dashboard.devices.deviceAccessPanel.undoHistoryUiRequiresTheLatest")}
               </p>
             )}
 
@@ -519,16 +461,16 @@ export function DeviceAccessPanel({
                         {timeAgo(action.created_at)}
                         {" · "}
                         {action.existed_before
-                          ? tr("restore previous content", "恢复原有内容")
-                          : tr("remove created file", "删除新建文件")}
+                          ? tr("dashboard.devices.deviceAccessPanel.restorePreviousContent")
+                          : tr("dashboard.devices.deviceAccessPanel.removeCreatedFile")}
                         {" · "}
                         {action.status === "ready"
-                          ? tr("ready", "可撤销")
+                          ? tr("dashboard.devices.deviceAccessPanel.ready")
                           : action.status === "conflict"
-                            ? tr("conflict: file changed again", "冲突：文件后来又被修改")
+                            ? tr("dashboard.devices.deviceAccessPanel.conflictFileChangedAgain")
                             : action.status === "missing"
-                              ? tr("target missing", "目标文件已不存在")
-                              : tr("legacy snapshot", "旧版快照")}
+                              ? tr("dashboard.devices.deviceAccessPanel.targetMissing")
+                              : tr("dashboard.devices.deviceAccessPanel.legacySnapshot")}
                       </small>
                     </div>
                     <button
@@ -540,15 +482,16 @@ export function DeviceAccessPanel({
                       }
                       title={
                         action.can_undo
-                          ? tr("Restore this local snapshot", "恢复这个本机快照")
+                          ? tr("dashboard.devices.deviceAccessPanel.restoreThisLocalSnapshot")
                           : tr(
-                              "Automatic undo is unavailable because the current file no longer matches the recorded post-edit state.",
-                              "当前文件已不再匹配当时修改后的状态，自动撤销不可用。",
+                              "dashboard.devices.deviceAccessPanel.automaticUndoIsUnavailableBecauseThe",
                             )
                       }
                       onClick={() => void restoreUndoAction(device, action)}
                     >
-                      {action.can_undo ? tr("Undo", "撤销") : tr("Unavailable", "不可撤销")}
+                      {action.can_undo
+                        ? tr("dashboard.devices.deviceAccessPanel.undo")
+                        : tr("dashboard.devices.deviceAccessPanel.unavailable")}
                     </button>
                   </div>
                 ))}
@@ -559,10 +502,7 @@ export function DeviceAccessPanel({
               !(undoByDevice[device.id] || []).length &&
               !undoErrors[device.id] && (
                 <p className="policyEmpty">
-                  {tr(
-                    "No reversible Remote Arc file changes are currently stored.",
-                    "当前没有可撤销的 Remote Arc 文件修改。",
-                  )}
+                  {tr("dashboard.devices.deviceAccessPanel.noReversibleRemoteArcFileChanges")}
                 </p>
               )}
           </div>

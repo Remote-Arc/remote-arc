@@ -1,6 +1,6 @@
 import React from "react";
-import { useI18n } from "../../app/i18n.js";
-import "./planned-goal.css";
+import { useI18n } from "../../hooks/use-i18n.js";
+import "../../styles/tasks/planned-goal.css";
 import type { PlannedDraft } from "./planned-goal-form.js";
 export function PlannedGoalEditor({
   value: d,
@@ -19,45 +19,33 @@ export function PlannedGoalEditor({
     );
   return (
     <fieldset className="plannedEditor automationFieldWide">
-      <legend>{tr("Plan settings", "计划设置")}</legend>
+      <legend>{tr("tasks.plannedGoalView.planSettings")}</legend>
       <label className="plannedToggle">
         <input
           type="checkbox"
           checked={d.enabled}
           onChange={(e) => set("enabled", e.target.checked)}
         />
-        {tr("Customize phases, priorities and quality checks", "自定义阶段、优先级与质量检查")}
+        {tr("tasks.plannedGoalView.customizePhasesPrioritiesAndQualityChecks")}
       </label>
-      {!d.enabled && (
-        <p>
-          {tr(
-            "The executor plans from your objective. Progress, plan revisions and checkpoints are always saved within the time budget above.",
-            "执行器根据目标规划；进度、计划版本和检查点始终会在上述时间预算内保存。",
-          )}
-        </p>
-      )}
+      {!d.enabled && <p>{tr("tasks.plannedGoalView.theExecutorPlansFromYourObjective")}</p>}
       {d.enabled && (
         <>
-          <p>
-            {tr(
-              "Saved command slices can continue after the chat turn ends. New judgment waits for the selected controller; normal Chat is not guaranteed to wake itself.",
-              "聊天轮次结束后，已保存的命令步骤可以继续。新的判断等待所选控制器；普通 Chat 不保证能自动唤醒自己。",
-            )}
-          </p>
+          <p>{tr("tasks.plannedGoalView.savedCommandSlicesCanContinueAfter")}</p>
           <div className="plannedFields">
             <label>
-              <span>{tr("Planning mode", "规划方式")}</span>
+              <span>{tr("tasks.plannedGoalView.planningMode")}</span>
               <select
                 value={d.mode}
                 onChange={(e) => set("mode", e.target.value as PlannedDraft["mode"])}
               >
-                <option value="fixed">{tr("Fixed phases", "固定阶段")}</option>
-                <option value="guided">{tr("Guided by priorities", "按优先级规划")}</option>
-                <option value="autonomous">{tr("Plan from the goal", "从目标自主规划")}</option>
+                <option value="fixed">{tr("tasks.plannedGoalView.fixedPhases")}</option>
+                <option value="guided">{tr("tasks.plannedGoalView.guidedByPriorities")}</option>
+                <option value="autonomous">{tr("tasks.plannedGoalView.planFromTheGoal")}</option>
               </select>
             </label>
             <label>
-              <span>{tr("Minimum useful time (minutes)", "最少有效工作时间（分钟）")}</span>
+              <span>{tr("tasks.plannedGoalView.minimumUsefulTimeMinutes")}</span>
               <input
                 type="number"
                 min="1"
@@ -66,7 +54,7 @@ export function PlannedGoalEditor({
               />
             </label>
             <label>
-              <span>{tr("Maximum time (minutes)", "最长时间（分钟）")}</span>
+              <span>{tr("tasks.plannedGoalView.maximumTimeMinutes")}</span>
               <input
                 type="number"
                 min="1"
@@ -75,7 +63,7 @@ export function PlannedGoalEditor({
               />
             </label>
             <label>
-              <span>{tr("Stop at (your local time)", "停止时间（你的本地时间）")}</span>
+              <span>{tr("tasks.plannedGoalView.stopAtYourLocalTime")}</span>
               <input
                 type="datetime-local"
                 value={d.endAt}
@@ -83,7 +71,7 @@ export function PlannedGoalEditor({
               />
             </label>
             <label>
-              <span>{tr("Finalization reserve (minutes)", "预留收尾时间（分钟）")}</span>
+              <span>{tr("tasks.plannedGoalView.finalizationReserveMinutes")}</span>
               <input
                 type="number"
                 min="0"
@@ -92,14 +80,9 @@ export function PlannedGoalEditor({
               />
             </label>
           </div>
-          <small>
-            {tr(
-              "The earliest limit wins. Minimum time never requires filler edits. Reserve time for final checks and a factual report.",
-              "最早的限制生效。最少时间不会要求凑数修改。预留时间用于最终检查与事实报告。",
-            )}
-          </small>
+          <small>{tr("tasks.plannedGoalView.theEarliestLimitWinsMinimumTime")}</small>
           <label className="plannedWide">
-            <span>{tr("Priorities (one per line)", "优先级（每行一项）")}</span>
+            <span>{tr("tasks.plannedGoalView.prioritiesOnePerLine")}</span>
             <textarea
               rows={3}
               value={d.priorities}
@@ -108,14 +91,14 @@ export function PlannedGoalEditor({
             />
           </label>
           <div className="plannedPhases">
-            <h3>{tr("Phases", "阶段")}</h3>
+            <h3>{tr("tasks.plannedGoalView.phases")}</h3>
             {d.phases.map((p, i) => (
               <fieldset key={p.id}>
                 <legend>
-                  {tr("Phase", "阶段")} {i + 1}
+                  {tr("tasks.plannedGoalView.phase")} {i + 1}
                 </legend>
                 <label>
-                  <span>{tr("Objective", "目标")}</span>
+                  <span>{tr("tasks.plannedGoalView.objective")}</span>
                   <input
                     value={p.objective}
                     maxLength={2000}
@@ -123,7 +106,7 @@ export function PlannedGoalEditor({
                   />
                 </label>
                 <label>
-                  <span>{tr("Success criteria", "成功标准")}</span>
+                  <span>{tr("tasks.plannedGoalView.successCriteria")}</span>
                   <textarea
                     rows={2}
                     value={p.criteria}
@@ -133,7 +116,7 @@ export function PlannedGoalEditor({
                 </label>
                 <div className="plannedFields">
                   <label>
-                    <span>{tr("Minimum minutes", "最少分钟")}</span>
+                    <span>{tr("tasks.plannedGoalView.minimumMinutes")}</span>
                     <input
                       type="number"
                       min="1"
@@ -142,7 +125,7 @@ export function PlannedGoalEditor({
                     />
                   </label>
                   <label>
-                    <span>{tr("Maximum minutes", "最多分钟")}</span>
+                    <span>{tr("tasks.plannedGoalView.maximumMinutes")}</span>
                     <input
                       type="number"
                       min="1"
@@ -152,7 +135,7 @@ export function PlannedGoalEditor({
                   </label>
                 </div>
                 <label>
-                  <span>{tr("Verification command (optional)", "验证命令（可选）")}</span>
+                  <span>{tr("tasks.plannedGoalView.verificationCommandOptional")}</span>
                   <textarea
                     rows={2}
                     value={p.verify}
@@ -161,12 +144,7 @@ export function PlannedGoalEditor({
                   />
                 </label>
                 <label>
-                  <span>
-                    {tr(
-                      "Authorized deterministic command (optional)",
-                      "已授权的确定性命令（可选）",
-                    )}
-                  </span>
+                  <span>{tr("tasks.plannedGoalView.authorizedDeterministicCommandOptional")}</span>
                   <textarea
                     rows={2}
                     value={p.command}
@@ -176,7 +154,7 @@ export function PlannedGoalEditor({
                 </label>
                 {i > 0 && (
                   <div className="plannedDependencies">
-                    <span>{tr("Requires completed phases", "必须完成的前置阶段")}</span>
+                    <span>{tr("tasks.plannedGoalView.requiresCompletedPhases")}</span>
                     {d.phases.slice(0, i).map((prior) => (
                       <label key={prior.id}>
                         <input
@@ -209,7 +187,7 @@ export function PlannedGoalEditor({
                     )
                   }
                 >
-                  {tr("Remove phase", "删除阶段")}
+                  {tr("tasks.plannedGoalView.removePhase")}
                 </button>
               </fieldset>
             ))}
@@ -233,7 +211,7 @@ export function PlannedGoalEditor({
                 ])
               }
             >
-              + {tr("Add phase", "添加阶段")}
+              + {tr("tasks.plannedGoalView.addPhase")}
             </button>
           </div>
           <label className="plannedToggle">
@@ -242,20 +220,15 @@ export function PlannedGoalEditor({
               checked={d.quality}
               onChange={(e) => set("quality", e.target.checked)}
             />
-            {tr("Promote only after required checks pass", "必需检查通过后才接受修改")}
+            {tr("tasks.plannedGoalView.promoteOnlyAfterRequiredChecksPass")}
           </label>
           {d.quality && (
             <div className="plannedQuality">
-              <p>
-                {tr(
-                  "Requires a clean Git repository root and updated remotelink. Work stays in a task-owned detached worktree. Rejected attempts are preserved; accepted checkpoints are not automatically applied to your original branch.",
-                  "需要干净的 Git 仓库根目录和新版 remotelink。工作在任务拥有的独立 worktree 中进行，失败尝试会保留，已验收版本不会自动应用到原分支。",
-                )}
-              </p>
+              <p>{tr("tasks.plannedGoalView.requiresACleanGitRepositoryRoot")}</p>
               {d.checks.map((c, i) => (
                 <div className="plannedCheck" key={i}>
                   <label>
-                    <span>{tr("Check name", "检查名称")}</span>
+                    <span>{tr("tasks.plannedGoalView.checkName")}</span>
                     <input
                       value={c.name}
                       maxLength={80}
@@ -268,7 +241,7 @@ export function PlannedGoalEditor({
                     />
                   </label>
                   <label>
-                    <span>{tr("Command", "命令")}</span>
+                    <span>{tr("tasks.plannedGoalView.command")}</span>
                     <textarea
                       rows={2}
                       value={c.command}
@@ -292,7 +265,7 @@ export function PlannedGoalEditor({
                       )
                     }
                   >
-                    {tr("Remove", "删除")}
+                    {tr("tasks.plannedGoalView.remove")}
                   </button>
                 </div>
               ))}
@@ -302,7 +275,7 @@ export function PlannedGoalEditor({
                 disabled={d.checks.length >= 8}
                 onClick={() => set("checks", [...d.checks, { name: "", command: "" }])}
               >
-                + {tr("Add check", "添加检查")}
+                + {tr("tasks.plannedGoalView.addCheck")}
               </button>
             </div>
           )}
@@ -312,14 +285,11 @@ export function PlannedGoalEditor({
               checked={d.continueWork}
               onChange={(e) => set("continueWork", e.target.checked)}
             />
-            {tr(
-              "Look for valuable safe work after planned priorities settle",
-              "计划优先级处理后寻找有价值的安全工作",
-            )}
+            {tr("tasks.plannedGoalView.lookForValuableSafeWorkAfter")}
           </label>
           <div className="plannedFields">
             <label>
-              <span>{tr("Same failure limit", "重复失败上限")}</span>
+              <span>{tr("tasks.plannedGoalView.sameFailureLimit")}</span>
               <input
                 type="number"
                 min="1"
@@ -329,7 +299,7 @@ export function PlannedGoalEditor({
               />
             </label>
             <label>
-              <span>{tr("No-progress turn limit", "无进展轮次上限")}</span>
+              <span>{tr("tasks.plannedGoalView.noProgressTurnLimit")}</span>
               <input
                 type="number"
                 min="1"
@@ -339,7 +309,7 @@ export function PlannedGoalEditor({
               />
             </label>
             <label>
-              <span>{tr("Strategy retry limit", "策略重试上限")}</span>
+              <span>{tr("tasks.plannedGoalView.strategyRetryLimit")}</span>
               <input
                 type="number"
                 min="0"
@@ -402,36 +372,36 @@ export function PlannedGoalProgress({
   const active = p.plan.phases.find((x) => x.id === p.active_phase);
   const outcome = (s: string) =>
     ({
-      completed: tr("Accepted", "已接受"),
-      partial: tr("Partial", "部分完成"),
-      blocked: tr("Blocked", "阻塞"),
-      failed: tr("Failed", "失败"),
-      skipped: tr("Skipped", "跳过"),
+      completed: tr("tasks.plannedGoalView.accepted"),
+      partial: tr("tasks.plannedGoalView.partial"),
+      blocked: tr("tasks.plannedGoalView.blocked"),
+      failed: tr("tasks.plannedGoalView.failed"),
+      skipped: tr("tasks.plannedGoalView.skipped"),
     })[s] || s;
   return (
     <section className="plannedProgress">
       <h3>
         {p.finished_at
-          ? tr("Finalized · inspect the outcome", "已收尾 · 请查看实际成果")
+          ? tr("tasks.plannedGoalView.finalizedInspectTheOutcome")
           : p.needs_reasoning
-            ? tr("Source reasoning needed", "需要源 AI 判断")
+            ? tr("tasks.plannedGoalView.sourceReasoningNeeded")
             : p.finalizing
-              ? tr("Finalizing", "正在收尾")
-              : tr("Plan progress", "计划进度")}
+              ? tr("tasks.plannedGoalView.finalizing")
+              : tr("tasks.plannedGoalView.planProgress")}
       </h3>
       <div className="plannedSummary">
         <div>
-          <span>{tr("Current phase", "当前阶段")}</span>
-          <strong>{active?.objective || tr("No active phase", "暂无活动阶段")}</strong>
+          <span>{tr("tasks.plannedGoalView.currentPhase")}</span>
+          <strong>{active?.objective || tr("tasks.plannedGoalView.noActivePhase")}</strong>
         </div>
         <div>
-          <span>{tr("Accepted phases", "已接受阶段")}</span>
+          <span>{tr("tasks.plannedGoalView.acceptedPhases")}</span>
           <strong>
             {p.outcomes.filter((x) => x.outcome === "completed").length} / {p.plan.phases.length}
           </strong>
         </div>
         <div>
-          <span>{tr("Elapsed", "已用时间")}</span>
+          <span>{tr("tasks.plannedGoalView.elapsed")}</span>
           <strong>
             {Math.max(
               0,
@@ -441,57 +411,56 @@ export function PlannedGoalProgress({
                   60000,
               ),
             )}{" "}
-            {tr("min", "分钟")}
+            {tr("tasks.plannedGoalView.min")}
           </strong>
         </div>
         <div>
-          <span>{tr("Deadline", "停止期限")}</span>
+          <span>{tr("tasks.plannedGoalView.deadline")}</span>
           <strong>
             {deadline?.toLocaleString(locale === "zh" ? "zh-CN" : "en-US") ||
-              tr("Task expiry applies", "遵循任务到期时间")}
+              tr("tasks.plannedGoalView.taskExpiryApplies")}
           </strong>
         </div>
       </div>
       {p.needs_reasoning && <p className="plannedReason">{p.needs_reasoning}</p>}
       <p>
-        <strong>{tr("Accepted checkpoint", "已验收版本")}: </strong>
+        <strong>{tr("tasks.plannedGoalView.acceptedCheckpoint")}: </strong>
         <code>
-          {p.green_frontier?.checkpoint || tr("No verified baseline yet", "尚无已验证基线")}
+          {p.green_frontier?.checkpoint || tr("tasks.plannedGoalView.noVerifiedBaselineYet")}
         </code>
       </p>
       {p.candidate && (
         <p>
-          <strong>{tr("Candidate", "候选修改")}: </strong>
+          <strong>{tr("tasks.plannedGoalView.candidate")}: </strong>
           {{
-            working: tr("In progress", "进行中"),
-            evaluating: tr("Checking", "检查中"),
-            accepted: tr("Accepted", "已接受"),
-            rejected: tr("Rejected; frontier retained", "已拒绝，保留已验收版本"),
-            unknown: tr("Outcome unknown; inspection needed", "结果未知，需要检查"),
+            working: tr("tasks.plannedGoalView.inProgress"),
+            evaluating: tr("tasks.plannedGoalView.checking"),
+            accepted: tr("tasks.plannedGoalView.accepted"),
+            rejected: tr("tasks.plannedGoalView.rejectedFrontierRetained"),
+            unknown: tr("tasks.plannedGoalView.outcomeUnknownInspectionNeeded"),
           }[p.candidate.status] || p.candidate.status}
           {p.candidate.evidence && <span className="plannedEvidence">{p.candidate.evidence}</span>}
         </p>
       )}
       {p.workspace && (
         <p className="plannedWorkspace">
-          {tr("Task worktree", "任务 worktree")}: <code>{p.workspace.path}</code>
+          {tr("tasks.plannedGoalView.taskWorktree")}: <code>{p.workspace.path}</code>
           <br />
-          {tr(
-            "Accepted work requires review before applying it to your original branch.",
-            "将成果应用到原分支前，需要先审查。",
-          )}
+          {tr("tasks.plannedGoalView.acceptedWorkRequiresReviewBeforeApplying")}
         </p>
       )}
       {!!p.checks.length && (
         <div className="plannedChecks">
-          <h4>{tr("Latest quality results", "最近质量检查")}</h4>
+          <h4>{tr("tasks.plannedGoalView.latestQualityResults")}</h4>
           {p.checks.map((c, i) => (
             <details key={i}>
               <summary>
                 <strong>{c.name}</strong>
                 <span>
-                  {c.passed ? tr("Passed", "通过") : tr("Not passed", "未通过")} ·{" "}
-                  {tr("Exit", "退出码")} {c.exit_code ?? "—"}
+                  {c.passed
+                    ? tr("tasks.plannedGoalView.passed")
+                    : tr("tasks.plannedGoalView.notPassed")}{" "}
+                  · {tr("tasks.plannedGoalView.exit")} {c.exit_code ?? "—"}
                 </span>
               </summary>
               <pre>{c.evidence}</pre>
@@ -500,7 +469,7 @@ export function PlannedGoalProgress({
         </div>
       )}
       <div className="plannedHistory">
-        <h4>{tr("Phase outcomes", "阶段结果")}</h4>
+        <h4>{tr("tasks.plannedGoalView.phaseOutcomes")}</h4>
         {p.plan.phases.map((phase) => {
           const r = p.outcomes.find((x) => x.id === phase.id);
           return (
@@ -511,8 +480,8 @@ export function PlannedGoalProgress({
                   {r
                     ? outcome(r.outcome)
                     : phase.id === p.active_phase
-                      ? tr("Active", "活动")
-                      : tr("Untouched", "未处理")}
+                      ? tr("tasks.plannedGoalView.active")
+                      : tr("tasks.plannedGoalView.untouched")}
                 </span>
               </summary>
               {r && (
@@ -520,16 +489,16 @@ export function PlannedGoalProgress({
                   <p>{r.evidence}</p>
                   {r.blocker && (
                     <p>
-                      {tr("Blocker", "阻塞")}: {r.blocker}
+                      {tr("tasks.plannedGoalView.blocker")}: {r.blocker}
                     </p>
                   )}
                   {r.remaining_work && (
                     <p>
-                      {tr("Remaining", "剩余工作")}: {r.remaining_work}
+                      {tr("tasks.plannedGoalView.remaining")}: {r.remaining_work}
                     </p>
                   )}
                   <p>
-                    {Math.round(r.spent_seconds / 60)} {tr("min", "分钟")}
+                    {Math.round(r.spent_seconds / 60)} {tr("tasks.plannedGoalView.min")}
                     {r.checkpoint && (
                       <>
                         {" "}
@@ -546,7 +515,7 @@ export function PlannedGoalProgress({
       {!!p.rejected.length && (
         <details>
           <summary>
-            {tr("Rejected attempts", "未接受的尝试")} ({p.rejected.length})
+            {tr("tasks.plannedGoalView.rejectedAttempts")} ({p.rejected.length})
           </summary>
           {p.rejected.map((r, i) => (
             <div key={i}>

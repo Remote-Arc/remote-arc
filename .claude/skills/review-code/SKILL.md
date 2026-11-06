@@ -40,8 +40,9 @@ fix things.
    5. Compatibility with existing callers, users and data
    6. Tests: do they prove the change, using the checklist in `write-tests`?
    7. Completeness: other places that needed the same change
-   8. Structure that will cause bugs, using `structure-code`: interface text
-      outside the message catalog, or a permission rule copied instead of shared
+   8. Structure that will cause bugs, using `structure-code`: a permission rule,
+      limit, config read or error message copied instead of shared, or interface
+      text outside the message catalog
 
 5. **Verify each finding.** For each suspected problem, trace a concrete input to a
    wrong result. Read the code that would stop it. Run it if you can. Drop anything

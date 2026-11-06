@@ -81,7 +81,7 @@ while (offset !== null) {
   structure += chunk.content;
   offset = chunk.nextOffset;
 }
-assert.match(structure, /Put interface text in the message catalog/);
+assert.match(structure, /Give every cross-cutting rule one source of truth/);
 assert.equal(
   structure.length,
   playbook.resources.find((f) => f.path.endsWith("structure-code/SKILL.md"))!.bytes,

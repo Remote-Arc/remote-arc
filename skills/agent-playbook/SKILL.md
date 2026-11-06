@@ -1,6 +1,6 @@
 ---
 name: agent-playbook
-description: Engineering procedures for any coding task through Remote Arc, such as a feature, bug fix, refactor, test, review, migration or pull request. Includes where new code goes, file and folder size limits, interface text in message catalogs, shared permission hooks and grouped styles.
+description: Engineering practice for any coding task through Remote Arc, in any language or stack, such as a feature, bug fix, refactor, test, review, migration or pull request. Covers module boundaries, file and folder size, one source of truth for permissions, config, errors and text, safe data changes, real tests and verified reports.
 priority: P0
 category: development
 status: builtin-guidance
@@ -49,7 +49,7 @@ shell commands.
 | Writing or changing tests | `skills/write-tests/SKILL.md` |
 | Finding weak or missing tests | `skills/audit-test-suite/SKILL.md` |
 | A test that sometimes fails | `skills/fix-flaky-test/SKILL.md` |
-| New files, or a file or folder grown too large | `skills/structure-code/SKILL.md` |
+| New files or modules, or code grown too large | `skills/structure-code/SKILL.md` |
 | Moving or restructuring code | `skills/refactor-safely/SKILL.md` |
 | Schema, migration, backfill or bulk data change | `skills/change-data-safely/SKILL.md` |
 | Login, permissions, user input, secrets or payments | `skills/secure-change/SKILL.md` |
@@ -60,9 +60,12 @@ shell commands.
 | Stopping before the work is finished | `skills/hand-off-work/SKILL.md` |
 
 When you add code, `skills/structure-code/SKILL.md` applies as well as the task's
-own procedure. It keeps files small, groups folders by feature, puts interface text
-in the message catalog, gives permissions and flags one shared entry point, uses a
-provider for app-wide values, and groups styles.
+own procedure, in every layer: services, APIs, jobs, tools, libraries and user
+interfaces. It keeps dependencies pointing one way, files small and folders grouped
+by domain. It gives permissions, config, error codes, limits, flags, logging and
+user-facing text one source of truth each, passes shared context explicitly,
+validates input at the edges and removes replaced code. Its
+`references/backend.md` and `references/frontend.md` show concrete layouts.
 
 ## Rules that always apply
 

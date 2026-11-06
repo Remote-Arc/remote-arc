@@ -89,7 +89,7 @@ and follow its steps in order. If nothing matches, use `implement-change`.
 | Writing or changing tests                           | `.agents/skills/write-tests/SKILL.md`        |
 | Finding weak or missing tests                       | `.agents/skills/audit-test-suite/SKILL.md`   |
 | A test that sometimes fails                         | `.agents/skills/fix-flaky-test/SKILL.md`     |
-| New files, or a file or folder grown too large      | `.agents/skills/structure-code/SKILL.md`     |
+| New files or modules, or code grown too large       | `.agents/skills/structure-code/SKILL.md`     |
 | Moving or restructuring code                        | `.agents/skills/refactor-safely/SKILL.md`    |
 | Schema, migration, backfill or bulk data change     | `.agents/skills/change-data-safely/SKILL.md` |
 | Login, permissions, user input, secrets or payments | `.agents/skills/secure-change/SKILL.md`      |

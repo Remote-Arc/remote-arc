@@ -68,17 +68,18 @@ export function ArcPublicPricing({
             </div>
             <div className="hostedPrice">
               <strong>US${p.monthlyPriceCents / 100}</strong>
-              <span>
-                / {tr("month", "月")}
-                {isConnectOnlyPlan(p) &&
-                  tr(
-                    ` · about US$${(p.monthlyPriceCents / 3000).toFixed(2)} a day`,
-                    ` · 约每天 US$${(p.monthlyPriceCents / 3000).toFixed(2)}`,
-                  )}
-              </span>
+              <span>/ {tr("month", "月")}</span>
             </div>
+            {isConnectOnlyPlan(p) && (
+              <p className="hostedPriceNote">
+                {tr(
+                  `About US$${(p.monthlyPriceCents / 3000).toFixed(2)} a day`,
+                  `约每天 US$${(p.monthlyPriceCents / 3000).toFixed(2)}`,
+                )}
+              </p>
+            )}
             {isConnectOnlyPlan(p) && p.yearlyPriceCents ? (
-              <p className="hostedYearly">
+              <p className="hostedPriceNote">
                 {tr(
                   `or US$${(p.yearlyPriceCents / 1200).toFixed(2)}/month, billed yearly (US$${p.yearlyPriceCents / 100}/year)`,
                   `或 US$${(p.yearlyPriceCents / 1200).toFixed(2)}／月，按年付费（US$${p.yearlyPriceCents / 100}／年）`,

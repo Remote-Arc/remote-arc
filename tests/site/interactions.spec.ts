@@ -234,9 +234,33 @@ test("Pricing separates Connect Unlimited from Arc plans", async ({ page }, test
     /topic=enterprise/,
   );
   await expect(card.locator(".hostedPrice strong")).toHaveText("US$19");
+  await expect(card.locator(".hostedPriceNote")).toHaveText([/US\$0\.63/, /US\$99/]);
   await expect(card).toContainText(/Unlimited registered computers|不限已注册电脑数量/);
   await expect(card.getByRole("link")).toHaveAttribute("href", /product=connect-unlimited-v1/);
   await expect(page.locator(".planCard").filter({ hasText: "ARC + CONNECT" })).toHaveCount(2);
+
+  for (const width of [320, 390, 621, 1101, 1440, 1760]) {
+    await page.setViewportSize({ width, height: 900 });
+    const overflow = await page.locator(".pricingPlans--saas .planCard").evaluateAll((cards) =>
+      cards.flatMap((card) => {
+        const bounds = card.getBoundingClientRect();
+        const style = getComputedStyle(card);
+        const left =
+          bounds.left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft);
+        const right =
+          bounds.right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight);
+        return [...card.querySelectorAll(".hostedPrice, .hostedPriceNote")].flatMap((price) => {
+          const range = document.createRange();
+          range.selectNodeContents(price);
+          const clips = [...range.getClientRects()].some(
+            (rect) => rect.left < left - 1 || rect.right > right + 1,
+          );
+          return clips ? [price.textContent] : [];
+        });
+      }),
+    );
+    expect(overflow, "price text outside card content at " + width + "px").toEqual([]);
+  }
 });
 
 for (const failure of ["HTTP failure", "network failure"])

@@ -1,15 +1,10 @@
 import { canonicalErrorEnvelope } from "../../../../packages/protocol/src/error-codes.js";
 import { createArcInputPreview } from "./arc-input-preview.js";
 import type { SecurityState } from "@remotearc/protocol";
-import {
-  ARC_PLANS,
-  ARC_TOPUPS,
-  ARC_PREMIUM_MODELS,
-  CONNECT_FREE_OVERFLOW,
-} from "@remotearc/protocol";
+import { ARC_TOPUPS, ARC_PREMIUM_MODELS, CONNECT_FREE_OVERFLOW } from "@remotearc/protocol";
 import appDirectory from "../data/app-directory.json" with { type: "json" };
 import { createArcPreview } from "./arc-preview.js";
-import { createBillingPreview } from "./billing-preview.js";
+import { createBillingPreview, previewBillingPlans } from "./billing-preview.js";
 import { createSupportPreview } from "./support-preview.js";
 import { createFollowupPreview } from "./followup-preview.js";
 import { createOnboardingPreview } from "./onboarding-preview.js";
@@ -622,7 +617,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
         arcAvailable: (await runtimeConfig()).arcAvailable,
         billingAvailable: false,
         connectFreeCalls: 10000,
-        plans: ARC_PLANS.map((p) => ({ ...p, versionId: "preview:" + p.id })),
+        plans: previewBillingPlans,
         topups: ARC_TOPUPS.map((p) => ({ ...p, versionId: "preview:" + p.id })),
         trial: { days: 14, credits: 200 },
       });

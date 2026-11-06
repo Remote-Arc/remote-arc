@@ -1684,6 +1684,7 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
   "mcp/mcp-errors.ts"
  ],
  "SERVICE_UNAVAILABLE": [
+  "admin/admin-operations.ts",
   "admin/admin-overview.ts",
   "index.ts"
  ],

@@ -286,7 +286,80 @@ await assert.rejects(
   () => listAdminUsers(db, { ...options, pluginOAuthClientIds: '["malformed id"]' }),
   /invalid_public_plugin_client_ids/,
 );
+
+// Successful days are counted exactly across every ledger, for the users on the page.
+user("multi");
+const audit = (id: string, at: string, success = 1) =>
+  sql
+    .prepare(
+      "INSERT INTO audit_events(id,user_id,device_id,event_type,tool_name,success,created_at) VALUES(?,'multi','device:multi','mcp.tool_call','run',?,?)",
+    )
+    .run(id, success, at);
+audit("multi-1", "2026-10-20T08:00:00.000Z");
+audit("multi-2", "2026-10-20T23:59:59.000Z");
+audit("multi-failed", "2026-10-21T10:00:00.000Z", 0);
+audit("multi-future", "2026-10-31T09:00:00.000Z");
+event("multi", "2026-10-25T00:00:00.000Z");
+event("multi", "2026-10-25T18:00:00.000Z");
+sql
+  .prepare(
+    "INSERT INTO app_calls(id,user_id,connection_id,connection_generation,operation,permission,request_id,input_hash,arguments_ciphertext,status,expires_at,created_at,updated_at) VALUES('multi-call','multi','app',1,'repos.list','read','multi-request','hash','private','succeeded',?,?,?)",
+  )
+  .run(now, now, now);
+const multi = (await listAdminUsers(db, { ...options, query: "multi" })).users[0];
+assert.equal(multi?.first_success_at, "2026-10-20T08:00:00.000Z");
+assert.equal(multi?.last_success_at, now, "A success after the read time is not counted");
+assert.equal(
+  multi?.successful_days,
+  3,
+  "Days 20, 25 and 30 count once each; a failed call and a future call count none",
+);
+assert.equal(multi?.activation_stage, "returning_active");
+const shown = new Map(
+  (await listAdminUsers(db, { ...options, pageSize: 100 })).users.map((row) => [row.id, row]),
+);
+assert.equal(shown.get("returning")?.successful_days, 2);
+assert.equal(shown.get("same-day")?.successful_days, 1);
+assert.equal(shown.get("registered")?.successful_days, 0);
+assert(
+  !Object.keys(shown.get("multi") || {}).some((key) => key.startsWith("__")),
+  "Internal query columns never reach the response",
+);
+
+// Success history is read by index seeks per user, never by scanning a ledger.
+let statement = "";
+let bound: unknown[] = [];
+await listAdminUsers(
+  {
+    prepare(query: string) {
+      statement = query;
+      return {
+        bind(...args: unknown[]) {
+          bound = args;
+          return { all: async () => ({ results: [] }) };
+        },
+      };
+    },
+  } as unknown as D1Database,
+  options,
+);
+const plan = (
+  sql.prepare("EXPLAIN QUERY PLAN " + statement).all(...(bound as never[])) as Array<{
+    detail: string;
+  }>
+).map((row) => row.detail);
+for (const table of ["audit_events", "app_calls", "arc_chat_runs", "product_events"]) {
+  const reads = plan.filter((detail) => detail.includes(" " + table + " "));
+  assert(reads.length > 0, table + " is read");
+  assert(
+    reads.every(
+      (detail) =>
+        detail.startsWith("SEARCH") && /_success_user_time|success_user_time/.test(detail),
+    ),
+    table + " is read only through its success index: " + reads.join(" | "),
+  );
+}
 sql.close();
 console.log(
-  "PASS: real SQLite activation evidence, provenance, historical unknowns, success/return windows, global filtering/sort/pagination and no token disclosure",
+  "PASS: real SQLite activation evidence, provenance, historical unknowns, success/return windows, exact successful days across ledgers, index-only success reads, global filtering/sort/pagination and no token disclosure",
 );

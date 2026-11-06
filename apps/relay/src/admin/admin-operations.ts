@@ -35,6 +35,8 @@ type LiveDevice = {
   recovery_bundle_version?: string | null;
 };
 const month = () => new Date().toISOString().slice(0, 7);
+// A device-registry answer slower than this counts as unknown, not online.
+const PRESENCE_TIMEOUT_MS = 2500;
 const jsonError = (error: string, status: number) => applicationJson({ error }, { status });
 const safeLimit = (raw: string | undefined) => {
   const n = Number(raw ?? "10000");
@@ -69,90 +71,142 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
     return jsonError((error as Error).message, 400);
   }
   const from = new Date(Date.now() - 7 * 86400_000).toISOString();
+  // The lifetime audit count and the 7-day activity reads scan audit history, so they
+  // run only for the views that show them. Omitting a parameter keeps the old response.
   const includeAuditTotals = url.searchParams.get("auditTotals") !== "0";
-  const [
-    userPage,
-    deviceRows,
-    chartRows,
-    totalUsers,
-    totalDevices,
-    auditSummary,
-    totalMonthlyCalls,
-    teamCount,
-    teamMembers,
-  ] = await Promise.all([
-    listAdminUsers(env.DB, {
-      ...selection,
-      now,
-      month: utcMonth,
-      page,
-      pageSize,
-      freeLimit: freeBase,
-      plusLimit: base,
-      pluginOAuthClientIds: env.PUBLIC_PLUGIN_OAUTH_CLIENT_IDS,
-      resource: (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp",
-    }),
-    env.DB.prepare(
-      `SELECT d.id, d.user_id, d.name, d.platform, d.arch, d.last_seen, d.created_at
+  const includeActivity = url.searchParams.get("activity") !== "0";
+  const one = <T>(sql: string, ...args: unknown[]) =>
+    env.DB.prepare(sql)
+      .bind(...args)
+      .first<T>();
+  const readers = {
+    users: () =>
+      listAdminUsers(env.DB, {
+        ...selection,
+        now,
+        month: utcMonth,
+        page,
+        pageSize,
+        freeLimit: freeBase,
+        plusLimit: base,
+        pluginOAuthClientIds: env.PUBLIC_PLUGIN_OAUTH_CLIENT_IDS,
+        resource: (env.APP_ORIGIN || env.PUBLIC_ORIGIN) + "/mcp",
+      }),
+    devices: async () =>
+      (
+        await env.DB.prepare(
+          `SELECT d.id, d.user_id, d.name, d.platform, d.arch, d.last_seen, d.created_at
       FROM devices d WHERE d.revoked_at IS NULL
       ORDER BY COALESCE(d.last_seen,d.created_at) DESC LIMIT 200`,
-    ).all<OpsDevice>(),
-    env.DB.prepare(
-      `SELECT substr(created_at,1,13) AS hour, COUNT(*) AS calls,
-      COUNT(DISTINCT user_id) AS users
-      FROM audit_events WHERE created_at>=?1 AND event_type='mcp.tool_call'
-      GROUP BY substr(created_at,1,13) ORDER BY hour`,
-    )
-      .bind(from)
-      .all<{ hour: string; calls: number; users: number }>(),
-    env.DB.prepare("SELECT COUNT(*) AS total FROM users").first<{ total: number }>(),
-    env.DB.prepare("SELECT COUNT(*) AS total FROM devices WHERE revoked_at IS NULL").first<{
-      total: number;
-    }>(),
-    env.DB.prepare(
-      includeAuditTotals
-        ? `SELECT COUNT(*) AS count,
-      SUM(CASE WHEN created_at>=?1 THEN 1 ELSE 0 END) AS last7d
-      FROM audit_events`
-        : "SELECT NULL AS count,COUNT(*) AS last7d FROM audit_events WHERE created_at>=?1",
-    )
-      .bind(from)
-      .first<{ count: number; last7d: number }>(),
-    env.DB.prepare(
-      "SELECT COALESCE(SUM(tool_calls),0) AS calls FROM user_monthly_usage WHERE month_key=?1",
-    )
-      .bind(utcMonth)
-      .first<{ calls: number }>(),
-    env.DB.prepare("SELECT COUNT(*) AS total FROM organizations WHERE kind='team'").first<{
-      total: number;
-    }>(),
-    env.DB.prepare(
-      "SELECT COUNT(*) AS total FROM organization_members m JOIN organizations o ON o.id=m.organization_id WHERE o.kind='team' AND m.status='active'",
-    ).first<{ total: number }>(),
-  ]);
-  const users = userPage.users;
-  const devices = deviceRows.results || [];
+        ).all<OpsDevice>()
+      ).results || [],
+    totals: async () => {
+      const [users, devices, monthly, teams, members] = await Promise.all([
+        one<{ total: number }>("SELECT COUNT(*) AS total FROM users"),
+        one<{ total: number }>("SELECT COUNT(*) AS total FROM devices WHERE revoked_at IS NULL"),
+        one<{ calls: number }>(
+          "SELECT COALESCE(SUM(tool_calls),0) AS calls FROM user_monthly_usage WHERE month_key=?1",
+          utcMonth,
+        ),
+        one<{ total: number }>("SELECT COUNT(*) AS total FROM organizations WHERE kind='team'"),
+        one<{ total: number }>(
+          "SELECT COUNT(*) AS total FROM organization_members m JOIN organizations o ON o.id=m.organization_id WHERE o.kind='team' AND m.status='active'",
+        ),
+      ]);
+      return {
+        users: users?.total || 0,
+        devices: devices?.total || 0,
+        monthlyCalls: monthly?.calls || 0,
+        teams: teams?.total || 0,
+        teamMembers: members?.total || 0,
+      };
+    },
+    activity: async () => {
+      if (!includeActivity && !includeAuditTotals) return null;
+      const [chart, audit] = await Promise.all([
+        includeActivity
+          ? env.DB.prepare(
+              `SELECT substr(created_at,1,13) AS hour, COUNT(*) AS calls,
+          COUNT(DISTINCT user_id) AS users
+          FROM audit_events WHERE created_at>=?1 AND event_type='mcp.tool_call'
+          GROUP BY substr(created_at,1,13) ORDER BY hour`,
+            )
+              .bind(from)
+              .all<{ hour: string; calls: number; users: number }>()
+          : null,
+        one<{ count: number | null; last7d: number }>(
+          includeAuditTotals
+            ? `SELECT COUNT(*) AS count,
+          SUM(CASE WHEN created_at>=?1 THEN 1 ELSE 0 END) AS last7d
+          FROM audit_events`
+            : "SELECT NULL AS count,COUNT(*) AS last7d FROM audit_events WHERE created_at>=?1",
+          from,
+        ),
+      ]);
+      return {
+        hourly: chart ? chart.results || [] : null,
+        auditRows: includeAuditTotals ? audit?.count || 0 : null,
+        auditLast7d: audit?.last7d || 0,
+      };
+    },
+  };
+  type Section = keyof typeof readers;
+  const keys = Object.keys(readers) as Section[];
+  // Each section is read on its own: one failing query hides one section, not the page.
+  const settled = await Promise.allSettled(keys.map((key) => readers[key]()));
+  const unavailable: Section[] = [];
+  const value = <K extends Section>(key: K) => {
+    const result = settled[keys.indexOf(key)]!;
+    if (result.status === "fulfilled")
+      return result.value as Awaited<ReturnType<(typeof readers)[K]>>;
+    unavailable.push(key);
+    console.error("admin operations section failed", key, String(result.reason).slice(0, 200));
+    return null;
+  };
+  const userPage = value("users");
+  const deviceRows = value("devices");
+  const totals = value("totals");
+  const activity = value("activity");
+  if (unavailable.length === keys.length) {
+    return applicationJson(
+      { error: "SERVICE_UNAVAILABLE", unavailable },
+      { status: 503, headers: { "cache-control": "private, no-store", "retry-after": "5" } },
+    );
+  }
+  const users = userPage?.users || [];
+  const devices = deviceRows || [];
   const byUser = new Map<string, Map<string, LiveDevice>>();
   // Real-time online is queried from the same per-user DO registry used by Devices,
-  // not guessed from last_seen. Cap per-refresh DO fan-out.
+  // not guessed from last_seen. Cap per-refresh DO fan-out, and give each owner a
+  // deadline so one slow registry cannot hold the whole page.
   await Promise.all(
     [...new Set([...users.map((u) => u.id), ...devices.map((d) => d.user_id)])]
       .slice(0, 60)
       .map(async (userId) => {
+        let timer: ReturnType<typeof setTimeout> | undefined;
         try {
-          const response = await env.REGISTRY.getByName("user:" + userId).fetch(
-            new Request("https://registry/devices", {
-              headers: { "x-remote-link-user-id": userId },
+          const rows = await Promise.race([
+            (async () => {
+              const response = await env.REGISTRY.getByName("user:" + userId).fetch(
+                new Request("https://registry/devices", {
+                  headers: { "x-remote-link-user-id": userId },
+                }),
+              );
+              return response.ok ? ((await response.json()) as LiveDevice[]) : null;
+            })(),
+            new Promise<null>((resolve) => {
+              timer = setTimeout(() => resolve(null), PRESENCE_TIMEOUT_MS);
             }),
-          );
-          if (!response.ok) return;
-          const rows = (await response.json()) as LiveDevice[];
+          ]);
+          if (!rows) return;
           byUser.set(
             userId,
             new Map(rows.filter((row) => row.status === "online").map((row) => [row.id, row])),
           );
         } catch {
           /* unknown is not online */
+        } finally {
+          clearTimeout(timer);
         }
       }),
   );
@@ -173,19 +227,20 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
       month: utcMonth,
       page,
       pageSize,
-      creditsReady: userPage.creditsReady,
-      filteredTotal: userPage.filteredTotal,
-      activationCounts: userPage.activationCounts,
+      unavailable,
+      creditsReady: userPage?.creditsReady ?? false,
+      filteredTotal: userPage?.filteredTotal ?? 0,
+      activationCounts: userPage?.activationCounts ?? {},
       selection,
       totals: {
-        users: totalUsers?.total || 0,
-        devices: totalDevices?.total || 0,
-        online: extended.filter((x) => x.online).length,
-        auditRows: includeAuditTotals ? auditSummary?.count || 0 : null,
-        auditLast7d: auditSummary?.last7d || 0,
-        monthlyCalls: totalMonthlyCalls?.calls || 0,
-        teams: teamCount?.total || 0,
-        teamMembers: teamMembers?.total || 0,
+        users: totals?.users ?? null,
+        devices: totals?.devices ?? null,
+        online: deviceRows ? extended.filter((x) => x.online).length : null,
+        auditRows: activity?.auditRows ?? null,
+        auditLast7d: activity?.auditLast7d ?? null,
+        monthlyCalls: totals?.monthlyCalls ?? null,
+        teams: totals?.teams ?? null,
+        teamMembers: totals?.teamMembers ?? null,
       },
       limits: { free: freeBase, plus: base },
       users: users.map((user) => {
@@ -207,7 +262,8 @@ export async function handleAdminOperations(request: Request, env: OpsEnv) {
         };
       }),
       devices: extended,
-      activity: chartRows.results || [],
+      // Null when this view did not ask for it (or it failed); never an empty chart.
+      activity: activity?.hourly ?? null,
       billing: {
         currency: "USD",
         actualUsd: null,

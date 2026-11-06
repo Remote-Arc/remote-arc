@@ -9,6 +9,7 @@ async function mount(
   mode: "normal" | "empty" | "unavailable" = "normal",
   section: "health" | "overview" | "payments" = "health",
   overview: Record<string, unknown> = overviewFixture(),
+  operations: Record<string, unknown> = {},
 ) {
   const calls = {
     metrics: [] as string[],
@@ -104,6 +105,7 @@ async function mount(
         filteredTotal: 0,
         activationCounts: {},
         billing: { actualUsd: null, source: "unavailable", billingUrl: "", note: "", services: [] },
+        ...operations,
       },
     });
   });
@@ -371,6 +373,45 @@ test("Independent Admin sections do not reload account history or unrelated cont
   await expect.poll(() => calls.operations.length).toBe(1);
   expect(new URL(calls.operations[0]!).searchParams.get("auditTotals")).toBe("0");
   expect(calls.submissions).toBe(0);
+});
+
+test("Users & operations reads 7-day activity only on its Activity tab and names a section that failed", async ({
+  page,
+}) => {
+  const { panel, calls } = await mount(page, "normal", "health", overviewFixture(), {
+    unavailable: ["users"],
+    totals: {
+      users: 12,
+      devices: 3,
+      online: null,
+      auditRows: null,
+      auditLast7d: null,
+      monthlyCalls: 1234,
+    },
+    activity: null,
+  });
+  await panel
+    .locator(".adminSidebar")
+    .getByRole("button", { name: /Users & operations|用户与运营/ })
+    .click();
+  await expect.poll(() => calls.operations.length).toBe(1);
+  expect(new URL(calls.operations[0]!).searchParams.get("activity")).toBe("0");
+  const stats = panel.locator(".opsStats");
+  await expect(stats).toContainText(/Tool calls this month|本月工具调用/);
+  await expect(stats).toContainText("1,234");
+  await expect(stats.locator("div").nth(2).locator("strong")).toHaveText("—");
+  await expect(panel.locator(".opsNotice")).toContainText(/users|用户列表/);
+  await expect(panel.locator(".opsTable tbody")).toContainText(
+    /user list could not be loaded|用户列表暂时无法加载/,
+  );
+  await expect(panel.locator(".opsTable tbody")).not.toContainText(/No users match|没有符合/);
+  await panel
+    .locator(".opsTabs")
+    .getByRole("button", { name: /^(Activity|活跃度)$/ })
+    .click();
+  await expect.poll(() => calls.operations.length).toBe(2);
+  expect(new URL(calls.operations[1]!).searchParams.get("activity")).toBe("1");
+  await expect(panel.locator(".opsChart")).toBeVisible();
 });
 
 test("The overview reads its own summary, leads with what needs action and keeps loaded numbers when a section fails", async ({

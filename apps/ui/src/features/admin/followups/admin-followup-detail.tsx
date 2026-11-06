@@ -20,6 +20,11 @@ import {
   type ContactDetail,
   type EmailDraft,
 } from "./followup-model.js";
+import {
+  FollowupLifecycleHistory,
+  lifecycleKindLabel,
+  recentLifecycleEmail,
+} from "./followup-lifecycle.js";
 
 export function FollowupDialog({
   title,
@@ -426,6 +431,7 @@ export function FollowupDetail({
       setBusy(null);
     }
   }
+  const recentAutomated = recentLifecycleEmail(data?.lifecycleEmails);
   const draftCount =
     data?.messages.filter((mail) => mail.status === "draft" && !mail.batch_id).length || 0;
   const mailStatus = (status: string) =>
@@ -492,6 +498,14 @@ export function FollowupDetail({
         <p className="adminFollowupNotice" role="status">
           <Icon name="check" size={15} />
           {noticeText}
+        </p>
+      )}
+      {recentAutomated && tab === "email" && (
+        <p className="followupLifecycleWarning" role="status">
+          {tr(
+            `An automated "${lifecycleKindLabel(recentAutomated.kind, tr)}" email went to this person on ${followupTime(recentAutomated.sent_at || recentAutomated.attempted_at || recentAutomated.created_at)}. Check it in Drafts & history before writing.`,
+            `系统已在 ${followupTime(recentAutomated.sent_at || recentAutomated.attempted_at || recentAutomated.created_at)} 给这位用户自动发送了「${lifecycleKindLabel(recentAutomated.kind, tr)}」邮件，可先在「草稿与历史」中查看。`,
+          )}
         </p>
       )}
       <div hidden={tab !== "email"} className="adminFollowupComposer">
@@ -772,6 +786,8 @@ export function FollowupDetail({
               {tr("Refresh history", "刷新记录")}
             </button>
           </div>
+          {data && <FollowupLifecycleHistory emails={data.lifecycleEmails} />}
+          <h4 className="followupHistorySubheading">{tr("Follow-up email", "跟进邮件")}</h4>
           {data?.messages.length === 0 && (
             <p className="adminNoData">
               {tr("No saved drafts or emails yet.", "还没有保存的草稿或邮件。")}

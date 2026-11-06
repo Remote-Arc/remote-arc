@@ -472,6 +472,96 @@ try {
     )
     .run("followup:" + id, now, now, now);
   assert.equal((await decode(await api("?query=person"))).items[0].feedback_count, 1);
+  sql
+    .prepare(
+      `INSERT INTO website_submissions(id,category,email,name,message,source,status,consent_at,created_at,updated_at) VALUES('feedback-other','feedback','other@example.invalid','Other','Not person',?,'new',?,?,?)`,
+    )
+    .run("followup:" + id, now, now, now);
+  assert.equal(
+    (await decode(await api("?query=person"))).items[0].feedback_count,
+    1,
+    "Feedback from another address does not count for this person",
+  );
+  const feedbackPlan = JSON.stringify(
+    sql
+      .prepare(
+        "EXPLAIN QUERY PLAN SELECT COUNT(*) FROM user_followup_messages m JOIN website_submissions s ON s.source='followup:'||m.id WHERE m.user_id='person' AND lower(s.email)='person@example.invalid'",
+      )
+      .all(),
+  );
+  assert.match(
+    feedbackPlan,
+    /website_submissions_source/,
+    "Feedback is found by its source, not by scanning every submission",
+  );
+  // The selected tab's total is its count, with the same filters.
+  const pendingTab = await decode(await api("?tab=suppressed"));
+  assert.equal(pendingTab.total, pendingTab.counts.suppressed);
+  assert.equal(pendingTab.total, 1);
+
+  // Automated lifecycle emails: each new user queued a welcome email by trigger.
+  const later7 = new Date(Date.now() - 2 * 86400000).toISOString();
+  sql
+    .prepare("UPDATE lifecycle_emails SET status='sent',sent_at=?2 WHERE user_id=?1")
+    .run("person", now);
+  sql
+    .prepare(
+      "INSERT INTO lifecycle_emails(id,user_id,kind,status,error_code,created_at) VALUES('trial-person','person','connect_trial_ending','skipped','suppressed',?)",
+    )
+    .run(later7);
+  sql
+    .prepare(
+      "INSERT INTO lifecycle_emails(id,user_id,kind,status,created_at) VALUES('old-person','person','connect_trial_started','sent',?)",
+    )
+    .run(new Date(Date.now() - 20 * 86400000).toISOString());
+  const detail = await decode(await api("/person"));
+  assert.deepEqual(
+    detail.lifecycleEmails.map((row: any) => [row.kind, row.status, row.error_code]),
+    [
+      ["welcome", "sent", null],
+      ["connect_trial_ending", "skipped", "SUPPRESSED"],
+      ["connect_trial_started", "sent", null],
+    ],
+    "A person's automated emails are listed newest first, with canonical skip reasons",
+  );
+  assert(
+    !JSON.stringify(detail.lifecycleEmails).includes("details_json"),
+    "Email details stay out of the history",
+  );
+  const summary = (await decode(await api(""))).lifecycle;
+  assert.equal(summary.delivery, "off", "Without LIFECYCLE_EMAILS_ENABLED nothing is delivered");
+  assert.equal(summary.queued, 2, "The admin's and other user's welcome emails are still queued");
+  assert.equal(typeof summary.oldestQueuedAt, "string");
+  const recent = Object.fromEntries(
+    summary.recent.map((row: any) => [row.kind + ":" + row.status, row.count]),
+  );
+  assert.deepEqual(
+    recent,
+    { "welcome:queued": 2, "welcome:sent": 1, "connect_trial_ending:skipped": 1 },
+    "The 7-day summary leaves out the 20-day-old email",
+  );
+  env.LIFECYCLE_EMAILS_ENABLED = "1";
+  assert.equal((await decode(await api(""))).lifecycle.delivery, "no_sender");
+  env.SENDPULSE_API_KEY = "fixture-sendpulse";
+  env.FOLLOWUP_REPLY_TO = "support@example.invalid";
+  assert.equal((await decode(await api(""))).lifecycle.delivery, "on");
+  delete env.LIFECYCLE_EMAILS_ENABLED;
+  delete env.SENDPULSE_API_KEY;
+  delete env.FOLLOWUP_REPLY_TO;
+  // A failing lifecycle read hides only its own panel and history.
+  const workingDb = env.DB;
+  env.DB = {
+    prepare(query: string) {
+      if (/FROM lifecycle_emails\s+WHERE (status|user_id)/.test(query))
+        throw new Error("D1_ERROR: simulated");
+      return workingDb.prepare(query);
+    },
+  };
+  const degraded = await decode(await api(""));
+  assert.equal(degraded.lifecycle, null);
+  assert(degraded.items.length > 0, "The follow-up list still loads");
+  assert.equal((await decode(await api("/person"))).lifecycleEmails, null);
+  env.DB = workingDb;
   for (const template of FOLLOWUP_TEMPLATES)
     for (const locale of ["en", "zh"] as const) {
       const rendered = followupTemplate(template.id, locale, {
@@ -483,7 +573,7 @@ try {
       assert(!/[\r\n]/.test(rendered.subject));
     }
   console.log(
-    "User follow-ups: admin host/RBAC/CSRF, active MCP segmentation, editable versioned drafts, stale review protection, contact consent, draft replay, concurrent dispatch, cooldown, ambiguous delivery, unsubscribe and feedback attribution passed. No real emails sent.",
+    "User follow-ups: admin host/RBAC/CSRF, active MCP segmentation, editable versioned drafts, stale review protection, contact consent, draft replay, concurrent dispatch, cooldown, ambiguous delivery, unsubscribe, feedback attribution by indexed source, per-tab totals, automated lifecycle email history and summary with isolated failures passed. No real emails sent.",
   );
 } finally {
   globalThis.fetch = native;

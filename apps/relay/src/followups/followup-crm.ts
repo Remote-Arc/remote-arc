@@ -13,6 +13,7 @@ import type { FollowupEnv } from "./followup-common.js";
 import { stamp } from "./followup-common.js";
 import { followupEmailSender } from "../platform/email-sender.js";
 import { followupEmailBudget } from "./followup-budget.js";
+import { lifecycleEmailSummary } from "./lifecycle-admin.js";
 
 // The next step each user still needs, in funnel order. The admin page
 // suggests the matching template.
@@ -52,7 +53,6 @@ export async function listFollowupPeople(env: FollowupEnv, url: URL, selection =
   const at = stamp(),
     quota = await followupQuotaContext(env, at);
   const cte = `WITH ${followupQuotaCtes}, facts AS (SELECT u.id,u.email,u.name,u.created_at,c.status,c.note,c.next_followup_at,c.consent_at,c.consent_note,c.suppressed_at,
-    (SELECT COUNT(*) FROM user_followup_batch_recipients r JOIN user_followup_batches b ON b.id=r.batch_id WHERE r.user_id=u.id AND b.status='queued' AND r.status IN ('pending','processing')) queued_followups,
     (SELECT COUNT(*) FROM devices d WHERE d.user_id=u.id AND d.revoked_at IS NULL) devices,
     (SELECT COUNT(*) FROM devices d WHERE d.user_id=u.id AND d.revoked_at IS NULL AND d.platform<>'browser') computers,
     (SELECT COUNT(*) FROM app_connections a WHERE a.user_id=u.id AND a.status='active') apps,
@@ -60,8 +60,7 @@ export async function listFollowupPeople(env: FollowupEnv, url: URL, selection =
     ${followupQuotaFacts},
     COALESCE((SELECT SUM(tool_calls) FROM user_monthly_usage m WHERE m.user_id=u.id),0) calls,
     (SELECT COUNT(*) FROM arc_chat_runs r WHERE r.user_id=u.id) arc_runs,
-    (SELECT MAX(sent_at) FROM user_followup_messages m WHERE m.user_id=u.id AND m.status='sent') last_contact_at,
-    (SELECT COUNT(*) FROM website_submissions s WHERE lower(s.email)=lower(u.email) AND s.source IN (SELECT 'followup:'||id FROM user_followup_messages m WHERE m.user_id=u.id)) feedback_count
+    (SELECT MAX(sent_at) FROM user_followup_messages m WHERE m.user_id=u.id AND m.status='sent') last_contact_at
     FROM users u LEFT JOIN user_followup_contacts c ON c.user_id=u.id),
   ${followupQuotaPeople}, people AS (SELECT *,quota_base+quota_extra+quota_reward monthly_limit,${nextStep} next_step FROM quota_facts)`;
   const base = `(email LIKE ?1 OR COALESCE(name,'') LIKE ?1) AND (?2='all' OR (?2='unconnected' AND devices=0 AND apps=0) OR (?2='device-only' AND devices>0 AND mcp_connections=0 AND suppressed_at IS NULL) OR (?2='unused' AND calls=0 AND arc_runs=0) OR (?2='active' AND (calls>0 OR arc_runs>0)) OR (?2='due' AND next_followup_at<=?3 AND suppressed_at IS NULL) OR (?2='suppressed' AND suppressed_at IS NOT NULL) OR (?2 LIKE 'step:%' AND next_step=substr(?2,6) AND suppressed_at IS NULL))`;
@@ -77,12 +76,12 @@ export async function listFollowupPeople(env: FollowupEnv, url: URL, selection =
   };
   const order = orders[url.searchParams.get("sort") || "due"] || orders.due,
     args = ["%" + query + "%", segment, at, tab, usage, quota];
-  const count = await env.DB.prepare(
-    cte + ` SELECT COUNT(*) count FROM people WHERE ${base} AND ${usageBase} AND ${filter}`,
-  )
-    .bind(...args)
-    .first<{ count: number }>();
   if (selection) {
+    const count = await env.DB.prepare(
+      cte + ` SELECT COUNT(*) count FROM people WHERE ${base} AND ${usageBase} AND ${filter}`,
+    )
+      .bind(...args)
+      .first<{ count: number }>();
     const rows = await env.DB.prepare(
       cte +
         ` SELECT id FROM people WHERE ${base} AND ${usageBase} AND ${filter} ORDER BY ${order} LIMIT 100`,
@@ -91,10 +90,14 @@ export async function listFollowupPeople(env: FollowupEnv, url: URL, selection =
       .all<{ id: string }>();
     return json({ ids: rows.results.map((row) => row.id), total: count?.count || 0, limit: 100 });
   }
-  const [rows, counts, funnel, budget] = await Promise.all([
+  const [rows, counts, funnel, budget, lifecycle] = await Promise.all([
     env.DB.prepare(
       cte +
-        ` SELECT id,email,name,created_at,status,note,next_followup_at,consent_at,consent_note,suppressed_at,queued_followups,devices,computers,apps,mcp_connections,calls,arc_runs,last_contact_at,feedback_count,next_step,monthly_calls,monthly_limit FROM people WHERE ${base} AND ${usageBase} AND ${filter} ORDER BY ${order} LIMIT 30 OFFSET ?7`,
+        `, page AS MATERIALIZED (SELECT id,email,name,created_at,status,note,next_followup_at,consent_at,consent_note,suppressed_at,devices,computers,apps,mcp_connections,calls,arc_runs,last_contact_at,next_step,monthly_calls,monthly_limit FROM people WHERE ${base} AND ${usageBase} AND ${filter} ORDER BY ${order} LIMIT 30 OFFSET ?7)
+  SELECT page.*,
+    (SELECT COUNT(*) FROM user_followup_batch_recipients r JOIN user_followup_batches b ON b.id=r.batch_id WHERE r.user_id=page.id AND b.status='queued' AND r.status IN ('pending','processing')) queued_followups,
+    (SELECT COUNT(*) FROM user_followup_messages m JOIN website_submissions s ON s.source='followup:'||m.id WHERE m.user_id=page.id AND lower(s.email)=lower(page.email)) feedback_count
+  FROM page ORDER BY ${order}`,
     )
       .bind(...args, page * 30)
       .all(),
@@ -103,7 +106,7 @@ export async function listFollowupPeople(env: FollowupEnv, url: URL, selection =
         ` SELECT COUNT(*) 'all',COALESCE(SUM(${pending}),0) pending,COALESCE(SUM(${followed}),0) contacted,COALESCE(SUM(status='waiting' AND suppressed_at IS NULL),0) waiting,COALESCE(SUM(status='resolved' AND suppressed_at IS NULL),0) resolved,COALESCE(SUM(suppressed_at IS NOT NULL),0) suppressed,COALESCE(SUM(next_followup_at<=?3 AND suppressed_at IS NULL AND COALESCE(status,'new')<>'resolved'),0) due FROM people WHERE ${base} AND ${usageBase}`,
     )
       .bind(...args)
-      .first(),
+      .first<Record<string, number>>(),
     // Whole user base, independent of the current filters.
     env.DB.prepare(
       cte +
@@ -113,15 +116,22 @@ export async function listFollowupPeople(env: FollowupEnv, url: URL, selection =
       .bind(...args)
       .first(),
     followupEmailBudget(env),
+    // A failing summary hides only the automated-email panel, not the list.
+    lifecycleEmailSummary(env).catch((error) => {
+      console.error("lifecycle_summary_failed", String(error).slice(0, 200));
+      return null;
+    }),
   ]);
   return json({
     items: rows.results,
-    total: count?.count || 0,
+    // The per-tab counts share the list's filters, so the selected tab's count is its total.
+    total: Number(counts?.[tab] || 0),
     page,
     pageSize: 30,
     counts,
     funnel,
     emailBudget: budget,
+    lifecycle,
     emailConfigured: Boolean(followupEmailSender(env)),
   });
 }

@@ -62,9 +62,31 @@ export type Mail = {
   batch_status?: string | null;
   batch_recipient_status?: string | null;
 };
+export type LifecycleKind =
+  "welcome" | "connect_trial_started" | "connect_trial_ending" | "plan_started";
+export type LifecycleStatus = "queued" | "sending" | "sent" | "failed" | "unknown" | "skipped";
+/** An automated email the product sent (or skipped) for one person. */
+export type LifecycleEmail = {
+  id: string;
+  kind: LifecycleKind;
+  status: LifecycleStatus;
+  error_code: string | null;
+  created_at: string;
+  attempted_at: string | null;
+  sent_at: string | null;
+};
+export type LifecycleSummary = {
+  delivery: "on" | "off" | "no_sender";
+  queued: number;
+  oldestQueuedAt: string | null;
+  since: string;
+  recent: Array<{ kind: LifecycleKind; status: LifecycleStatus; count: number }>;
+};
 export type ContactDetail = {
   contact: Contact;
   messages: Mail[];
+  /** Null when the automated-email history could not be read. */
+  lifecycleEmails?: LifecycleEmail[] | null;
   rewardAvailable?: boolean;
   emailConfigured: boolean;
   sender?: { from: string; replyTo: string } | null;
@@ -90,6 +112,7 @@ export type EmailBudget = {
   hourly?: { limit: number; used: number; remaining: number };
   monthly?: { limit: number; used: number; remaining: number; windowDays: number };
   otpUsage?: { daily: number; hourly: number; monthly: number };
+  lifecycleUsage?: { daily: number; hourly: number; monthly: number };
 };
 export function followupBudgetSummary(budget: EmailBudget) {
   return [
@@ -116,6 +139,8 @@ export type FollowupList = {
   counts: Record<FollowupTab | "due", number>;
   funnel?: FollowupFunnel;
   emailBudget?: EmailBudget;
+  /** Null when the automated-email summary could not be read. */
+  lifecycle?: LifecycleSummary | null;
 };
 export type FollowupBatch = {
   id: string;

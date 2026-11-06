@@ -161,7 +161,7 @@
   padding: 84px 0;
   border-top: 1px solid var(--line);
 }
-.landingContent .eyebrow {
+.landingContent .eyebrow:not(:where(.homeSecurityIntro *)) {
   font-size: 12px;
   font-weight: 750;
   letter-spacing: 0.11em;
@@ -171,7 +171,7 @@
   max-width: 900px;
   margin-bottom: 34px;
 }
-.landingContent h2 {
+.landingContent h2:not(:where(.homeSecurityIntro *)) {
   margin: 15px 0 20px;
   max-width: 900px;
   font-size: clamp(32px, 4.3vw, 50px);
@@ -179,7 +179,7 @@
   letter-spacing: -0.038em;
   color: var(--text);
 }
-.landingContent h3 {
+.landingContent h3:not(:where(.homeSecurityIntro *)) {
   color: var(--text);
 }
 .modernSectionIntro > p,
@@ -1156,7 +1156,7 @@
   .landingContent .sectionBlock {
     padding: 52px 0;
   }
-  .landingContent h2 {
+  .landingContent h2:not(:where(.homeSecurityIntro *)) {
     font-size: 34px;
     line-height: 1.16;
     margin-top: 12px;

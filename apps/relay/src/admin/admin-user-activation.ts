@@ -20,6 +20,13 @@ export type AdminUserRow = ActivationEvidence & {
   linked_login: "google" | "email_only";
   first_mcp_client: string | null;
 };
+// Must stay textually identical to the partial-index predicates in
+// 0078_admin_query_indexes.sql, or SQLite will not use those indexes.
+const SUCCESSFUL_AUDIT =
+  "event_type='mcp.tool_call' AND success=1 AND device_id IS NOT NULL AND (outcome IS NULL OR outcome='allowed')";
+const SUCCESSFUL_PRODUCT_EVENT =
+  "source='server' AND outcome='succeeded' AND name IN ('device.tool.completed','app.call.succeeded','task.run.succeeded')";
+
 export function activationOptions(url: URL) {
   const stage = url.searchParams.get("activation") || "all";
   const sort = url.searchParams.get("sort") || "usage";
@@ -80,16 +87,29 @@ export async function listAdminUsers(
   ];
   // Source ledgers are intentionally separate from charged calls and login/page views.
   // Device audit success proves an operation, not completion of an end-to-end goal.
-  const cte = (credits: boolean) => `WITH candidates AS MATERIALIZED (
+  // Each predicate matches a partial index from 0078_admin_query_indexes.sql, so the
+  // first and latest success per user are index seeks instead of a scan of every success.
+  const sources = [
+    ["audit_events", "created_at", SUCCESSFUL_AUDIT],
+    ["app_calls", "updated_at", "status='succeeded'"],
+    ["arc_chat_runs", "updated_at", "status='succeeded'"],
+    ["product_events", "occurred_at", SUCCESSFUL_PRODUCT_EVENT],
+  ] as const;
+  const seek = (fn: "MIN" | "MAX", user: string, after = "") =>
+    sources.map(
+      ([table, at, predicate]) =>
+        `(SELECT ${fn}(${at}) FROM ${table} WHERE user_id=${user} AND ${predicate}${after ? ` AND ${at}>=${after}` : ""} AND ${at}<=?2)`,
+    );
+  // SQLite's multi-argument MIN/MAX return NULL when any argument is NULL.
+  const earliest = (values: string[]) =>
+    `NULLIF(MIN(${values.map((value) => `COALESCE(${value},'~')`).join(",")}),'~')`;
+  const latest = (values: string[]) =>
+    `NULLIF(MAX(${values.map((value) => `COALESCE(${value},'')`).join(",")}),'')`;
+  const cte = (credits: boolean) => `WITH RECURSIVE candidates AS MATERIALIZED (
     SELECT * FROM users WHERE email LIKE ?3 ESCAPE '\\' OR COALESCE(name,'') LIKE ?3 ESCAPE '\\'
-  ), successful_use AS (
-    SELECT user_id,created_at AS at FROM audit_events WHERE user_id IN (SELECT id FROM candidates) AND event_type='mcp.tool_call' AND success=1 AND device_id IS NOT NULL AND (outcome IS NULL OR outcome='allowed')
-    UNION ALL SELECT user_id,updated_at FROM app_calls WHERE user_id IN (SELECT id FROM candidates) AND status='succeeded'
-    UNION ALL SELECT user_id,updated_at FROM arc_chat_runs WHERE user_id IN (SELECT id FROM candidates) AND status='succeeded'
-    UNION ALL SELECT user_id,occurred_at FROM product_events WHERE user_id IN (SELECT id FROM candidates) AND source='server' AND outcome='succeeded' AND name IN ('device.tool.completed','app.call.succeeded','task.run.succeeded')
   ), success_summary AS MATERIALIZED (
-    SELECT user_id,MIN(at) first_success_at,MAX(at) last_success_at,COUNT(DISTINCT substr(at,1,10)) successful_days
-    FROM successful_use WHERE at<=?2 GROUP BY user_id
+    SELECT id user_id,${earliest(seek("MIN", "u.id"))} first_success_at,${latest(seek("MAX", "u.id"))} last_success_at
+    FROM candidates u
   ), facts AS MATERIALIZED (SELECT u.id,u.email,u.name,u.created_at,u.role,u.plan,
     CASE WHEN u.google_sub LIKE 'email:%' THEN 'email_only' ELSE 'google' END AS linked_login,
     (SELECT COALESCE(NULLIF(c.client_name,''),'MCP client') FROM oauth_tokens t LEFT JOIN oauth_clients c ON c.client_id=t.client_id
@@ -113,10 +133,11 @@ export async function listAdminUsers(
       THEN 1 ELSE 0 END online_history_complete,
     (SELECT MAX(created_at) FROM audit_events a WHERE a.user_id=u.id) last_activity,
     EXISTS(SELECT 1 FROM plan_grants g WHERE g.user_id=u.id AND g.plan='plus' AND g.revoked_at IS NULL AND (g.expires_at IS NULL OR g.expires_at>?2)) has_plus_grant,
-    ss.first_success_at,ss.last_success_at,COALESCE(ss.successful_days,0) successful_days
+    ss.first_success_at,ss.last_success_at,
+    CASE WHEN ss.first_success_at IS NULL THEN 0 WHEN substr(ss.first_success_at,1,10)<>substr(ss.last_success_at,1,10) THEN 2 ELSE 1 END __success_day_span
     FROM candidates u LEFT JOIN user_monthly_usage um ON um.user_id=u.id AND um.month_key=?1 LEFT JOIN success_summary ss ON ss.user_id=u.id
   ), staged AS MATERIALIZED (SELECT *,CASE
-    WHEN successful_days>=2 AND last_success_at>=?9 THEN 'returning_active'
+    WHEN __success_day_span>=2 AND last_success_at>=?9 THEN 'returning_active'
     WHEN first_success_at IS NOT NULL THEN 'activated'
     WHEN first_computer_online_at IS NOT NULL THEN 'online_no_success'
     WHEN first_computer_paired_at IS NOT NULL AND online_history_complete=1 THEN 'paired_never_online'
@@ -142,8 +163,18 @@ export async function listAdminUsers(
       .prepare(
         cte(credits) +
           `,
-      counted AS (SELECT *,${ACTIVATION_STAGES.map((stage, index) => `SUM(activation_stage='${stage.id}') OVER() ${aliases[index]}`).join(",")} FROM matched)
-      SELECT * FROM counted WHERE ?4='all' OR activation_stage=?4 ORDER BY ${order} LIMIT ?5 OFFSET ?6`,
+      counted AS (SELECT *,${ACTIVATION_STAGES.map((stage, index) => `SUM(activation_stage='${stage.id}') OVER() ${aliases[index]}`).join(",")} FROM matched),
+      page AS MATERIALIZED (SELECT * FROM counted WHERE ?4='all' OR activation_stage=?4 ORDER BY ${order} LIMIT ?5 OFFSET ?6),
+      -- Exact successful days for this page only: jump from each successful day to
+      -- the next one with index seeks, so reads grow with active days, not with calls.
+      success_days(user_id,day) AS (
+        SELECT id,substr(first_success_at,1,10) FROM page WHERE first_success_at IS NOT NULL
+        UNION ALL
+        SELECT user_id,substr(${earliest(seek("MIN", "success_days.user_id", "date(success_days.day,'+1 day')"))},1,10)
+        FROM success_days WHERE day IS NOT NULL
+      )
+      SELECT page.*,(SELECT COUNT(DISTINCT day) FROM success_days d WHERE d.user_id=page.id) successful_days
+      FROM page ORDER BY ${order}`,
       )
       .bind(...args)
       .all<CountedUser>();
@@ -169,9 +200,8 @@ export async function listAdminUsers(
       users: rows.results.map(
         (row) =>
           Object.fromEntries(
-            Object.entries(row).filter(
-              ([key]) => !aliases.includes(key as (typeof aliases)[number]),
-            ),
+            // Internal facet counters and the day-span hint never leave the query.
+            Object.entries(row).filter(([key]) => !key.startsWith("__")),
           ) as AdminUserRow,
       ),
       activationCounts,

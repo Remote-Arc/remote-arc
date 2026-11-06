@@ -74,18 +74,20 @@ type OperationsData = {
   page: number;
   pageSize: number;
   creditsReady: boolean;
+  // Null means not read for this view, or its section is unavailable.
   totals: {
-    users: number;
-    devices: number;
-    online: number;
+    users: number | null;
+    devices: number | null;
+    online: number | null;
     auditRows: number | null;
-    auditLast7d: number;
-    monthlyCalls: number;
+    auditLast7d: number | null;
+    monthlyCalls: number | null;
   };
+  unavailable?: OperationsSection[];
   limits: { free: number; plus: number };
   users: Account[];
   devices: Computer[];
-  activity: Hour[];
+  activity: Hour[] | null;
   filteredTotal: number;
   activationCounts: Record<ActivationStage, number>;
   billing: {
@@ -107,6 +109,7 @@ type LiveBilling = {
   note: string;
 };
 type Section = "users" | "devices" | "activity" | "costs";
+type OperationsSection = "users" | "devices" | "totals" | "activity";
 const relative = (value: string | null, tr: Translate) => {
   if (!value) return "—";
   const diff = Date.now() - Date.parse(value);
@@ -117,6 +120,13 @@ const relative = (value: string | null, tr: Translate) => {
   return `${Math.floor(diff / 86400_000)}d ago`;
 };
 const fmt = (v: number) => new Intl.NumberFormat("en").format(v);
+const count = (v: number | null | undefined) => (v == null ? "—" : fmt(v));
+const sectionNames: Record<OperationsSection, MessageKey> = {
+  users: "admin.adminOperations.unavailableUsers",
+  devices: "admin.adminOperations.unavailableDevices",
+  totals: "admin.adminOperations.unavailableTotals",
+  activity: "admin.adminOperations.unavailableActivity",
+};
 
 export function AdminOperations({
   readOnly = false,
@@ -178,6 +188,8 @@ export function AdminOperations({
         sort,
         query: appliedQuery,
         auditTotals: section === "costs" ? "1" : "0",
+        // Only the Activity tab reads the chart history.
+        activity: section === "activity" ? "1" : "0",
       });
       const res = await fetch("/api/admin/operations?" + parameters, {
         credentials: "same-origin",
@@ -202,7 +214,7 @@ export function AdminOperations({
     return () => {
       requestSequence.current++;
     };
-  }, [page, activation, sort, appliedQuery, section === "costs"]);
+  }, [page, activation, sort, appliedQuery, section === "costs", section === "activity"]);
   useEffect(() => {
     const nextQuery = query.trim();
     if (nextQuery === appliedQuery) return;
@@ -215,6 +227,7 @@ export function AdminOperations({
   }, [query, appliedQuery]);
 
   const filtered = data?.users || [];
+  const missing = data?.unavailable || [];
   const chosen = data?.users.find((u) => u.id === selectedUser) || null;
   const userDetailBusy = saving || deviceBusy || plusBusy;
   useEffect(() => {
@@ -278,7 +291,7 @@ export function AdminOperations({
   const userNames = new Map((data?.users || []).map((u) => [u.id, u.email]));
   const hours = useMemo(() => {
     if (!data) return [];
-    const amounts = new Map(data.activity.map((x) => [x.hour, x.calls]));
+    const amounts = new Map((data.activity || []).map((x) => [x.hour, x.calls]));
     const ending = Math.floor(Date.parse(data.checkedAt) / 3600_000) * 3600_000;
     return Array.from({ length: 48 }, (_, i) => {
       const instant = new Date(ending - (47 - i) * 3600_000);
@@ -291,8 +304,9 @@ export function AdminOperations({
   const peak = Math.max(1, ...hours.map((h) => h.calls));
   const quietWindow = useMemo(() => {
     const list = data?.activity || [];
+    // The chart covers 48 hours, so each hour of the day appears at most twice.
     const days = new Set(list.map((item) => item.hour.slice(0, 10)));
-    if (days.size < 3 || list.reduce((sum, item) => sum + item.calls, 0) < 100) return null;
+    if (days.size < 2 || list.reduce((sum, item) => sum + item.calls, 0) < 100) return null;
     const totals = Array.from({ length: 24 }, (_, i) => ({ hour: i, calls: 0 }));
     list.forEach((item) => {
       const index = Number(item.hour.slice(11, 13));
@@ -609,23 +623,30 @@ export function AdminOperations({
           {error}
         </div>
       )}
+      {!error && missing.length > 0 && (
+        <div className="opsNotice" role="alert">
+          {tr("admin.adminOperations.someDataCouldNotBeLoaded") +
+            missing.map((key) => tr(sectionNames[key])).join(" · ") +
+            tr("admin.adminOperations.refreshToTryAgain")}
+        </div>
+      )}
       <div className="opsStats">
         <div>
           <span>{tr("admin.adminOperations.registeredUsers")}</span>
-          <strong>{data ? fmt(data.totals.users) : "—"}</strong>
+          <strong>{count(data?.totals.users)}</strong>
         </div>
         <div>
           <span>{tr("admin.adminOperations.pairedDevices")}</span>
-          <strong>{data ? fmt(data.totals.devices) : "—"}</strong>
+          <strong>{count(data?.totals.devices)}</strong>
         </div>
         <div>
           <span>{tr("admin.adminOperations.onlineNow")}</span>
-          <strong>{data ? fmt(data.totals.online) : "—"}</strong>
+          <strong>{count(data?.totals.online)}</strong>
           <small>{tr("admin.adminOperations.verifiedAgainstDeviceConnections")}</small>
         </div>
         <div>
-          <span>{tr("admin.adminOperations.auditEventsD")}</span>
-          <strong>{data ? fmt(data.totals.auditLast7d) : "—"}</strong>
+          <span>{tr("admin.adminOperations.toolCallsThisMonth")}</span>
+          <strong>{count(data?.totals.monthlyCalls)}</strong>
         </div>
       </div>
       <nav className="opsTabs" aria-label={tr("admin.adminOperations.operationalViews")}>
@@ -827,7 +848,11 @@ export function AdminOperations({
                 ))}
                 {!loading && filtered.length === 0 && (
                   <tr>
-                    <td colSpan={9}>{tr("admin.adminOperations.noUsersMatchTheseFilters")}</td>
+                    <td colSpan={9}>
+                      {missing.includes("users")
+                        ? tr("admin.adminOperations.theUserListCouldNotBeLoaded")
+                        : tr("admin.adminOperations.noUsersMatchTheseFilters")}
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -1191,11 +1216,15 @@ export function AdminOperations({
             ))}
           </div>
           <p className="opsHelp">
+            {tr("admin.adminOperations.toolCallsInTheLastHours") +
+              count(data?.activity ? hours.reduce((sum, h) => sum + h.calls, 0) : null)}
+          </p>
+          <p className="opsHelp">
             {quietWindow
-              ? tr("admin.adminOperations.observedLowerActivityHoursAucklandTime") +
+              ? tr("admin.adminOperations.lowerActivityHoursInTheLastHours") +
                 quietWindow.join(" · ") +
                 tr("admin.adminOperations.treatAsAPlanningHintNot")
-              : tr("admin.adminOperations.notEnoughMultiDayActivityFor")}
+              : tr("admin.adminOperations.notEnoughActivityInTheLastHours")}
           </p>
           <p className="opsHelp">
             {tr("admin.adminOperations.countsDeriveFromRecordedAuditEvents")}
@@ -1285,7 +1314,7 @@ export function AdminOperations({
             </div>
             <div>
               <span>{tr("admin.adminOperations.monthlyMcpToolCalls")}</span>
-              <strong>{data ? fmt(data.totals.monthlyCalls) : "—"}</strong>
+              <strong>{count(data?.totals.monthlyCalls)}</strong>
               <small>{tr("admin.adminOperations.trackedByRemoteArcD1Not")}</small>
             </div>
           </div>

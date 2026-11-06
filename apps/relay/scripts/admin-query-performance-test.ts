@@ -67,24 +67,113 @@ const response = await f.call(ADMIN + "/api/admin/operations?auditTotals=0", {
 assert.equal(response.status, 200);
 const bounded = (await response.json()) as any;
 assert.equal(bounded.totals.auditRows, null, "An omitted lifetime total is unknown, never zero");
-assert.equal(bounded.totals.auditLast7d, 1);
-const audit = queries.filter((query) => query.includes("AS last7d"));
-assert.equal(audit.length, 1);
-const plan = f.sql
-  .prepare("EXPLAIN QUERY PLAN " + audit[0]!)
-  .all(new Date(now.getTime() - 7 * 86400000).toISOString());
-assert(
-  JSON.stringify(plan).includes("SEARCH"),
-  "The seven-day audit count performs a bounded index search",
+assert.equal(
+  bounded.totals.auditLast7d,
+  null,
+  "Without the lifetime count, no separate 7-day count is read",
 );
+const chart = queries.filter((query) => query.includes("GROUP BY substr(created_at,1,13)"));
+assert.equal(chart.length, 1);
+const plan = f.sql
+  .prepare("EXPLAIN QUERY PLAN " + chart[0]!)
+  .all(new Date(now.getTime() - 48 * 3600000).toISOString());
+assert(JSON.stringify(plan).includes("SEARCH"), "The hourly chart performs a bounded index search");
 const legacy = await f.call(ADMIN + "/api/admin/operations", { headers: { cookie } });
 assert.equal(legacy.status, 200);
-assert.equal(
-  ((await legacy.json()) as any).totals.auditRows,
-  2,
-  "Existing callers retain lifetime totals",
+const legacyBody = (await legacy.json()) as any;
+assert.equal(legacyBody.totals.auditRows, 2, "Existing callers retain lifetime totals");
+assert.equal(legacyBody.totals.auditLast7d, 1, "The lifetime read still splits out 7 days");
+
+// The Users tab skips audit history reads; the Activity tab asks for its 48-hour chart.
+queries.length = 0;
+const usersTab = await f.call(ADMIN + "/api/admin/operations?auditTotals=0&activity=0", {
+  headers: { cookie },
+});
+assert.equal(usersTab.status, 200);
+const usersBody = (await usersTab.json()) as any;
+assert.equal(usersBody.activity, null, "A chart that was not read is unknown, never empty");
+assert.equal(usersBody.totals.auditLast7d, null);
+assert.deepEqual(usersBody.unavailable, []);
+assert(
+  !queries.some((query) => /FROM audit_events\s+WHERE created_at>=/.test(query)),
+  "The Users tab issues no time-range read of audit history",
 );
+f.sql
+  .prepare(
+    `INSERT INTO audit_events(id,user_id,device_id,event_type,success,created_at)
+    VALUES('three-days','query-admin','fixture-device','mcp.tool_call',1,?)`,
+  )
+  .run(new Date(now.getTime() - 3 * 86400000).toISOString());
+queries.length = 0;
+const activityTab = (await (
+  await f.call(ADMIN + "/api/admin/operations?auditTotals=0&activity=1", { headers: { cookie } })
+).json()) as any;
+assert.deepEqual(
+  activityTab.activity.map((row: { hour: string }) => row.hour),
+  [recent.slice(0, 13)],
+  "The chart holds only the last 48 hours, not a 3-day-old call",
+);
+assert.equal(activityTab.totals.auditLast7d, null);
+assert(
+  !queries.some((query) => query.includes("AS last7d")),
+  "The Activity tab reads no 7-day audit count",
+);
+
+// One failing read hides its own section; the rest of the page still loads.
+f.sql
+  .prepare(
+    "INSERT INTO devices(id,user_id,name,platform,credential_hash,created_at,last_seen) VALUES('fixture-device','query-admin','Mac','darwin','credential',?,?)",
+  )
+  .run(recent, recent);
+f.env.DB = {
+  ...original,
+  prepare(query: string) {
+    if (query.includes("ORDER BY COALESCE(d.last_seen,d.created_at) DESC LIMIT 200"))
+      throw new Error("D1_ERROR: simulated devices failure");
+    return original.prepare(query);
+  },
+} as D1Database;
+const partial = await f.call(ADMIN + "/api/admin/operations?auditTotals=0&activity=0", {
+  headers: { cookie },
+});
+assert.equal(partial.status, 200);
+const partialBody = (await partial.json()) as any;
+assert.deepEqual(partialBody.unavailable, ["devices"]);
+assert.equal(partialBody.totals.online, null, "Online is unknown without the device list");
+assert.equal(partialBody.totals.users, 1);
+assert.equal(partialBody.users[0].id, "query-admin", "The user list survives a devices failure");
+
+f.env.DB = {
+  ...original,
+  prepare(query: string) {
+    if (/FROM sessions/.test(query)) return original.prepare(query);
+    throw new Error("D1_ERROR: simulated outage");
+  },
+} as D1Database;
+const outage = await f.call(ADMIN + "/api/admin/operations", { headers: { cookie } });
+assert.equal(outage.status, 503);
+assert.equal(outage.headers.get("retry-after"), "5");
+assert.deepEqual(((await outage.json()) as any).unavailable, [
+  "users",
+  "devices",
+  "totals",
+  "activity",
+]);
+
+// A device registry that never answers cannot hold the page open.
+f.env.DB = original;
+f.state.registry = () => new Promise<Response>(() => {});
+const started = Date.now();
+const stalled = await f.call(ADMIN + "/api/admin/operations?auditTotals=0&activity=0", {
+  headers: { cookie },
+});
+assert.equal(stalled.status, 200);
+assert(Date.now() - started < 6000, "The presence deadline ends the wait");
+const stalledBody = (await stalled.json()) as any;
+assert.equal(stalledBody.devices[0].statusVerified, false, "No answer is unknown, not offline");
+assert.equal(stalledBody.totals.online, 0);
+f.state.registry = null;
 f.sql.close();
 console.log(
-  "PASS: populated/rerunnable index migration, actual indexed plans, bounded audit reads and legacy Admin totals",
+  "PASS: populated/rerunnable index migration, actual indexed plans, bounded audit reads, legacy Admin totals, per-tab audit reads, isolated failing sections and a presence deadline",
 );

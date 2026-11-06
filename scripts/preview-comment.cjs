@@ -74,7 +74,6 @@ const GROUPS = [
       ["Payments & offers", "/admin-preview?section=payments"],
       ["Users & operations · usage diagnostics", "/admin-preview?section=operations"],
       ["Service health", "/admin-preview?section=health"],
-      ["Monitor", "/monitor"],
     ],
   },
 ];

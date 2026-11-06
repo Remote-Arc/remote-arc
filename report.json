@@ -2,17 +2,17 @@
   "version": 1,
   "repository": "Remote-Arc/remote-arc",
   "source": {
-    "runId": 42171382259,
-    "sha": "c5e66240bc72714a8be5dc34ec629d41c1b4e892",
-    "url": "https://github.com/Remote-Arc/remote-arc/actions/runs/42171382259",
-    "measuredAt": "2026-11-06T06:15:44Z"
+    "runId": 42177470562,
+    "sha": "5f22d7b0023d91b07dbecaa800e4489cbded0e3b",
+    "url": "https://github.com/Remote-Arc/remote-arc/actions/runs/42177470562",
+    "measuredAt": "2026-11-06T07:13:11Z"
   },
   "scope": "Production TypeScript/TSX and Linux Go module statements; Apps/Relay are overlapping breakouts.",
   "target": 90,
   "overall": {
-    "covered": 77661,
+    "covered": 77655,
     "total": 135635,
-    "pct": 57.26
+    "pct": 57.25
   },
   "scopes": {
     "apps": {
@@ -44,9 +44,9 @@
         "pct": 54.62
       },
       "branches": {
-        "covered": 13612,
+        "covered": 13611,
         "total": 16566,
-        "pct": 82.17
+        "pct": 82.16
       },
       "functions": {
         "covered": 1326,
@@ -66,9 +66,9 @@
         "pct": 93.02
       },
       "branches": {
-        "covered": 12276,
+        "covered": 12275,
         "total": 14564,
-        "pct": 84.29
+        "pct": 84.28
       },
       "functions": {
         "covered": 1062,
@@ -83,9 +83,9 @@
     },
     "agent": {
       "statements": {
-        "covered": 6804,
+        "covered": 6798,
         "total": 7529,
-        "pct": 90.37
+        "pct": 90.29
       }
     },
     "core": {

@@ -53,6 +53,9 @@ export async function writeAudit(
 }
 
 export async function readAudit(env: AuditEnv, userId: string, limit = 20) {
+  // SQLite rejects a LIMIT that is not an integer, and Math.min/max pass NaN
+  // through, so a value such as `?limit=abc` used to fail in D1 with a 500.
+  const rowLimit = Number.isFinite(limit) ? Math.min(Math.max(Math.trunc(limit), 1), 100) : 20;
   const rows = await env.DB.prepare(
     `SELECT a.id, a.device_id, a.event_type, a.tool_name, a.success,
             a.request_id, a.client_id, c.client_name, a.grant_id, a.outcome,
@@ -63,7 +66,7 @@ export async function readAudit(env: AuditEnv, userId: string, limit = 20) {
      ORDER BY a.created_at DESC
      LIMIT ?2`,
   )
-    .bind(userId, Math.min(Math.max(limit, 1), 100))
+    .bind(userId, rowLimit)
     .all<AuditEvent>();
 
   return rows.results || [];

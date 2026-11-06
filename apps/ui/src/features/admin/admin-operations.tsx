@@ -1,6 +1,7 @@
 import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useI18n } from "../../app/i18n.js";
+import { ProductIcon } from "../../components/product-icon.js";
 import { AdminUserUsageInsights } from "./user-usage-insights.js";
 import {
   ACTIVATION_STAGES,
@@ -145,6 +146,8 @@ export function AdminOperations({
   const [appliedQuery, setAppliedQuery] = useState("");
   const requestSequence = useRef(0);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const userDetailDialog = useRef<HTMLDialogElement>(null);
+  const userDetailTitle = useId();
   const [credit, setCredit] = useState("500");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
@@ -212,6 +215,11 @@ export function AdminOperations({
 
   const filtered = data?.users || [];
   const chosen = data?.users.find((u) => u.id === selectedUser) || null;
+  const userDetailBusy = saving || deviceBusy || plusBusy;
+  useEffect(() => {
+    const dialog = userDetailDialog.current;
+    if (dialog && !dialog.open) dialog.showModal();
+  }, [chosen?.id]);
   const activeDeviceGrants = deviceGrants.filter(
     (g) => !g.revoked_at && (!g.expires_at || Date.parse(g.expires_at) > Date.now()),
   );
@@ -853,8 +861,10 @@ export function AdminOperations({
                     <td>{relative(u.last_activity, locale)}</td>
                     <td>
                       <button
+                        type="button"
+                        aria-haspopup="dialog"
                         onClick={() => {
-                          setSelectedUser(u.id === selectedUser ? null : u.id);
+                          setSelectedUser(u.id);
                           setNotice("");
                         }}
                       >
@@ -874,246 +884,271 @@ export function AdminOperations({
             </table>
           </div>
           {chosen && (
-            <AdminUserUsageInsights
-              key={chosen.id}
-              userId={chosen.id}
-              used={chosen.used}
-              allowance={chosen.allowance}
-              extra={chosen.extra}
-            />
-          )}
-          {chosen && (
-            <div className="opsUserDetail">
-              <div>
-                <h3>{chosen.name || chosen.email}</h3>
-                <p>
-                  {chosen.email} · {tr("Joined", "注册于")}{" "}
-                  {new Date(chosen.created_at).toLocaleDateString()}
-                </p>
-                <p>
-                  {tr("Monthly plan quota", "本月基础额度")}:{" "}
-                  {chosen.allowance === null ? "∞" : fmt(chosen.allowance - chosen.extra)} ·{" "}
-                  {tr("Extra granted", "额外赠送")}: {fmt(chosen.extra)}
-                </p>
-                <UserActivationEvidence evidence={chosen} />
-              </div>
-              <div className="opsPlusGrant">
+            <dialog
+              ref={userDetailDialog}
+              className="opsUserDetailDialog"
+              aria-labelledby={userDetailTitle}
+              onClose={() => setSelectedUser(null)}
+              onCancel={(event) => {
+                if (userDetailBusy) event.preventDefault();
+              }}
+            >
+              <header>
+                <h3 id={userDetailTitle}>{chosen.name || chosen.email}</h3>
+                <button
+                  type="button"
+                  className="ghostButton"
+                  disabled={userDetailBusy}
+                  onClick={() => userDetailDialog.current?.close()}
+                  aria-label={tr("Close", "关闭")}
+                >
+                  <ProductIcon name="close" size={16} />
+                </button>
+              </header>
+              <AdminUserUsageInsights
+                key={chosen.id}
+                userId={chosen.id}
+                used={chosen.used}
+                allowance={chosen.allowance}
+                extra={chosen.extra}
+              />
+              <div className="opsUserDetail">
                 <div>
-                  <h4>{tr("Additional computer slots", "追加电脑名额")}</h4>
                   <p>
-                    {tr(
-                      "Extra slots add to the plan's computer limit. Browser companions are counted separately. Expiry prevents new pairings but does not disconnect already-paired computers.",
-                      "额外名额叠加到套餐电脑上限，不占用浏览器扩展名额。",
-                    )}
+                    {chosen.email} · {tr("Joined", "注册于")}{" "}
+                    {new Date(chosen.created_at).toLocaleDateString()}
                   </p>
                   <p>
-                    <strong>
-                      {tr("Active extra slots", "当前额外名额")}: +{activeDeviceExtra}
-                    </strong>
-                    {" · "}
-                    {tr("Computers currently registered", "已注册电脑")}:{" "}
-                    {chosen.computer_count ?? chosen.device_count}
+                    {tr("Monthly plan quota", "本月基础额度")}:{" "}
+                    {chosen.allowance === null ? "∞" : fmt(chosen.allowance - chosen.extra)} ·{" "}
+                    {tr("Extra granted", "额外赠送")}: {fmt(chosen.extra)}
                   </p>
+                  <UserActivationEvidence evidence={chosen} />
                 </div>
-                <label>
-                  {tr("Add computers", "追加数量")}
-                  <input
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={deviceExtra}
-                    disabled={deviceBusy || readOnly || chosen.role === "admin"}
-                    onChange={(e) => setDeviceExtra(e.target.value)}
-                  />
-                </label>
-                <label>
-                  {tr("Duration", "生效时长")}
-                  <select
-                    value={deviceDuration}
-                    disabled={deviceBusy || readOnly}
-                    onChange={(e) => setDeviceDuration(e.target.value)}
-                  >
-                    <option value="7">{tr("7 days", "7 天")}</option>
-                    <option value="30">{tr("30 days", "30 天")}</option>
-                    <option value="90">{tr("90 days", "90 天")}</option>
-                    <option value="365">{tr("365 days", "365 天")}</option>
-                    <option value="never">{tr("Until revoked", "永久（直到撤销）")}</option>
-                    <option value="custom">{tr("Custom expiry", "自定义到期时间")}</option>
-                  </select>
-                </label>
-                {deviceDuration === "custom" && (
+                <div className="opsPlusGrant">
+                  <div>
+                    <h4>{tr("Additional computer slots", "追加电脑名额")}</h4>
+                    <p>
+                      {tr(
+                        "Extra slots add to the plan's computer limit. Browser companions are counted separately. Expiry prevents new pairings but does not disconnect already-paired computers.",
+                        "额外名额叠加到套餐电脑上限，不占用浏览器扩展名额。",
+                      )}
+                    </p>
+                    <p>
+                      <strong>
+                        {tr("Active extra slots", "当前额外名额")}: +{activeDeviceExtra}
+                      </strong>
+                      {" · "}
+                      {tr("Computers currently registered", "已注册电脑")}:{" "}
+                      {chosen.computer_count ?? chosen.device_count}
+                    </p>
+                  </div>
                   <label>
-                    {tr("Expires at (local time)", "到期时间（本地时区）")}
+                    {tr("Add computers", "追加数量")}
                     <input
-                      type="datetime-local"
-                      value={deviceUntil}
-                      onChange={(e) => setDeviceUntil(e.target.value)}
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={deviceExtra}
+                      disabled={deviceBusy || readOnly || chosen.role === "admin"}
+                      onChange={(e) => setDeviceExtra(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    {tr("Duration", "生效时长")}
+                    <select
+                      value={deviceDuration}
+                      disabled={deviceBusy || readOnly}
+                      onChange={(e) => setDeviceDuration(e.target.value)}
+                    >
+                      <option value="7">{tr("7 days", "7 天")}</option>
+                      <option value="30">{tr("30 days", "30 天")}</option>
+                      <option value="90">{tr("90 days", "90 天")}</option>
+                      <option value="365">{tr("365 days", "365 天")}</option>
+                      <option value="never">{tr("Until revoked", "永久（直到撤销）")}</option>
+                      <option value="custom">{tr("Custom expiry", "自定义到期时间")}</option>
+                    </select>
+                  </label>
+                  {deviceDuration === "custom" && (
+                    <label>
+                      {tr("Expires at (local time)", "到期时间（本地时区）")}
+                      <input
+                        type="datetime-local"
+                        value={deviceUntil}
+                        onChange={(e) => setDeviceUntil(e.target.value)}
+                        disabled={deviceBusy || readOnly}
+                      />
+                    </label>
+                  )}
+                  <label>
+                    {tr("Reason (audited)", "追加原因（审计记录）")}
+                    <input
+                      value={deviceReason}
+                      maxLength={500}
+                      onChange={(e) => setDeviceReason(e.target.value)}
                       disabled={deviceBusy || readOnly}
                     />
                   </label>
-                )}
-                <label>
-                  {tr("Reason (audited)", "追加原因（审计记录）")}
-                  <input
-                    value={deviceReason}
-                    maxLength={500}
-                    onChange={(e) => setDeviceReason(e.target.value)}
-                    disabled={deviceBusy || readOnly}
-                  />
-                </label>
-                <div className="opsPlusGrantActions">
-                  <button
-                    type="button"
-                    className="primaryButton"
-                    disabled={deviceBusy || readOnly || chosen.role === "admin"}
-                    onClick={() => void addDeviceCapacity()}
-                  >
-                    {deviceBusy
-                      ? tr("Saving…", "处理中…")
-                      : tr("Grant extra slots", "追加设备名额")}
-                  </button>
-                </div>
-                {activeDeviceGrants.length > 0 && (
-                  <div className="opsCapacityHistory">
-                    {activeDeviceGrants.map((g) => (
-                      <div key={g.id}>
-                        <span>
-                          +{g.extra_devices} ·{" "}
-                          {g.expires_at
-                            ? new Date(g.expires_at).toLocaleDateString()
-                            : tr("Until revoked", "直到撤销")}{" "}
-                          · {g.reason}
-                        </span>
-                        <button
-                          type="button"
-                          className="ghostButton"
-                          disabled={deviceBusy || readOnly}
-                          onClick={() => void revokeDeviceCapacity(g.id)}
-                        >
-                          {tr("Revoke", "撤销")}
-                        </button>
-                      </div>
-                    ))}
+                  <div className="opsPlusGrantActions">
+                    <button
+                      type="button"
+                      className="primaryButton"
+                      disabled={deviceBusy || readOnly || chosen.role === "admin"}
+                      onClick={() => void addDeviceCapacity()}
+                    >
+                      {deviceBusy
+                        ? tr("Saving…", "处理中…")
+                        : tr("Grant extra slots", "追加设备名额")}
+                    </button>
                   </div>
-                )}
-                {deviceNotice && <p role="status">{deviceNotice}</p>}
-              </div>
-              <div className="opsPlusGrant">
-                <div>
-                  <h4>{tr("Plus membership", "Plus 会员管理")}</h4>
-                  <p>
-                    {tr(
-                      "Grant Connect Plus with a chosen expiry. Hosted Arc model Credits are managed separately under Payments.",
-                      "为用户开通指定有效期的 Connect Plus；Arc 托管模型 Credits 在支付管理中独立管理。",
-                    )}
-                  </p>
-                  {activePlusGrant ? (
-                    <p>
-                      <strong>{tr("Active Plus grant", "当前有效的 Plus 授权")}</strong> ·{" "}
-                      {activePlusGrant.expires_at
-                        ? new Date(activePlusGrant.expires_at).toLocaleString()
-                        : tr("Until revoked", "手动撤销前有效")}
-                    </p>
-                  ) : (
-                    <p>{tr("No active administrator Plus grant", "暂无有效的管理员 Plus 授权")}</p>
+                  {activeDeviceGrants.length > 0 && (
+                    <div className="opsCapacityHistory">
+                      {activeDeviceGrants.map((g) => (
+                        <div key={g.id}>
+                          <span>
+                            +{g.extra_devices} ·{" "}
+                            {g.expires_at
+                              ? new Date(g.expires_at).toLocaleDateString()
+                              : tr("Until revoked", "直到撤销")}{" "}
+                            · {g.reason}
+                          </span>
+                          <button
+                            type="button"
+                            className="ghostButton"
+                            disabled={deviceBusy || readOnly}
+                            onClick={() => void revokeDeviceCapacity(g.id)}
+                          >
+                            {tr("Revoke", "撤销")}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   )}
+                  {deviceNotice && <p role="status">{deviceNotice}</p>}
                 </div>
-                <label>
-                  {tr("Duration", "开通时长")}
-                  <select
-                    aria-label={tr("Plus duration", "Plus 开通时长")}
-                    value={plusDuration}
-                    disabled={plusBusy || !!activePlusGrant}
-                    onChange={(e) => setPlusDuration(e.target.value)}
-                  >
-                    <option value="7">{tr("7 days", "7 天")}</option>
-                    <option value="30">{tr("30 days", "30 天")}</option>
-                    <option value="90">{tr("90 days", "90 天")}</option>
-                    <option value="365">{tr("365 days", "365 天")}</option>
-                    <option value="never">{tr("Until revoked", "永久（直到撤销）")}</option>
-                    <option value="custom">{tr("Custom expiry", "自定义到期时间")}</option>
-                  </select>
-                </label>
-                {plusDuration === "custom" && (
+                <div className="opsPlusGrant">
+                  <div>
+                    <h4>{tr("Plus membership", "Plus 会员管理")}</h4>
+                    <p>
+                      {tr(
+                        "Grant Connect Plus with a chosen expiry. Hosted Arc model Credits are managed separately under Payments.",
+                        "为用户开通指定有效期的 Connect Plus；Arc 托管模型 Credits 在支付管理中独立管理。",
+                      )}
+                    </p>
+                    {activePlusGrant ? (
+                      <p>
+                        <strong>{tr("Active Plus grant", "当前有效的 Plus 授权")}</strong> ·{" "}
+                        {activePlusGrant.expires_at
+                          ? new Date(activePlusGrant.expires_at).toLocaleString()
+                          : tr("Until revoked", "手动撤销前有效")}
+                      </p>
+                    ) : (
+                      <p>
+                        {tr("No active administrator Plus grant", "暂无有效的管理员 Plus 授权")}
+                      </p>
+                    )}
+                  </div>
                   <label>
-                    {tr("Expires at (local time)", "到期时间（本地时区）")}
+                    {tr("Duration", "开通时长")}
+                    <select
+                      aria-label={tr("Plus duration", "Plus 开通时长")}
+                      value={plusDuration}
+                      disabled={plusBusy || !!activePlusGrant}
+                      onChange={(e) => setPlusDuration(e.target.value)}
+                    >
+                      <option value="7">{tr("7 days", "7 天")}</option>
+                      <option value="30">{tr("30 days", "30 天")}</option>
+                      <option value="90">{tr("90 days", "90 天")}</option>
+                      <option value="365">{tr("365 days", "365 天")}</option>
+                      <option value="never">{tr("Until revoked", "永久（直到撤销）")}</option>
+                      <option value="custom">{tr("Custom expiry", "自定义到期时间")}</option>
+                    </select>
+                  </label>
+                  {plusDuration === "custom" && (
+                    <label>
+                      {tr("Expires at (local time)", "到期时间（本地时区）")}
+                      <input
+                        type="datetime-local"
+                        value={plusCustomUntil}
+                        onChange={(e) => setPlusCustomUntil(e.target.value)}
+                        disabled={plusBusy || !!activePlusGrant}
+                      />
+                    </label>
+                  )}
+                  <label>
+                    {tr("Reason (audited)", "开通原因（审计记录）")}
                     <input
-                      type="datetime-local"
-                      value={plusCustomUntil}
-                      onChange={(e) => setPlusCustomUntil(e.target.value)}
+                      value={plusReason}
+                      onChange={(e) => setPlusReason(e.target.value)}
+                      maxLength={500}
                       disabled={plusBusy || !!activePlusGrant}
                     />
                   </label>
-                )}
-                <label>
-                  {tr("Reason (audited)", "开通原因（审计记录）")}
-                  <input
-                    value={plusReason}
-                    onChange={(e) => setPlusReason(e.target.value)}
-                    maxLength={500}
-                    disabled={plusBusy || !!activePlusGrant}
-                  />
-                </label>
-                <div className="opsPlusGrantActions">
+                  <div className="opsPlusGrantActions">
+                    <button
+                      className="primaryButton"
+                      type="button"
+                      onClick={() => void grantPlus()}
+                      disabled={
+                        readOnly || plusBusy || !!activePlusGrant || chosen.role === "admin"
+                      }
+                    >
+                      {plusBusy ? tr("Saving…", "处理中…") : tr("Grant Plus", "开通 Plus")}
+                    </button>
+                    {activePlusGrant && (
+                      <button
+                        type="button"
+                        className="ghostButton"
+                        onClick={() => void revokePlus()}
+                        disabled={readOnly || plusBusy}
+                      >
+                        {tr("Revoke grant", "撤销授权")}
+                      </button>
+                    )}
+                  </div>
+                  {plusNotice && <p role="status">{plusNotice}</p>}
+                </div>
+                <div className="opsCreditForm">
+                  <label>
+                    {tr("Add calls this month", "本月追加调用次数")}
+                    <input
+                      type="number"
+                      min={1}
+                      max={100000}
+                      value={credit}
+                      onChange={(e) => setCredit(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    {tr("Reason (audited)", "原因（可审计）")}
+                    <input
+                      maxLength={300}
+                      placeholder={tr("e.g. Early access feedback", "例如：早期体验反馈奖励")}
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                    />
+                  </label>
                   <button
                     className="primaryButton"
-                    type="button"
-                    onClick={() => void grantPlus()}
-                    disabled={readOnly || plusBusy || !!activePlusGrant || chosen.role === "admin"}
+                    disabled={readOnly || saving || chosen.role === "admin" || !data?.creditsReady}
+                    onClick={() => void grantCredits()}
                   >
-                    {plusBusy ? tr("Saving…", "处理中…") : tr("Grant Plus", "开通 Plus")}
+                    {saving
+                      ? tr("Saving…", "正在提交…")
+                      : tr("Grant monthly calls", "追加本月额度")}
                   </button>
-                  {activePlusGrant && (
-                    <button
-                      type="button"
-                      className="ghostButton"
-                      onClick={() => void revokePlus()}
-                      disabled={readOnly || plusBusy}
-                    >
-                      {tr("Revoke grant", "撤销授权")}
-                    </button>
+                  {!data?.creditsReady && (
+                    <small>
+                      {tr(
+                        "Credit grants will be available after the database migration.",
+                        "额度追加将在数据库迁移完成后开放。",
+                      )}
+                    </small>
                   )}
+                  {notice && <small role="status">{notice}</small>}
                 </div>
-                {plusNotice && <p role="status">{plusNotice}</p>}
               </div>
-              <div className="opsCreditForm">
-                <label>
-                  {tr("Add calls this month", "本月追加调用次数")}
-                  <input
-                    type="number"
-                    min={1}
-                    max={100000}
-                    value={credit}
-                    onChange={(e) => setCredit(e.target.value)}
-                  />
-                </label>
-                <label>
-                  {tr("Reason (audited)", "原因（可审计）")}
-                  <input
-                    maxLength={300}
-                    placeholder={tr("e.g. Early access feedback", "例如：早期体验反馈奖励")}
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                  />
-                </label>
-                <button
-                  className="primaryButton"
-                  disabled={readOnly || saving || chosen.role === "admin" || !data?.creditsReady}
-                  onClick={() => void grantCredits()}
-                >
-                  {saving ? tr("Saving…", "正在提交…") : tr("Grant monthly calls", "追加本月额度")}
-                </button>
-                {!data?.creditsReady && (
-                  <small>
-                    {tr(
-                      "Credit grants will be available after the database migration.",
-                      "额度追加将在数据库迁移完成后开放。",
-                    )}
-                  </small>
-                )}
-                {notice && <small role="status">{notice}</small>}
-              </div>
-            </div>
+            </dialog>
           )}
           <div className="opsPages">
             <button

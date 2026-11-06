@@ -4,13 +4,20 @@ import type { DashboardModel } from "../hooks/use-dashboard-model.js";
 import { DeviceCard } from "../devices/device-card.js";
 
 // Devices tab: the device list and the per-device management panel.
-export function DevicesView({ m }: { m: DashboardModel }) {
+export function DevicesView({
+  m,
+  browserTaskCount,
+}: {
+  m: DashboardModel;
+  browserTaskCount: number;
+}) {
   const {
     arcAvailable,
     deviceFilter,
     deviceQuery,
     devices,
     filteredDevices,
+    navigateTab,
     openArcChat,
     setDeviceFilter,
     setDeviceQuery,
@@ -30,10 +37,18 @@ export function DevicesView({ m }: { m: DashboardModel }) {
             )}
           </p>
         </div>
-        <button className="addButton arcRadiantCta" onClick={() => setShowAdd(true)}>
-          <ProductIcon name="add" />
-          {tr("Add device", "添加设备")}
-        </button>
+        <div className="devicePageActions">
+          {browserTaskCount > 0 && (
+            <button type="button" className="ghostButton" onClick={() => navigateTab("security")}>
+              {tr("Browser tasks", "浏览器任务")}{" "}
+              <span className="approvalCount">{browserTaskCount}</span>
+            </button>
+          )}
+          <button className="addButton arcRadiantCta" onClick={() => setShowAdd(true)}>
+            <ProductIcon name="add" />
+            {tr("Add device", "添加设备")}
+          </button>
+        </div>
       </section>
 
       <DeviceFleetOverview

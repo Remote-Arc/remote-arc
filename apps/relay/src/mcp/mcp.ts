@@ -85,7 +85,8 @@ import { planFleetGitWorkspace } from "../devices/fleet-workspace.js";
 import { DEFAULT_MCP_SCOPES } from "../auth/oauth.js";
 import type { OAuthIdentity } from "../auth/auth.js";
 import { callDevice } from "../devices/device-call.js";
-import { consumeToolCall } from "../billing/usage.js";
+import { CONNECT_UNLIMITED_PLAN_ID } from "@remotearc/protocol";
+import { consumeToolCall, SlowLaneRateLimitedError } from "../billing/usage.js";
 import { recordProductEvent } from "../analytics/product-events.js";
 import { registerMcpTool, observeMcpFailures, mcpBillingRecovery } from "./mcp-errors.js";
 import { CLAUDE_TOOL_DESCRIPTIONS } from "./mcp-claude-descriptions.js";
@@ -145,9 +146,14 @@ const hasScope = (identity: OAuthIdentity, scope: Scope) =>
   identity.scope.split(/\s+/).includes(scope);
 
 const QUOTA_UPGRADE_GUIDANCE =
-  "If a tool returns MONTHLY_LIMIT_REACHED, show its upgrade_url in chat so the user can review upgrade options or wait for the monthly reset. Do not keep retrying while the allowance is exhausted.";
+  "If a tool returns MONTHLY_LIMIT_REACHED, show its upgrade_url in chat so the user can review upgrade options or wait for the monthly reset. Do not keep retrying while the allowance is exhausted. If a tool returns SLOW_LANE_RATE_LIMITED, Free calls are in the slow lane: wait retry_after_seconds before the next Remote Arc tool call, combine work into fewer calls, and tell the user once, with its upgrade_url, that Connect Unlimited restores full speed. Never retry it immediately.";
 
-const toolErrorResult = (message: string, code?: string, upgradeUrl?: string) => ({
+const toolErrorResult = (
+  message: string,
+  code?: string,
+  upgradeUrl?: string,
+  extra: Record<string, unknown> = {},
+) => ({
   content: [
     {
       type: "text" as const,
@@ -159,6 +165,7 @@ const toolErrorResult = (message: string, code?: string, upgradeUrl?: string) =>
             message,
             ...mcpBillingRecovery(code),
             ...(upgradeUrl ? { upgrade_url: upgradeUrl } : {}),
+            ...extra,
           },
         },
         null,
@@ -168,12 +175,26 @@ const toolErrorResult = (message: string, code?: string, upgradeUrl?: string) =>
   ],
 });
 
+const slowLaneResult = (env: Env, error: SlowLaneRateLimitedError) => {
+  const upgradeUrl = new URL(
+    "/checkout?product=" + CONNECT_UNLIMITED_PLAN_ID,
+    env.DASHBOARD_ORIGIN || env.APP_ORIGIN || env.PUBLIC_ORIGIN,
+  ).toString();
+  return toolErrorResult(
+    `${error.message} Connect Unlimited restores full speed: ${upgradeUrl}`,
+    error.code,
+    upgradeUrl,
+    { retry_after_seconds: error.retryAfterSeconds },
+  );
+};
+
 const consume = async (env: Env, identity: OAuthIdentity) => {
   try {
     await consumeToolCall(env, identity.userId);
     return null;
   } catch (error) {
     const typed = error as Error & { code?: string };
+    if (error instanceof SlowLaneRateLimitedError) return slowLaneResult(env, error);
     if (typed.code === "MONTHLY_LIMIT_REACHED") {
       const upgradeUrl = new URL(
         "/settings?section=billing",
@@ -468,6 +489,8 @@ export function createRemoteLinkMcp(
             };
           if (error instanceof AppError && error.code === "app_mcp_scope_required")
             return authRequired(env, ["apps:read", "apps:write"], identity);
+          if (error instanceof SlowLaneRateLimitedError)
+            return { ...slowLaneResult(env, error), isError: true };
           if (error instanceof Error && "code" in error && error.code === "MONTHLY_LIMIT_REACHED")
             return {
               ...toolErrorResult(

@@ -6,6 +6,7 @@ import { CONNECT_FAIR_USE, CONNECT_UNLIMITED_PLAN_ID } from "@remotearc/protocol
 import { productRequestHeaders } from "../../lib/product-events.js";
 import { billingRecovery } from "../../../../../packages/protocol/src/billing-recovery.js";
 import type { ArcAccess } from "../arc/chat/use-arc-chat.js";
+import type { FreeOverflow } from "../../types/app-types.js";
 export type BillingPlan = {
   versionId?: string;
   id: string;
@@ -63,7 +64,7 @@ export type ArcBilling = {
   plan: BillingPlan;
   access?: ArcAccess;
   credits: { available: number; pending: number };
-  usage: { month?: string; used: number; limit: number | null };
+  usage: { month?: string; used: number; limit: number | null; freeOverflow?: FreeOverflow };
   transfer?: { used: number; limit: number | null };
   plans: BillingPlan[];
   topups: { versionId?: string; id: string; credits: number; priceCents: number }[];
@@ -147,8 +148,12 @@ export function connectPlanFeatures(tr: (en: string, zh: string) => string) {
   const registrationsPerDay = CONNECT_FAIR_USE.computerRegistrationsPerDay;
   return [
     tr(
-      "Unlimited Connect calls · fair-use rate limits, no monthly cap",
-      "无限 Connect 调用 · 仅有公开的速率限制，无月度上限",
+      "Your agents at full speed all month · no call cap, no slow lane",
+      "agent 整月全速运行 · 不限调用次数，没有慢速通道",
+    ),
+    tr(
+      "Unlimited Connect calls · published fair-use rate limits only",
+      "无限 Connect 调用 · 仅有公开的合理使用速率限制",
     ),
     tr(
       "Unlimited registered computers, each authenticated and revocable",

@@ -120,15 +120,12 @@ assert.equal(
 );
 sql.prepare("UPDATE user_monthly_usage SET tool_calls=9999 WHERE user_id=?").run("after-billing");
 assert.equal((await consumeToolCall(env, "after-billing")).used, 10000);
-await assert.rejects(
-  () => consumeToolCall(env, "after-billing"),
-  /Monthly Remote Arc tool-call limit reached/,
-);
-assert.equal(
-  (await getMonthlyUsage(env, "after-billing")).used,
-  10000,
-  "blocked call does not increment usage",
-);
+// Past the boundary Free starts its reverse trial instead of failing; the
+// trial and slow lane are covered in connect-free-overflow-test.ts.
+const overflow = await consumeToolCall(env, "after-billing");
+assert.equal(overflow.used, 10001);
+assert.equal(overflow.limit, 10000, "the call past 10000 does not raise the Free allowance");
+assert.equal(overflow.freeOverflow?.trial?.active, true);
 sql
   .prepare("UPDATE user_monthly_usage SET month_key=? WHERE user_id=?")
   .run("2000-01", "after-billing");
@@ -146,5 +143,5 @@ assert.equal(
 );
 sql.close();
 console.log(
-  "PASS: all Free accounts receive 10000 monthly calls, preserved usage/capacity/history, call 501, 10000 boundary and monthly reset",
+  "PASS: all Free accounts receive 10000 monthly calls, preserved usage/capacity/history, call 501, 10000 boundary into the reverse trial and monthly reset",
 );

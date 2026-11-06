@@ -89,6 +89,11 @@ const special: Record<
     action: "核对账单和支付状态，请用户检查付款方式；勿重复扣款。",
   },
   MONTHLY_LIMIT_REACHED: { category: "quota", meaning: "本月工具调用额度已用满。" },
+  SLOW_LANE_RATE_LIMITED: {
+    category: "quota",
+    meaning: "Free 本月额度与反向试用都已用完，调用处于慢速通道，本次调用早于允许的间隔。",
+    action: "按 retryAfterSeconds 等待后重试；升级 Connect Unlimited 可恢复全速。",
+  },
   DEVICE_TIMEOUT: {
     category: "execution",
     meaning: "设备未在等待窗口内返回。操作可能已执行，当前结果未知。",
@@ -406,6 +411,8 @@ const englishSpecial: Record<string, string> = {
   BILLING_INVOICE_PAYMENT_FAILED:
     "The payment provider confirmed an invoice payment failure. Entitlements must be checked against the server ledger.",
   MONTHLY_LIMIT_REACHED: "The monthly tool-call allowance has been used up.",
+  SLOW_LANE_RATE_LIMITED:
+    "The Free allowance and reverse trial are used up, so calls are paced in the slow lane and this call came before the allowed interval.",
   DEVICE_TIMEOUT:
     "The device did not reply before the deadline. The operation may have executed; its result is unknown.",
   DEVICE_SIGNAL_STALE:

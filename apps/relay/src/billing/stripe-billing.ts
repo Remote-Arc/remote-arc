@@ -14,6 +14,7 @@ import { isTrustedDashboardMutation } from "../auth/dashboard-origin.js";
 import { creditBalance, grantArcCredits } from "../arc/arc-credits.js";
 import { currentArcPlan } from "../arc/arc-plan.js";
 import { getMonthlyUsage } from "./usage.js";
+import { queuePlanStartedEmail } from "../platform/lifecycle-email.js";
 import { binaryBytesUsed } from "./plus-usage.js";
 import { binaryTransferLimit } from "./entitlements.js";
 import {
@@ -245,6 +246,16 @@ async function fulfill(env: BillingEnv, r: Receipt) {
       ),
     ]);
   }
+  if (p.subscription)
+    await queuePlanStartedEmail(env.DB, {
+      receipt: r.receipt,
+      userId: r.userId,
+      sku: r.sku,
+      label: p.label,
+      cents: r.cents,
+      start: r.start,
+      end: r.end,
+    });
   await recordProductEvent(env, {
     domain: "billing",
     name: "billing.entitlement.granted",

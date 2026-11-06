@@ -97,6 +97,26 @@
 .usageConversionActions a:hover {
   text-decoration: underline;
 }
+.usageConversionActions a.usageConversionPrimary {
+  color: #fff;
+}
+.usageConversionActions a.usageConversionPrimary:hover {
+  text-decoration: none;
+}
+.usageConversionLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sky-light);
+  cursor: pointer;
+}
+.usageConversionLink:hover {
+  text-decoration: underline;
+}
+.usageConversion .usageConversionPace {
+  margin: 14px 0 0;
+  font-size: 12.5px;
+}
 .usageConversionPanel {
   padding: 21px 22px;
   border: 1px solid var(--line);

@@ -83,6 +83,7 @@
       ["tsx", "scripts/followup-provider-test.ts"],
       ["tsx", "scripts/otp-capacity-test.ts"],
       ["tsx", "scripts/followup-email-test.ts"],
+      ["tsx", "scripts/lifecycle-email-test.ts"],
       ["tsx", "scripts/feedback-rewards-test.ts"],
       ["node", "scripts/email-provider-worker-test.mjs"]
     ],
@@ -118,6 +119,7 @@
     ],
     "test:stripe": [
       ["tsx", "scripts/free-connect-quota-test.ts"],
+      ["tsx", "scripts/connect-free-overflow-test.ts"],
       ["tsx", "scripts/connect-unlimited-test.ts"],
       ["tsx", "scripts/connect-unlimited-yearly-test.ts"],
       ["node", "scripts/stripe-worker-test.mjs"],

@@ -1,3 +1,4 @@
+import { CONNECT_FREE_OVERFLOW } from "@remotearc/protocol";
 import { useI18n } from "../../app/i18n.js";
 import type { PlatformCatalog } from "../../lib/use-platform-catalog.js";
 import { connectPlanFeatures, isConnectOnlyPlan } from "../billing/arc-billing-client.js";
@@ -67,7 +68,14 @@ export function ArcPublicPricing({
             </div>
             <div className="hostedPrice">
               <strong>US${p.monthlyPriceCents / 100}</strong>
-              <span>/ {tr("month", "月")}</span>
+              <span>
+                / {tr("month", "月")}
+                {isConnectOnlyPlan(p) &&
+                  tr(
+                    ` · about US$${(p.monthlyPriceCents / 3000).toFixed(2)} a day`,
+                    ` · 约每天 US$${(p.monthlyPriceCents / 3000).toFixed(2)}`,
+                  )}
+              </span>
             </div>
             {isConnectOnlyPlan(p) && p.yearlyPriceCents ? (
               <p className="hostedYearly">
@@ -82,8 +90,8 @@ export function ArcPublicPricing({
                 ? tr("Your AI, connected to your world.", "让已有的 AI 连接你的世界。")
                 : isConnectOnlyPlan(p)
                   ? tr(
-                      "Your own AI, on every computer you run.",
-                      "用你自己的 AI，连接你的每一台电脑。",
+                      "Your own AI on every computer, at full speed all month.",
+                      "用你自己的 AI 连接每一台电脑，整月全速运行。",
                     )
                   : p.label === "Plus"
                     ? tr("Your agent for everyday work.", "处理日常工作的个人智能体。")
@@ -98,6 +106,10 @@ export function ArcPublicPricing({
                         ? tr("Unlimited", "无限")
                         : catalog.connectFreeCalls.toLocaleString()) +
                         tr(" Connect calls / month", " 次 Connect 调用 / 月"),
+                      tr(
+                        `Run out? A one-time ${CONNECT_FREE_OVERFLOW.trialDays}-day Unlimited trial, then a ${CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute}-calls-a-minute slow lane. Never cut off`,
+                        `额度用完？先送一次 ${CONNECT_FREE_OVERFLOW.trialDays} 天 Unlimited 试用，之后进入每分钟 ${CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute} 次的慢速通道，不会断`,
+                      ),
                       tr("Up to 2 computers", "最多连接 2 台电脑"),
                       tr("2 GB file transfer / month", "每月 2 GB 文件传输"),
                       tr("Device permissions and local Undo", "设备权限与本地撤销"),
@@ -177,8 +189,8 @@ export function ArcPublicPricing({
             <h3>{tr("Connect calls", "Connect 调用")}</h3>
             <p>
               {tr(
-                "Connect allowance is separate from model Credits and follows your saved plan terms. Rate limits and provider limits still apply.",
-                "Connect 额度独立于模型 Credits，按已保存的套餐条款执行。仍遵守速率与供应商限制。",
+                "Connect allowance is separate from model Credits and follows your saved plan terms. When Free runs out, calls are paced, not stopped. Rate limits and provider limits still apply.",
+                "Connect 额度独立于模型 Credits，按已保存的套餐条款执行。Free 额度用完后调用会降速，而不是中断。仍遵守速率与供应商限制。",
               )}
             </p>
           </article>

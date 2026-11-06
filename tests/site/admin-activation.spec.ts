@@ -21,13 +21,33 @@ test("Admin activation filters, sorting and provenance evidence stay distinct fr
   await expect(page.locator(".opsTable tbody")).not.toContainText(
     zh ? "插件已连接" : "Plugin connected",
   );
-  await page.locator(".opsTable tbody button").click();
-  await expect(page.locator(".opsActivationEvidence")).toContainText(
+  const details = page.locator(".opsTable tbody button");
+  await details.scrollIntoViewIfNeeded();
+  await details.focus();
+  const scrollY = await page.evaluate(() => window.scrollY);
+  await details.press("Enter");
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeInViewport();
+  await expect(dialog.locator(".opsActivationEvidence")).toContainText(
     zh ? "插件来源未核实" : "plugin source unverified",
   );
-  await expect(page.locator(".opsActivationEvidence")).toContainText(
+  await expect(dialog.locator(".opsActivationEvidence")).toContainText(
     zh ? "整个用户目标" : "entire user goal",
   );
+  const close = dialog.getByRole("button", { name: zh ? "关闭" : "Close", exact: true });
+  await expect(close).toBeInViewport();
+  await dialog.locator(".opsCreditForm").scrollIntoViewIfNeeded();
+  await expect(close).toBeInViewport();
+  await close.click();
+  await expect(dialog).toHaveCount(0);
+  await expect(details).toBeFocused();
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrollY);
+  await details.press("Enter");
+  await expect(dialog).toBeInViewport();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(details).toBeFocused();
+  await expect(stage).toHaveValue("mcp_connected_no_device");
   await stage.selectOption("history_unknown");
   await expect(page.locator(".opsTable tbody tr")).toHaveCount(1);
   await expect(page.locator(".opsTable tbody")).toContainText("history@example.com");

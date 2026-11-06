@@ -22,7 +22,8 @@ jobs:
 
   media-intelligence:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Allow a cold cache download and the bounded real-media integration to finish.
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

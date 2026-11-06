@@ -73,18 +73,20 @@ type OperationsData = {
   page: number;
   pageSize: number;
   creditsReady: boolean;
+  // Null means not read for this view, or its section is unavailable.
   totals: {
-    users: number;
-    devices: number;
-    online: number;
+    users: number | null;
+    devices: number | null;
+    online: number | null;
     auditRows: number | null;
-    auditLast7d: number;
-    monthlyCalls: number;
+    auditLast7d: number | null;
+    monthlyCalls: number | null;
   };
+  unavailable?: OperationsSection[];
   limits: { free: number; plus: number };
   users: Account[];
   devices: Computer[];
-  activity: Hour[];
+  activity: Hour[] | null;
   filteredTotal: number;
   activationCounts: Record<ActivationStage, number>;
   billing: {
@@ -106,6 +108,7 @@ type LiveBilling = {
   note: string;
 };
 type Section = "users" | "devices" | "activity" | "costs";
+type OperationsSection = "users" | "devices" | "totals" | "activity";
 const relative = (value: string | null, locale: string) => {
   if (!value) return "—";
   const diff = Date.now() - Date.parse(value);
@@ -116,6 +119,13 @@ const relative = (value: string | null, locale: string) => {
   return `${Math.floor(diff / 86400_000)}d ago`;
 };
 const fmt = (v: number) => new Intl.NumberFormat("en").format(v);
+const count = (v: number | null | undefined) => (v == null ? "—" : fmt(v));
+const sectionNames: Record<OperationsSection, [string, string]> = {
+  users: ["users", "用户列表"],
+  devices: ["devices", "设备"],
+  totals: ["totals", "汇总数字"],
+  activity: ["activity", "活跃趋势"],
+};
 
 export function AdminOperations({
   readOnly = false,
@@ -177,6 +187,8 @@ export function AdminOperations({
         sort,
         query: appliedQuery,
         auditTotals: section === "costs" ? "1" : "0",
+        // The 7-day chart reads audit history, so only the Activity tab asks for it.
+        activity: section === "activity" ? "1" : "0",
       });
       const res = await fetch("/api/admin/operations?" + parameters, {
         credentials: "same-origin",
@@ -201,7 +213,7 @@ export function AdminOperations({
     return () => {
       requestSequence.current++;
     };
-  }, [page, activation, sort, appliedQuery, section === "costs"]);
+  }, [page, activation, sort, appliedQuery, section === "costs", section === "activity"]);
   useEffect(() => {
     const nextQuery = query.trim();
     if (nextQuery === appliedQuery) return;
@@ -214,6 +226,7 @@ export function AdminOperations({
   }, [query, appliedQuery]);
 
   const filtered = data?.users || [];
+  const missing = data?.unavailable || [];
   const chosen = data?.users.find((u) => u.id === selectedUser) || null;
   const userDetailBusy = saving || deviceBusy || plusBusy;
   useEffect(() => {
@@ -277,7 +290,7 @@ export function AdminOperations({
   const userNames = new Map((data?.users || []).map((u) => [u.id, u.email]));
   const hours = useMemo(() => {
     if (!data) return [];
-    const amounts = new Map(data.activity.map((x) => [x.hour, x.calls]));
+    const amounts = new Map((data.activity || []).map((x) => [x.hour, x.calls]));
     const ending = Math.floor(Date.parse(data.checkedAt) / 3600_000) * 3600_000;
     return Array.from({ length: 48 }, (_, i) => {
       const instant = new Date(ending - (47 - i) * 3600_000);
@@ -290,8 +303,9 @@ export function AdminOperations({
   const peak = Math.max(1, ...hours.map((h) => h.calls));
   const quietWindow = useMemo(() => {
     const list = data?.activity || [];
+    // The chart covers 48 hours, so each hour of the day appears at most twice.
     const days = new Set(list.map((item) => item.hour.slice(0, 10)));
-    if (days.size < 3 || list.reduce((sum, item) => sum + item.calls, 0) < 100) return null;
+    if (days.size < 2 || list.reduce((sum, item) => sum + item.calls, 0) < 100) return null;
     const totals = Array.from({ length: 24 }, (_, i) => ({ hour: i, calls: 0 }));
     list.forEach((item) => {
       const index = Number(item.hour.slice(11, 13));
@@ -643,23 +657,30 @@ export function AdminOperations({
           {error}
         </div>
       )}
+      {!error && missing.length > 0 && (
+        <div className="opsNotice" role="alert">
+          {tr("Some data could not be loaded: ", "以下数据暂时无法加载：") +
+            missing.map((key) => tr(sectionNames[key][0], sectionNames[key][1])).join(" · ") +
+            tr(". Refresh to try again.", "。可稍后刷新重试。")}
+        </div>
+      )}
       <div className="opsStats">
         <div>
           <span>{tr("Registered users", "注册用户")}</span>
-          <strong>{data ? fmt(data.totals.users) : "—"}</strong>
+          <strong>{count(data?.totals.users)}</strong>
         </div>
         <div>
           <span>{tr("Paired devices", "已配对设备")}</span>
-          <strong>{data ? fmt(data.totals.devices) : "—"}</strong>
+          <strong>{count(data?.totals.devices)}</strong>
         </div>
         <div>
           <span>{tr("Online now", "当前在线")}</span>
-          <strong>{data ? fmt(data.totals.online) : "—"}</strong>
+          <strong>{count(data?.totals.online)}</strong>
           <small>{tr("Verified against device connections", "根据实际设备连接核实")}</small>
         </div>
         <div>
-          <span>{tr("Audit events · 7d", "审计事件 · 7 天")}</span>
-          <strong>{data ? fmt(data.totals.auditLast7d) : "—"}</strong>
+          <span>{tr("Tool calls this month", "本月工具调用")}</span>
+          <strong>{count(data?.totals.monthlyCalls)}</strong>
         </div>
       </div>
       <nav className="opsTabs" aria-label={tr("Operational views", "运营视图")}>
@@ -876,7 +897,12 @@ export function AdminOperations({
                 {!loading && filtered.length === 0 && (
                   <tr>
                     <td colSpan={9}>
-                      {tr("No users match these filters.", "没有符合筛选条件的用户。")}
+                      {missing.includes("users")
+                        ? tr(
+                            "The user list could not be loaded. Refresh to try again.",
+                            "用户列表暂时无法加载，可稍后刷新重试。",
+                          )
+                        : tr("No users match these filters.", "没有符合筛选条件的用户。")}
                     </td>
                   </tr>
                 )}
@@ -1265,10 +1291,14 @@ export function AdminOperations({
             ))}
           </div>
           <p className="opsHelp">
+            {tr("Tool calls in the last 48 hours: ", "最近 48 小时工具调用：") +
+              count(data?.activity ? hours.reduce((sum, h) => sum + h.calls, 0) : null)}
+          </p>
+          <p className="opsHelp">
             {quietWindow
               ? tr(
-                  "Observed lower-activity hours (Auckland time): ",
-                  "近期观察到较低活跃的奥克兰时段：",
+                  "Lower-activity hours in the last 48 hours (Auckland time): ",
+                  "最近 48 小时较低活跃的奥克兰时段：",
                 ) +
                 quietWindow.join(" · ") +
                 tr(
@@ -1276,8 +1306,8 @@ export function AdminOperations({
                   "。仅供安排发版参考，不保证在线用户为零。",
                 )
               : tr(
-                  "Not enough multi-day activity for a reliable release window yet.",
-                  "目前还缺少足够的多天活跃记录，暂不建议自动推荐发版时段。",
+                  "Not enough activity in the last 48 hours to suggest a release window.",
+                  "最近 48 小时的活跃记录不足，暂不建议自动推荐发版时段。",
                 )}
           </p>
           <p className="opsHelp">
@@ -1393,7 +1423,7 @@ export function AdminOperations({
             </div>
             <div>
               <span>{tr("Monthly MCP tool calls", "本月 MCP 工具调用")}</span>
-              <strong>{data ? fmt(data.totals.monthlyCalls) : "—"}</strong>
+              <strong>{count(data?.totals.monthlyCalls)}</strong>
               <small>
                 {tr(
                   "Tracked by Remote Arc D1, not equal to billable Worker requests.",

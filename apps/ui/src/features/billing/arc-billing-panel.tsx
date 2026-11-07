@@ -6,6 +6,7 @@ import {
   billingRequest,
   billingFailureMessage,
   isConnectOnlyPlan,
+  planIncludesArc,
   transferSize,
   usageResetAt,
   type ArcBilling,
@@ -238,8 +239,10 @@ export function ArcBillingPanel() {
             slowLaneCallsPerMinute: overflow.slowLaneCallsPerMinute,
           })
         : tr("billing.arcBillingPanel.yourNextCallStartsADay", { trialDays: overflow.trialDays });
+  // Once the Connect Unlimited on offer includes Arc, Plus is no longer offered to new subscribers.
+  const bundled = planIncludesArc(unlimited);
   const paid = data.plan.monthlyPriceCents > 0,
-    connect = isConnectOnlyPlan(data.plan),
+    connect = isConnectOnlyPlan(data.plan) && !planIncludesArc(data.plan),
     subscription = data.subscriptions.find(
       (s) =>
         s.period_end > new Date().toISOString() &&
@@ -263,7 +266,11 @@ export function ArcBillingPanel() {
               US${data.plan.monthlyPriceCents / 100} / {tr("billing.arcBillingPanel.month")} ·{" "}
               {connect
                 ? tr("billing.arcBillingPanel.unlimitedConnectCallsAndComputersNo")
-                : data.plan.monthlyCredits.toLocaleString() + " Credits"}
+                : isConnectOnlyPlan(data.plan)
+                  ? tr("billing.arcBillingPanel.unlimitedConnectCallsAndComputersCredits", {
+                      credits: data.plan.monthlyCredits.toLocaleString(),
+                    })
+                  : data.plan.monthlyCredits.toLocaleString() + " Credits"}
             </p>
           )}
           {subscription && (
@@ -544,6 +551,7 @@ export function ArcBillingPanel() {
         </div>
       )}
       {connect ? (
+        // A Connect-only subscriber keeps their saved terms; Plus stays their way to add Arc.
         <section className="raSettingsSurface raBillingNotice">
           <h3>{tr("billing.arcBillingPanel.wantArcToDoTheWork")}</h3>
           <p>{tr("billing.arcBillingPanel.connectUnlimitedRunsYourOwnAi")}</p>
@@ -563,14 +571,20 @@ export function ArcBillingPanel() {
           </h3>
           <p>
             {(resetText ? tr("billing.arcBillingPanel.freeAllowancesRenew", { resetText }) : "") +
-              tr("billing.arcBillingPanel.connectUnlimitedKeepsYourAgentsRunning", {
-                price: unlimited
-                  ? tr("billing.arcBillingPanel.connectPriceDetail", {
-                      monthly: unlimited.monthlyPriceCents / 100,
-                      daily: (unlimited.monthlyPriceCents / 3000).toFixed(2),
-                    })
-                  : "",
-              })}
+              tr(
+                bundled
+                  ? "billing.arcBillingPanel.connectUnlimitedIncludesArc"
+                  : "billing.arcBillingPanel.connectUnlimitedKeepsYourAgentsRunning",
+                {
+                  price: unlimited
+                    ? tr("billing.arcBillingPanel.connectPriceDetail", {
+                        monthly: unlimited.monthlyPriceCents / 100,
+                        daily: (unlimited.monthlyPriceCents / 3000).toFixed(2),
+                      })
+                    : "",
+                  credits: (unlimited?.monthlyCredits ?? 0).toLocaleString(),
+                },
+              )}
           </p>
           <div className="raBillingActions">
             {unlimited && (
@@ -581,9 +595,11 @@ export function ArcBillingPanel() {
                 {tr("billing.arcBillingPanel.choose") + unlimited.label} →
               </a>
             )}
-            <a className="raSettingsButton" href="/checkout?product=arc-plus-v1">
-              {tr("billing.arcBillingPanel.compareWithPlus")} →
-            </a>
+            {!bundled && (
+              <a className="raSettingsButton" href="/checkout?product=arc-plus-v1">
+                {tr("billing.arcBillingPanel.compareWithPlus")} →
+              </a>
+            )}
           </div>
         </section>
       ) : (

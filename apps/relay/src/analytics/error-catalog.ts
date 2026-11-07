@@ -92,7 +92,7 @@ const special: Record<
   SLOW_LANE_RATE_LIMITED: {
     category: "quota",
     meaning: "Free 本月额度与反向试用都已用完，调用处于慢速通道，本次调用早于允许的间隔。",
-    action: "按 retryAfterSeconds 等待后重试；升级 Connect Unlimited 可恢复全速。",
+    action: "按 retryAfterSeconds 等待后重试；升级到 Pro 可恢复全速。",
   },
   ARC_DAILY_LIMIT_REACHED: {
     category: "quota",

@@ -9,6 +9,10 @@ import {
 } from "../billing/stripe-client.js";
 
 export type CommercialEnv = StripeEnv & { DB: D1Database };
+/** The hosted-Arc entitlement a Connect Unlimited invoice adds when its version
+ * includes Credits (migration 0083). Connect Unlimited's own plan row stays on the
+ * 'connect' lane. */
+export const CONNECT_HOSTED_PLAN_ID = "connect-unlimited-hosted-v1";
 export const commercialMode = (env: StripeEnv) =>
   /^(sk|rk)_test_/.test(env.STRIPE_SECRET_KEY || "") ? "test" : "live";
 export const planConfigSchema = z
@@ -34,11 +38,12 @@ export const planConfigSchema = z
     (p) =>
       p.id === "free"
         ? p.monthlyPriceCents === 0 && p.monthlyCredits === 0 && !p.allHostedModels
-        : // Connect-only stays Connect-only: no Credits, no hosted models, explicit unlimited entitlements.
+        : // Connect Unlimited keeps explicit unlimited Connect entitlements. It is either
+          // Connect-only (no Credits, no hosted models) or also includes Arc: monthly
+          // Credits together with the hosted models they pay for, never one without the other.
           p.id === CONNECT_UNLIMITED_PLAN_ID
           ? p.monthlyPriceCents >= 100 &&
-            p.monthlyCredits === 0 &&
-            !p.allHostedModels &&
+            p.monthlyCredits > 0 === p.allHostedModels &&
             p.connectToolCalls === null &&
             p.deviceLimit === null
           : p.monthlyPriceCents >= 100 &&
@@ -50,7 +55,8 @@ export const planConfigSchema = z
   .refine(
     (p) =>
       p.yearlyPriceCents == null ||
-      // Yearly is a Connect-only offer: Arc plans grant monthly Credits per invoice.
+      // Yearly is a Connect Unlimited offer. Its monthly Credits are granted one month
+      // at a time across the paid year; Plus and Pro grant Credits per monthly invoice.
       (p.id === CONNECT_UNLIMITED_PLAN_ID && p.yearlyPriceCents <= p.monthlyPriceCents * 12),
     "Only Connect Unlimited has a yearly price, at most twelve monthly payments",
   );

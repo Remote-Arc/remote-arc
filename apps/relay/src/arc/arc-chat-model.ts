@@ -35,20 +35,23 @@ export const arcAutoId = (env: ArcModelEnv) => env.ARC_AUTO_MODEL_ID || "arc-aut
  * most. "off" keeps every Auto step on the base model. */
 export const arcAutoEscalationId = (env: ArcModelEnv) =>
   env.ARC_AUTO_ESCALATION_MODEL_ID || "gpt-6.1-terra";
-/** Auto escalates the first plan, recovery after a failed or uncertain tool
- * step, and a repair of a malformed decision. Every other step stays on the
- * low-cost base model. Credits charge each step at its own model's price. */
+/** For a paid plan, Auto runs every step on the stronger model. For a trial it
+ * escalates the first plan, recovery after a failed or uncertain tool step, and
+ * a repair of a malformed decision, and keeps every other step on the low-cost
+ * base model. Credits charge each step at its own model's price. */
 export function arcAutoStepModel(
   env: ArcModelEnv,
   access: {
     gateway: { models: readonly ModelDefinition[]; adapters: Record<string, unknown> };
     definition: ModelDefinition;
+    access?: { paid: boolean };
   },
   input: { auto: boolean; step: number; lastToolStatus?: string; repairing: boolean },
 ) {
   const escalate =
     input.auto &&
-    (input.step === 0 ||
+    (access.access?.paid === true ||
+      input.step === 0 ||
       input.lastToolStatus === "failed" ||
       input.lastToolStatus === "unknown" ||
       input.repairing);

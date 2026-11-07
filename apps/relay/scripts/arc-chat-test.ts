@@ -2606,6 +2606,19 @@ assert.equal(
   autoAccess.definition.id,
   "An unconfigured stronger model never blocks Auto",
 );
+// A paid plan runs every Auto step on the stronger model; a chosen model and a
+// disabled escalation still keep their own model.
+const paidAuto = { ...autoAccess, access: { ...autoAccess.access, paid: true } },
+  paidPick = (input: Partial<Parameters<typeof arcAutoStepModel>[2]>, stepEnv = env) =>
+    arcAutoStepModel(stepEnv, paidAuto, { auto: true, step: 3, repairing: false, ...input }).id;
+assert.equal(autoAccess.access.paid, false, "The routing cases above are a trial");
+assert.equal(paidPick({ lastToolStatus: "succeeded" }), "gpt-6.1-terra");
+assert.equal(paidPick({ step: 7 }), "gpt-6.1-terra");
+assert.equal(paidPick({ auto: false }), autoAccess.definition.id);
+assert.equal(
+  paidPick({}, { ...env, ARC_AUTO_ESCALATION_MODEL_ID: "off" }),
+  autoAccess.definition.id,
+);
 await assert.rejects(
   () => prepareArcBudget(env, "owner", "personal:owner", id, "gpt-6.1-sol"),
   /PAID_MODEL_REQUIRED/,

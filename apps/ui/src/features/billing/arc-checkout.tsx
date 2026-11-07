@@ -8,6 +8,8 @@ import {
   BillingFailure,
   connectPlanFeatures,
   isConnectOnlyPlan,
+  offeredPlans,
+  planIncludesArc,
   type ArcBilling,
   type BillingInterval,
   type NativePaymentSession,
@@ -65,11 +67,19 @@ export function ArcCheckout({ email }: { email: string }) {
       .then((value) => {
         if (!controller.signal.aborted) {
           setData(value);
+          // Once Connect Unlimited includes Arc it is the plan on offer, also for an
+          // old link to a plan no longer sold; before that, the default is the first Arc plan.
+          const connectPlan = value.plans.find(isConnectOnlyPlan),
+            offered = offeredPlans(value.plans, value.plan),
+            hidden = (id: string) =>
+              value.plans.some((plan) => plan.id === id) && !offered.some((plan) => plan.id === id);
           setSelected(
             (previous) =>
-              previous ||
-              value.plans.find((plan) => plan.monthlyPriceCents > 0 && !isConnectOnlyPlan(plan))
-                ?.id ||
+              (previous && !hidden(previous) ? previous : "") ||
+              (planIncludesArc(connectPlan)
+                ? connectPlan!.id
+                : value.plans.find((plan) => plan.monthlyPriceCents > 0 && !isConnectOnlyPlan(plan))
+                    ?.id) ||
               "",
           );
         }
@@ -142,9 +152,11 @@ export function ArcCheckout({ email }: { email: string }) {
     topup = data?.topups.find((product) => product.id === selected),
     paid = Boolean(data && data.plan.monthlyPriceCents > 0),
     product = plan || topup;
-  // Connect Unlimited is sold without hosted Arc; top-ups still need an Arc plan.
+  // Connect-only versions are sold without hosted Arc; top-ups need a plan with Credits.
   const connect = Boolean(plan && isConnectOnlyPlan(plan)),
-    arcPaid = paid && !isConnectOnlyPlan(data!.plan),
+    arcIncluded = planIncludesArc(plan),
+    connectOnly = connect && !arcIncluded,
+    arcPaid = paid && planIncludesArc(data!.plan),
     available = connect ? (data?.connectEnabled ?? data?.enabled) : data?.enabled;
   // Yearly is offered only for Connect Unlimited, and only once its price is published.
   const yearlyCents = connect ? plan?.yearlyPriceCents || null : null,
@@ -341,12 +353,16 @@ export function ArcCheckout({ email }: { email: string }) {
               <div>
                 <h2>{orderLabel}</h2>
                 <p>
-                  {connect
+                  {connectOnly
                     ? tr("billing.arcCheckout.unlimitedConnectManageRenewalInSettings")
-                    : plan
-                      ? plan.monthlyCredits.toLocaleString() +
-                        tr("billing.arcCheckout.creditsEveryMonthManageRenewalIn")
-                      : tr("billing.arcCheckout.oneTimeTopUpCreditsDo")}
+                    : connect
+                      ? tr("billing.arcCheckout.unlimitedConnectCreditsManageRenewal", {
+                          credits: plan!.monthlyCredits.toLocaleString(),
+                        })
+                      : plan
+                        ? plan.monthlyCredits.toLocaleString() +
+                          tr("billing.arcCheckout.creditsEveryMonthManageRenewalIn")
+                        : tr("billing.arcCheckout.oneTimeTopUpCreditsDo")}
                 </p>
               </div>
               <button
@@ -389,8 +405,10 @@ export function ArcCheckout({ email }: { email: string }) {
                       : tr("billing.arcCheckout.oneTime"),
                     recurringNote: plan
                       ? billed === "year"
-                        ? tr("billing.arcCheckout.renewsYearlyUntilCancelledNoMonthly")
-                        : connect
+                        ? arcIncluded
+                          ? tr("billing.arcCheckout.renewsYearlyUntilCancelledCreditsEachMonth")
+                          : tr("billing.arcCheckout.renewsYearlyUntilCancelledNoMonthly")
+                        : connectOnly
                           ? tr("billing.arcCheckout.renewsMonthlyUntilCancelledNoMonthly")
                           : tr("billing.arcCheckout.renewsMonthlyUntilCancelledMonthlyCredits")
                       : tr("billing.arcCheckout.topUpCreditsDoNotExpire"),
@@ -449,7 +467,9 @@ export function ArcCheckout({ email }: { email: string }) {
                 >
                   {(topup
                     ? data.topups
-                    : data.plans.filter((plan) => plan.monthlyPriceCents > 0)
+                    : offeredPlans(data.plans, data.plan).filter(
+                        (plan) => plan.monthlyPriceCents > 0,
+                      )
                   ).map((offer) => (
                     <button
                       key={offer.id}
@@ -466,7 +486,11 @@ export function ArcCheckout({ email }: { email: string }) {
                         </strong>
                         <small>
                           {"monthlyCredits" in offer && isConnectOnlyPlan(offer)
-                            ? tr("billing.arcCheckout.yourOwnAiUnlimitedComputers")
+                            ? planIncludesArc(offer)
+                              ? tr("billing.arcCheckout.creditsYourOwnAiUnlimitedComputers", {
+                                  credits: offer.monthlyCredits.toLocaleString(),
+                                })
+                              : tr("billing.arcCheckout.yourOwnAiUnlimitedComputers")
                             : "monthlyCredits" in offer
                               ? offer.monthlyCredits.toLocaleString() +
                                 tr("billing.arcCheckout.creditsMonth")
@@ -529,7 +553,7 @@ export function ArcCheckout({ email }: { email: string }) {
                 )}
                 {plan && connect && (
                   <ul className="arcCheckoutFeatures">
-                    {connectPlanFeatures(tr).map((item) => (
+                    {connectPlanFeatures(tr, plan).map((item) => (
                       <li key={item}>{item}</li>
                     ))}
                   </ul>
@@ -581,8 +605,10 @@ export function ArcCheckout({ email }: { email: string }) {
                 {plan && (
                   <p>
                     {billed === "year"
-                      ? tr("billing.arcCheckout.renewsYearlyUntilCancelledCancelRenewal")
-                      : connect
+                      ? arcIncluded
+                        ? tr("billing.arcCheckout.renewsYearlyCancelRenewalCreditsEachMonth")
+                        : tr("billing.arcCheckout.renewsYearlyUntilCancelledCancelRenewal")
+                      : connectOnly
                         ? tr("billing.arcCheckout.renewsMonthlyUntilCancelledCancelRenewal")
                         : tr("billing.arcCheckout.renewsMonthlyUntilCancelledCancelRenewal2")}
                   </p>

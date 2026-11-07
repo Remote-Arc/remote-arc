@@ -43,8 +43,8 @@ const rules: readonly [readonly string[], BillingRecovery][] = [
     ["SLOW_LANE_RATE_LIMITED"],
     recovery(
       [
-        "This month’s Free Connect calls are used up, so calls continue in the slow lane. Wait for the retry time before the next call, or choose Connect Unlimited to keep your agent at full speed.",
-        "本月 Free Connect 调用额度已用完，调用会继续在慢速通道运行。请等到重试时间后再调用，或选择 Connect Unlimited，让你的 agent 恢复全速。",
+        "This month’s Free Connect calls are used up, so calls continue in the slow lane. Wait for the retry time before the next call, or choose Pro to keep your agent at full speed.",
+        "本月 Free Connect 调用额度已用完，调用会继续在慢速通道运行。请等到重试时间后再调用，或选择 Pro，让你的 agent 恢复全速。",
       ],
       [plans, billing],
       "later",

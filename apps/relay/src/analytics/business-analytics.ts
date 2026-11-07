@@ -61,7 +61,7 @@ async function paymentSummary(db: D1Database, from: string, to: string, current 
   const fulfilled =
     "(" +
     complete +
-    " OR (r.id IS NOT NULL AND EXISTS(SELECT 1 FROM arc_credit_lots l WHERE l.source_ref=r.id AND l.user_id=c.user_id AND l.created_at<?2) AND (r.period_end IS NULL OR EXISTS(SELECT 1 FROM billing_plan_assignments a WHERE a.id='stripe:'||r.id AND a.subject_id=c.user_id AND a.created_at<?2))))";
+    " OR (r.id IS NOT NULL AND EXISTS(SELECT 1 FROM arc_credit_lots l WHERE l.source_ref IN (r.id,r.id||'#month-01') AND l.user_id=c.user_id AND l.created_at<?2) AND (r.period_end IS NULL OR EXISTS(SELECT 1 FROM billing_plan_assignments a WHERE a.id='stripe:'||r.id AND a.subject_id=c.user_id AND a.created_at<?2))))";
   const joins =
     "LEFT JOIN arc_commercial_versions v ON v.id=c.commercial_version_id LEFT JOIN arc_payment_receipts r ON r.id=c.receipt_id AND r.verified_at>=c.created_at AND r.verified_at<?2";
   const visits = await db

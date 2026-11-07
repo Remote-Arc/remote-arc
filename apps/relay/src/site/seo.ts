@@ -339,7 +339,7 @@ const pages: Record<string, SeoPage> = {
   "/pricing": {
     title: "Remote Arc Pricing — Hosted remote MCP for AI",
     description:
-      "Start free with 10,000 monthly hosted MCP tool calls, or remove call and computer limits with Connect Unlimited. Understand account usage, separate AI subscriptions and current capacity availability.",
+      "Start free with 10,000 monthly hosted MCP tool calls, or remove call and computer limits with Pro. Understand account usage, separate AI subscriptions and current capacity availability.",
     canonical: SITE + "/pricing",
   },
   "/downloads": {
@@ -1150,12 +1150,12 @@ const crawlPages: Record<string, CrawlPage> = {
         text: "The Free plan currently includes 10,000 hosted MCP tool calls per account each month, text-file and directory inspection, process inspection, explicitly shared browser-tab context and the file-editing or terminal tools that you deliberately enable on a device. Per-device permissions, Trusted Write Locations and Sensitive Path Policy remain part of the control model.",
       },
       {
-        heading: "Connect Unlimited removes call and computer limits",
-        text: "Connect Unlimited is a paid Connect-only plan for people who bring their own ChatGPT, Claude or Codex. It has no monthly hosted MCP call cap and no limit on registered computers; each computer is authenticated separately and can be revoked. Published fair-use rate limits still apply, including at most 20 new computer registrations per day. It includes the durable-work capabilities below, but no Arc-hosted AI or monthly Credits beyond the one-time Arc trial.",
+        heading: "Pro removes call and computer limits",
+        text: "Pro is the paid plan for people who bring their own ChatGPT, Claude or Codex. It has no monthly hosted MCP call cap and no limit on registered computers; each computer is authenticated separately and can be revoked. Published fair-use rate limits still apply, including at most 20 new computer registrations per day. It includes the durable-work capabilities below and monthly Arc Credits for Arc-hosted AI; the pricing page shows the current allowance.",
       },
       {
         heading: "Connect tools are available on every plan",
-        text: "Free includes the same Connect tool capabilities: bounded binary reads, temporary revision-pinned file resources, background command Tasks, schedules, condition watches, source-controlled Agent Goals, deterministic verification loops and supported keep-awake leases. Free retains 10,000 monthly tool calls; after they run out, a one-time 7-day Connect Unlimited trial starts, then calls continue at 2 per minute until the monthly reset. Account authorization and device policy still apply. Hosted model access and third-party charges remain separate.",
+        text: "Free includes the same Connect tool capabilities: bounded binary reads, temporary revision-pinned file resources, background command Tasks, schedules, condition watches, source-controlled Agent Goals, deterministic verification loops and supported keep-awake leases. Free retains 10,000 monthly tool calls; after they run out, a one-time 7-day unlimited Connect trial starts, then calls continue at 2 per minute until the monthly reset. Account authorization and device policy still apply. Hosted model access and third-party charges remain separate.",
       },
       {
         heading: "Plan entitlement and usage are separate",

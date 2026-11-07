@@ -1,5 +1,6 @@
 import { displayCredits } from "./arc-credits.js";
 import { StripeError } from "../billing/stripe-client.js";
+import { CONNECT_HOSTED_PLAN_ID } from "./arc-commercial-config.js";
 
 /** Administrative metadata only: no conversation content or device files. */
 export async function listAdminTrials(db: D1Database, url: URL, at = new Date().toISOString()) {
@@ -23,7 +24,7 @@ export async function listAdminTrials(db: D1Database, url: URL, at = new Date().
    (SELECT COUNT(*) FROM arc_chat_runs r WHERE r.user_id=t.user_id) runs,
    (SELECT COUNT(*) FROM arc_chat_runs r WHERE r.user_id=t.user_id AND r.status='succeeded') succeeded,
    (SELECT MAX(r.created_at) FROM arc_chat_runs r WHERE r.user_id=t.user_id) last_run_at,
-   EXISTS(SELECT 1 FROM billing_plan_assignments a WHERE a.subject_type='user' AND a.subject_id=t.user_id AND a.plan_id IN ('arc-plus-v1','arc-pro-v1') AND a.revoked_at IS NULL AND a.expires_at>?1) paid
+   EXISTS(SELECT 1 FROM billing_plan_assignments a WHERE a.subject_type='user' AND a.subject_id=t.user_id AND a.plan_id IN ('arc-plus-v1','arc-pro-v1','${CONNECT_HOSTED_PLAN_ID}') AND a.revoked_at IS NULL AND a.expires_at>?1) paid
   FROM arc_trials t JOIN users u ON u.id=t.user_id
  ), labelled AS (
   SELECT *,CASE WHEN paid THEN 'paid' WHEN expires_at<=?1 THEN 'expired' WHEN granted>0 AND spent+reserved>=granted THEN 'exhausted' ELSE 'active' END status FROM records

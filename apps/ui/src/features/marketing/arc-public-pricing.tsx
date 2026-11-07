@@ -1,7 +1,7 @@
 import { CONNECT_FAIR_USE, CONNECT_FREE_OVERFLOW } from "@remotearc/protocol";
 import { useI18n } from "../../hooks/use-i18n.js";
 import type { PlatformCatalog } from "../../hooks/use-platform-catalog.js";
-import { isConnectOnlyPlan } from "../billing/arc-billing-client.js";
+import { isConnectOnlyPlan, offeredPlans, planIncludesArc } from "../billing/arc-billing-client.js";
 export function ArcPublicPricing({
   catalog,
   startHref,
@@ -12,7 +12,23 @@ export function ArcPublicPricing({
   usageHref: string;
 }) {
   const { tr, locale } = useI18n(),
-    billing = "https://agent.remotearc.app/checkout";
+    billing = "https://agent.remotearc.app/checkout",
+    plans = offeredPlans(catalog.plans);
+  // Without Plus and Pro on offer, the Arc group is left out.
+  const groups = [
+    {
+      key: "own",
+      title: tr("marketing.arcPublicPricing.bringYourOwnAi"),
+      note: tr("marketing.arcPublicPricing.connectChatgptClaudeOrCodexTo"),
+      plans: plans.filter((p) => p.id === "free" || isConnectOnlyPlan(p)),
+    },
+    {
+      key: "arc",
+      title: tr("marketing.arcPublicPricing.arcSOwnAgent"),
+      note: tr("marketing.arcPublicPricing.arcRunsTheAiForYou"),
+      plans: plans.filter((p) => p.id !== "free" && !isConnectOnlyPlan(p)),
+    },
+  ].filter((group) => group.plans.length > 0);
   return (
     <main className="pricingContent">
       <header className="pricingIntro">
@@ -37,20 +53,7 @@ export function ArcPublicPricing({
         </a>
       </section>
       <section className="pricingPlans pricingPlans--saas">
-        {[
-          {
-            key: "own",
-            title: tr("marketing.arcPublicPricing.bringYourOwnAi"),
-            note: tr("marketing.arcPublicPricing.connectChatgptClaudeOrCodexTo"),
-            plans: catalog.plans.filter((p) => p.id === "free" || isConnectOnlyPlan(p)),
-          },
-          {
-            key: "arc",
-            title: tr("marketing.arcPublicPricing.arcSOwnAgent"),
-            note: tr("marketing.arcPublicPricing.arcRunsTheAiForYou"),
-            plans: catalog.plans.filter((p) => p.id !== "free" && !isConnectOnlyPlan(p)),
-          },
-        ].map((group) => (
+        {groups.map((group) => (
           <div className="planGroup" key={group.key}>
             <header className="planGroupHeader">
               <h2>{group.title}</h2>
@@ -128,46 +131,58 @@ export function ArcPublicPricing({
                             : tr("marketing.arcPublicPricing.moreCreditsAndCapacityForOngoing")}
                     </p>
                     <ul className="planIncluded">
-                      {(connect
+                      {(connect && planIncludesArc(p)
                         ? [
                             tr("marketing.arcPublicPricing.yourAgentsAtFullSpeedAll"),
+                            tr("marketing.arcPublicPricing.arcCreditsMonthForRoutines", {
+                              credits: p.monthlyCredits.toLocaleString(),
+                            }),
                             tr("marketing.arcPublicPricing.unlimitedComputersAndFileTransfer"),
                             tr("marketing.arcPublicPricing.terminalFilesBrowserFleetAndConnected"),
-                            tr("marketing.arcPublicPricing.worksWithYourOwnChatgptClaude"),
+                            tr("marketing.arcPublicPricing.yourAiOrArcAutoAndNamed"),
                           ]
-                        : p.id === "free"
+                        : connect
                           ? [
-                              (catalog.connectFreeCalls === null
-                                ? tr("marketing.arcPublicPricing.unlimited")
-                                : catalog.connectFreeCalls.toLocaleString()) +
-                                tr("marketing.arcPublicPricing.connectCallsMonth"),
-                              tr("marketing.arcPublicPricing.runOutAOneTimeDay", {
-                                trialDays: CONNECT_FREE_OVERFLOW.trialDays,
-                                slowLaneCallsPerMinute:
-                                  CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute,
-                              }),
-                              tr("marketing.arcPublicPricing.upToComputers"),
-                              tr("marketing.arcPublicPricing.gbFileTransferMonth"),
-                              tr("marketing.arcPublicPricing.devicePermissionsAndLocalUndo"),
+                              tr("marketing.arcPublicPricing.yourAgentsAtFullSpeedAll"),
+                              tr("marketing.arcPublicPricing.unlimitedComputersAndFileTransfer"),
+                              tr(
+                                "marketing.arcPublicPricing.terminalFilesBrowserFleetAndConnected",
+                              ),
+                              tr("marketing.arcPublicPricing.worksWithYourOwnChatgptClaude"),
                             ]
-                          : [
-                              p.monthlyCredits.toLocaleString() +
-                                tr("marketing.arcPublicPricing.creditsMonth"),
-                              tr("marketing.arcPublicPricing.allConfiguredPremiumModels"),
-                              tr("marketing.arcPublicPricing.oneOffAndRecurringTasks"),
-                              p.concurrentRuns + tr("marketing.arcPublicPricing.concurrentRuns"),
-                              tr("marketing.arcPublicPricing.upTo") +
-                                p.maxSeconds / 60 +
-                                tr("marketing.arcPublicPricing.minutesPerRun"),
-                              (p.id === "arc-plus-v1"
-                                ? 10
-                                : (p.deviceLimit ?? tr("marketing.arcPublicPricing.unlimited"))) +
-                                tr("marketing.arcPublicPricing.connectedComputers"),
-                              p.connectToolCalls === null
-                                ? tr("marketing.arcPublicPricing.unlimitedConnectCalls")
-                                : p.connectToolCalls.toLocaleString() +
+                          : p.id === "free"
+                            ? [
+                                (catalog.connectFreeCalls === null
+                                  ? tr("marketing.arcPublicPricing.unlimited")
+                                  : catalog.connectFreeCalls.toLocaleString()) +
                                   tr("marketing.arcPublicPricing.connectCallsMonth"),
-                            ]
+                                tr("marketing.arcPublicPricing.runOutAOneTimeDay", {
+                                  trialDays: CONNECT_FREE_OVERFLOW.trialDays,
+                                  slowLaneCallsPerMinute:
+                                    CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute,
+                                }),
+                                tr("marketing.arcPublicPricing.upToComputers"),
+                                tr("marketing.arcPublicPricing.gbFileTransferMonth"),
+                                tr("marketing.arcPublicPricing.devicePermissionsAndLocalUndo"),
+                              ]
+                            : [
+                                p.monthlyCredits.toLocaleString() +
+                                  tr("marketing.arcPublicPricing.creditsMonth"),
+                                tr("marketing.arcPublicPricing.allConfiguredPremiumModels"),
+                                tr("marketing.arcPublicPricing.oneOffAndRecurringTasks"),
+                                p.concurrentRuns + tr("marketing.arcPublicPricing.concurrentRuns"),
+                                tr("marketing.arcPublicPricing.upTo") +
+                                  p.maxSeconds / 60 +
+                                  tr("marketing.arcPublicPricing.minutesPerRun"),
+                                (p.id === "arc-plus-v1"
+                                  ? 10
+                                  : (p.deviceLimit ?? tr("marketing.arcPublicPricing.unlimited"))) +
+                                  tr("marketing.arcPublicPricing.connectedComputers"),
+                                p.connectToolCalls === null
+                                  ? tr("marketing.arcPublicPricing.unlimitedConnectCalls")
+                                  : p.connectToolCalls.toLocaleString() +
+                                    tr("marketing.arcPublicPricing.connectCallsMonth"),
+                              ]
                       ).map((item) => (
                         <li key={item}>
                           <span aria-hidden="true">✓</span>
@@ -208,9 +223,12 @@ export function ArcPublicPricing({
         ))}
       </section>
       <p className="pricingFinePrint">
-        {tr("marketing.arcPublicPricing.connectUnlimitedFollowsPublishedFairUse", {
-          computerRegistrationsPerDay: CONNECT_FAIR_USE.computerRegistrationsPerDay,
-        })}
+        {tr(
+          planIncludesArc(catalog.plans.find(isConnectOnlyPlan))
+            ? "marketing.arcPublicPricing.proFollowsPublishedFairUse"
+            : "marketing.arcPublicPricing.connectUnlimitedFollowsPublishedFairUse",
+          { computerRegistrationsPerDay: CONNECT_FAIR_USE.computerRegistrationsPerDay },
+        )}
       </p>
       <section className="pricingEnterprise" aria-label="Enterprise">
         <div>

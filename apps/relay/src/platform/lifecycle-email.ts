@@ -86,13 +86,15 @@ export async function queuePlanStartedEmail(
     cents: number;
     start: string | null;
     end: string | null;
+    interval?: "month" | "year";
+    credits?: number;
   },
   at = new Date().toISOString(),
 ) {
   await db
     .prepare(
       `INSERT OR IGNORE INTO lifecycle_emails(id,user_id,kind,ref,details_json,created_at)
-       SELECT lower(hex(randomblob(16))),?1,'plan_started',?2,json_object('planId',?3,'label',?4,'cents',?5,'periodEnd',?6),?8
+       SELECT lower(hex(randomblob(16))),?1,'plan_started',?2,json_object('planId',?3,'label',?4,'cents',?5,'periodEnd',?6,'interval',?9,'credits',?10),?8
        WHERE NOT EXISTS(SELECT 1 FROM arc_payment_receipts r WHERE r.user_id=?1 AND r.product_id=?3
          AND r.id<>?2 AND r.state='paid' AND r.period_end IS NOT NULL
          AND r.period_end>=strftime('%Y-%m-%dT%H:%M:%fZ',COALESCE(?7,?8),'-2 days'))`,
@@ -106,6 +108,8 @@ export async function queuePlanStartedEmail(
       receipt.end,
       receipt.start,
       at,
+      receipt.interval ?? "month",
+      receipt.credits ?? 0,
     )
     .run();
 }
@@ -206,6 +210,8 @@ export async function runLifecycleEmails(env: LifecycleEmailEnv, timeoutMs = 150
               label: String(details.label),
               cents: Number(details.cents),
               periodEnd: typeof details.periodEnd === "string" ? details.periodEnd : null,
+              interval: details.interval === "year" ? "year" : "month",
+              credits: Number(details.credits) || 0,
             },
           }
         : {}),

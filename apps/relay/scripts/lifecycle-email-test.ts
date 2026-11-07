@@ -116,7 +116,7 @@ try {
   const subjects = sent.slice(2).map((mail) => mail.body.email.subject as string);
   assert(
     subjects.some((subject) =>
-      subject.startsWith("Your 7-day Connect Unlimited trial has started"),
+      subject.startsWith("Your 7-day unlimited Connect trial has started"),
     ),
   );
   assert(subjects.some((subject) => subject.startsWith("Your full-speed trial ends soon")));
@@ -215,6 +215,44 @@ try {
     !html(sent.length - 1).includes("unsubscribe?token="),
     "confirmations have no opt-out link",
   );
+  // A yearly plan with Credits is confirmed with its yearly price and its Credits.
+  fixture.addUser("annual-user");
+  sql
+    .prepare(
+      "INSERT INTO arc_payment_receipts(id,provider,event_id,user_id,product_id,state,amount_cents,currency,period_start,period_end,verified_at,payload_hash) VALUES(?,'stripe',?,?,?,'paid',24900,'usd',?,?,?,?)",
+    )
+    .run(
+      "receipt-y",
+      "evt-y",
+      "annual-user",
+      "connect-unlimited-v1",
+      day(0),
+      day(365),
+      fixture.now,
+      "hash",
+    );
+  await queuePlanStartedEmail(fixture.db, {
+    userId: "annual-user",
+    sku: "connect-unlimited-v1",
+    label: "Pro",
+    cents: 24900,
+    receipt: "receipt-y",
+    start: day(0),
+    end: day(365),
+    interval: "year",
+    credits: 1000,
+  });
+  const beforeAnnual = sent.length;
+  await runLifecycleEmails(env);
+  const annualIndex = sent.findIndex(
+    (mail, index) => index >= beforeAnnual && mail.body.email.subject === "Your Pro plan is active",
+  );
+  assert(annualIndex >= 0, "The yearly plan is confirmed");
+  const annualHtml = html(annualIndex);
+  assert.match(annualHtml, /US\$249\/year/);
+  assert.doesNotMatch(annualHtml, /US\$249\/month/);
+  assert.match(annualHtml, /1,000 Arc Credits are ready for each month/);
+  assert.match(html(beforeAnnual - 1), /US\$\d+\/month/, "Monthly plans still say per month");
 
   // 7. A provider rejection is recorded; a timeout is uncertain and never retried.
   fixture.addUser("rejected");
@@ -263,5 +301,5 @@ try {
 }
 sql.close();
 console.log(
-  "PASS: lifecycle emails queue once per sign-up, trial start, trial ending and new paid plan, deliver through SendPulse only when enabled, skip opted-out, stale and already-paid cases, never resend uncertain deliveries and respect shared capacity with the OTP reserve",
+  "PASS: lifecycle emails queue once per sign-up, trial start, trial ending and new paid plan, deliver through SendPulse only when enabled, confirm yearly plans with their yearly price and Credits, skip opted-out, stale and already-paid cases, never resend uncertain deliveries and respect shared capacity with the OTP reserve",
 );

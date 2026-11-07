@@ -158,6 +158,40 @@
     grid-template-columns: 1fr;
   }
 }
+.adminTrialFunnel {
+  margin: 20px 0 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.adminTrialFunnel h3 {
+  margin: 0 0 12px;
+  font-size: 13px;
+}
+.adminTrialFunnel ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.adminTrialFunnel li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.adminTrialFunnel strong {
+  font-size: 22px;
+}
+.adminTrialFunnel span,
+.adminTrialFunnel p {
+  font-size: 12px;
+  color: var(--muted);
+}
+.adminTrialFunnel p {
+  margin: 12px 0 0;
+}
 .adminTrialFilters {
   display: flex;
   flex-wrap: wrap;

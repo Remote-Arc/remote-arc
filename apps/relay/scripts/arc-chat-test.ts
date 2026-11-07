@@ -28,7 +28,7 @@ import {
   arcToolInputError,
   arcExecutionPrompt,
 } from "../src/arc/arc-chat-runtime.js";
-import { ARC_MODELS, prepareArcBudget } from "../src/arc/arc-chat-model.js";
+import { ARC_MODELS, prepareArcBudget, arcAutoStepModel } from "../src/arc/arc-chat-model.js";
 import {
   nextArcOccurrence,
   arcScheduleSchema,
@@ -229,6 +229,14 @@ assert.equal(
   false,
 );
 assert.equal((await decode(await api("status"))).enabled, true);
+assert(
+  sql
+    .prepare(
+      "SELECT 1 FROM product_events WHERE name='arc.workspace.opened' AND user_id=? AND operation IS NOT NULL",
+    )
+    .get("owner"),
+  "Opening Arc records the first funnel step with the access state",
+);
 const autoOption = (await decode(await api("status"))).models.find(
   (model: any) => model.id === "auto",
 );
@@ -2570,6 +2578,33 @@ assert.equal(
   qualityAuto.premium,
   false,
   "A stronger server-selected Auto model is usable without a client-supplied key",
+);
+// Auto uses the stronger model only for the first plan, recovery after a
+// failed or uncertain tool step, and repairs. Every other step, a chosen
+// model, a disabled escalation or an unconfigured model keep the base model.
+const autoAccess = await prepareArcBudget(env, "owner", "personal:owner", id, "auto");
+const stepPick = (
+  input: Partial<Parameters<typeof arcAutoStepModel>[2]>,
+  stepEnv: typeof env = env,
+) => arcAutoStepModel(stepEnv, autoAccess, { auto: true, step: 3, repairing: false, ...input }).id;
+assert.equal(stepPick({ step: 0 }), "gpt-6.1-terra");
+assert.equal(stepPick({ lastToolStatus: "succeeded" }), autoAccess.definition.id);
+assert.equal(stepPick({ lastToolStatus: "failed" }), "gpt-6.1-terra");
+assert.equal(stepPick({ lastToolStatus: "unknown" }), "gpt-6.1-terra");
+assert.equal(stepPick({ repairing: true }), "gpt-6.1-terra");
+assert.equal(stepPick({ step: 0, auto: false }), autoAccess.definition.id);
+assert.equal(
+  stepPick({ step: 0 }, { ...env, ARC_AUTO_ESCALATION_MODEL_ID: "off" }),
+  autoAccess.definition.id,
+);
+assert.equal(
+  arcAutoStepModel(
+    env,
+    { ...autoAccess, gateway: { ...autoAccess.gateway, adapters: {} } },
+    { auto: true, step: 0, repairing: false },
+  ).id,
+  autoAccess.definition.id,
+  "An unconfigured stronger model never blocks Auto",
 );
 await assert.rejects(
   () => prepareArcBudget(env, "owner", "personal:owner", id, "gpt-6.1-sol"),

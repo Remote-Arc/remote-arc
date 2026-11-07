@@ -242,6 +242,19 @@ export async function reserveBilling(
       if ((wallet?.available ?? 0) < walletMaximum)
         throw new BillingDeniedError("BILLING_CREDITS_EXHAUSTED");
     }
+    // Today's allowance for this person or task is used up. Name it, so they
+    // wait for the daily reset instead of reading it as a service outage.
+    if (input.lane === "arc_hosted") {
+      const daily = await db
+        .prepare(
+          `SELECT 1 AS hit FROM json_each(?1) e JOIN billing_budgets b ON ${sameEntry}
+        WHERE b.scope_type IN ('user','organization','task') AND b.metric='cost_micros' AND b.period_key=?2
+        AND b.spent_units+b.reserved_units+json_extract(e.value,'$.units')>b.limit_units LIMIT 1`,
+        )
+        .bind(n.entriesJson, n.period)
+        .first<{ hit: number }>();
+      if (daily) throw new BillingDeniedError("ARC_DAILY_LIMIT_REACHED");
+    }
     throw new BillingDeniedError("BILLING_QUOTA_OR_AUTHORITY_UNAVAILABLE");
   }
   if (row.request_json !== n.requestJson)

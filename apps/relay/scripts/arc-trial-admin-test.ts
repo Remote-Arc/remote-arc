@@ -83,6 +83,42 @@ sql
     "INSERT INTO billing_plan_assignments(id,plan_id,subject_type,subject_id,expires_at,created_at) VALUES('paid-assignment','arc-plus-v1','user','paid',?,?)",
   )
   .run(future, now);
+// Funnel fixture: who opened Arc, ran work, came back on another day and
+// ran a routine. Administrators and work older than 30 days are left out.
+const day = (offset: number) => new Date(Date.now() - offset * 86400000).toISOString();
+for (const user of ["active", "exhausted", "operator"])
+  sql
+    .prepare(
+      "INSERT INTO product_events(id,occurred_at,domain,name,source,outcome,user_id,trace_id) VALUES(?,?,'arc','arc.workspace.opened','server','accepted',?,?)",
+    )
+    .run(crypto.randomUUID(), now, user, crypto.randomUUID());
+for (const user of ["active", "expired"]) {
+  sql
+    .prepare(
+      "INSERT OR IGNORE INTO organizations(id,name,kind,personal_owner_user_id,created_at) VALUES(?,?,'personal',?,?)",
+    )
+    .run("personal:" + user, user, user, now);
+  sql
+    .prepare(
+      "INSERT INTO arc_chat_sessions(id,user_id,organization_id,title_ciphertext,created_at,updated_at) VALUES(?,?,?,'x',?,?)",
+    )
+    .run("session:" + user, user, "personal:" + user, now, now);
+}
+sql
+  .prepare(
+    "INSERT INTO automations(id,user_id,name,kind,action_json,created_at,updated_at) VALUES('routine:active','active','Daily','goal_loop','{}',?,?)",
+  )
+  .run(now, now);
+for (const [id, user, status, at, automation] of [
+  ["run-1", "active", "succeeded", day(2), null],
+  ["run-2", "active", "failed", day(0), "routine:active"],
+  ["run-old", "expired", "succeeded", day(40), null],
+] as const)
+  sql
+    .prepare(
+      "INSERT INTO arc_chat_runs(id,session_id,user_id,request_id,input_hash,model_id,automation_id,status,max_tokens,max_steps,deadline,created_at,updated_at) VALUES(?,?,?,?,'h','auto',?,?,1000,8,?,?,?)",
+    )
+    .run(id, "session:" + user, user, id, automation, status, at, at, at);
 const env = {
   DB: db,
   PUBLIC_ORIGIN: "https://mcp.remotearc.app",
@@ -108,6 +144,19 @@ assert.equal(response.status, 200);
 assert.equal(response.headers.get("cache-control"), "private, no-store");
 const data = (await response.json()) as any;
 assert.equal(data.total, 35);
+assert.deepEqual(
+  { ...data.funnel, since: undefined },
+  {
+    since: undefined,
+    opened: 2,
+    trials: 34,
+    ran: 1,
+    succeeded: 1,
+    returned: 1,
+    routines: 1,
+  },
+  "The funnel counts people per step over 30 days, without administrators or older work",
+);
 assert.equal(data.items.length, 30);
 assert(!data.items.some((item: any) => item.user_id === "eligible"));
 const second = await listAdminTrials(db, new URL("https://admin.remotearc.app/?page=1"));
@@ -140,5 +189,5 @@ assert.equal(
 );
 sql.close();
 console.log(
-  "PASS: trial user metadata, paid/active/expired/exhausted state, saved allowance, pagination, literal search, private responses and current administrator authorization.",
+  "PASS: trial user metadata, paid/active/expired/exhausted state, saved allowance, pagination, literal search, the 30-day Arc funnel, private responses and current administrator authorization.",
 );

@@ -404,6 +404,7 @@
     "arc.chat.arcNativeChat.theModelDidNotReturnA": "模型未返回完整的下一步，已执行的操作与实际返回仍保留在下方记录中。",
     "arc.chat.arcNativeChat.theSelectedResultCouldNotBe": "所选结果尚未核验完成，请查看回执后再继续。",
     "arc.chat.arcNativeChat.thisModelNeedsAPaidModel": "此模型需要付费模型额度，可以选择 Auto 继续。",
+    "arc.chat.arcNativeChat.todaysArcAllowanceIsUsedUp": "今天的 Arc 额度已用完，将在 {time} 重置。你的 Credits 和已保存的工作都会保留。",
     "arc.chat.arcNativeChat.thisRequestStoppedBeforeANew": "这次请求未能启动新的模型调用。刷新额度后，可以发送新消息继续。",
     "arc.chat.arcNativeChat.thisRunReachedItsWorkLimit": "本次运行已达到工作上限。上方结果已保存，可以发送新消息继续。",
     "arc.chat.arcNativeChat.thisRunUsedItsTokenAllowance": "本次运行的 token 额度已用完。结果已保留，可以发送新消息继续。",

@@ -133,6 +133,17 @@ const rules: readonly [readonly string[], BillingRecovery][] = [
     ),
   ],
   [
+    ["ARC_DAILY_LIMIT_REACHED"],
+    recovery(
+      [
+        "Today's Arc allowance is used up. It resets at 00:00 UTC. Your Credits, conversations and saved work are kept.",
+        "今天的 Arc 额度已用完，将在 UTC 00:00 重置。你的 Credits、对话和已保存的工作都会保留。",
+      ],
+      [billing],
+      "later",
+    ),
+  ],
+  [
     [
       "BILLING_QUOTA_OR_AUTHORITY_UNAVAILABLE",
       "APP_PLATFORM_FUNDED_ALLOWANCE_REACHED",

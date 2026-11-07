@@ -1,7 +1,7 @@
 import { arcEnabled, creditsEnabled, type PlatformLaunchEnv } from "../platform/platform-launch.js";
 import { resolveModelGateway, type ModelGatewayEnv } from "./model-gateway.js";
 import { ModelProviderError, type ModelDefinition } from "./model-provider-adapters.js";
-import { requireArcAccess, arcLimit, ensureTrialCredits } from "./arc-trial.js";
+import { requireArcAccess, ensureTrialCredits } from "./arc-trial.js";
 import { ARC_HOSTED_MODELS } from "@remotearc/protocol";
 import { fundingPolicy, automaticFunding } from "./arc-funding.js";
 
@@ -14,8 +14,8 @@ export type ArcModelEnv = ModelGatewayEnv &
     ARC_CHAT_ENABLED?: string;
     ARC_MODELS?: string;
     ARC_AUTO_MODEL_ID?: string;
+    ARC_AUTO_ESCALATION_MODEL_ID?: string;
     ARC_PLATFORM_DAILY_MICROS?: string;
-    ARC_USER_DAILY_MICROS?: string;
     ARC_PAID_USER_DAILY_MICROS?: string;
     ARC_TRIAL_DAILY_MICROS?: string;
     ARC_TRIAL_PREMIUM_MICROS?: string;
@@ -31,6 +31,31 @@ export function arcGateway(env: ArcModelEnv) {
   return gateway;
 }
 export const arcAutoId = (env: ArcModelEnv) => env.ARC_AUTO_MODEL_ID || "arc-auto";
+/** The stronger model Auto uses for the steps where a weak decision costs the
+ * most. "off" keeps every Auto step on the base model. */
+export const arcAutoEscalationId = (env: ArcModelEnv) =>
+  env.ARC_AUTO_ESCALATION_MODEL_ID || "gpt-6.1-terra";
+/** Auto escalates the first plan, recovery after a failed or uncertain tool
+ * step, and a repair of a malformed decision. Every other step stays on the
+ * low-cost base model. Credits charge each step at its own model's price. */
+export function arcAutoStepModel(
+  env: ArcModelEnv,
+  access: {
+    gateway: { models: readonly ModelDefinition[]; adapters: Record<string, unknown> };
+    definition: ModelDefinition;
+  },
+  input: { auto: boolean; step: number; lastToolStatus?: string; repairing: boolean },
+) {
+  const escalate =
+    input.auto &&
+    (input.step === 0 ||
+      input.lastToolStatus === "failed" ||
+      input.lastToolStatus === "unknown" ||
+      input.repairing);
+  if (!escalate) return access.definition;
+  const stronger = access.gateway.models.find((m) => m.id === arcAutoEscalationId(env));
+  return stronger && access.gateway.adapters[stronger.provider] ? stronger : access.definition;
+}
 export function arcDeploymentReady(
   env: ArcModelEnv & { ARC_RUNTIME?: unknown; APP_TOKEN_KEY?: string },
 ) {
@@ -154,7 +179,9 @@ export async function prepareArcBudget(
         userId,
         organizationId,
         access.definition.provider,
-        access.access.paid ? userLimit : arcLimit(env.ARC_USER_DAILY_MICROS, 50000),
+        // The trial daily allowance already bounds this grant; a second, lower
+        // per-user cap refused trial work the allowance still covered.
+        userLimit,
         expires,
         now,
       )

@@ -31,7 +31,7 @@ export async function listAdminTrials(db: D1Database, url: URL, at = new Date().
   SELECT * FROM labelled WHERE (?2='' OR lower(email) LIKE ?2 ESCAPE '\\' OR lower(COALESCE(name,'')) LIKE ?2 ESCAPE '\\') AND (?3='all' OR status=?3)
  )`;
   const pageSize = 30,
-    [rows, count] = await Promise.all([
+    [rows, count, funnel] = await Promise.all([
       db
         .prepare(
           base + " SELECT * FROM filtered ORDER BY started_at DESC,user_id LIMIT 30 OFFSET ?4",
@@ -42,16 +42,49 @@ export async function listAdminTrials(db: D1Database, url: URL, at = new Date().
         .prepare(base + " SELECT COUNT(*) total FROM filtered")
         .bind(at, search, status)
         .first<{ total: number }>(),
+      arcFunnel(db, at),
     ]);
   return {
     page,
     pageSize,
     total: count?.total || 0,
+    funnel,
     items: rows.results.map(({ granted, spent, reserved, ...row }) => ({
       ...row,
       grantedCredits: displayCredits(granted),
       spentCredits: displayCredits(spent),
       reservedCredits: displayCredits(reserved),
     })),
+  };
+}
+/** People (not administrators) reaching each Arc step in the last 30 days.
+ * Each step is counted on its own, so a later step can include people whose
+ * earlier step happened before the window. */
+export async function arcFunnel(db: D1Database, at = new Date().toISOString()) {
+  const since = new Date(Date.parse(at) - 30 * 86400000).toISOString();
+  const row = await db
+    .prepare(
+      `WITH people AS (SELECT id FROM users WHERE role<>'admin'),
+  runs AS (SELECT r.user_id,r.status,r.automation_id,substr(r.created_at,1,10) day
+   FROM arc_chat_runs r JOIN people p ON p.id=r.user_id WHERE r.created_at>=?1)
+ SELECT
+  (SELECT COUNT(DISTINCT e.user_id) FROM product_events e JOIN people p ON p.id=e.user_id
+    WHERE e.name='arc.workspace.opened' AND e.occurred_at>=?1) opened,
+  (SELECT COUNT(*) FROM arc_trials t JOIN people p ON p.id=t.user_id WHERE t.started_at>=?1) trials,
+  (SELECT COUNT(DISTINCT user_id) FROM runs) ran,
+  (SELECT COUNT(DISTINCT user_id) FROM runs WHERE status='succeeded') succeeded,
+  (SELECT COUNT(*) FROM (SELECT user_id FROM runs GROUP BY user_id HAVING COUNT(DISTINCT day)>=2)) returned,
+  (SELECT COUNT(DISTINCT user_id) FROM runs WHERE automation_id IS NOT NULL) routines`,
+    )
+    .bind(since)
+    .first<Record<"opened" | "trials" | "ran" | "succeeded" | "returned" | "routines", number>>();
+  return {
+    since,
+    opened: row?.opened || 0,
+    trials: row?.trials || 0,
+    ran: row?.ran || 0,
+    succeeded: row?.succeeded || 0,
+    returned: row?.returned || 0,
+    routines: row?.routines || 0,
   };
 }

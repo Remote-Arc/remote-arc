@@ -94,6 +94,11 @@ const special: Record<
     meaning: "Free 本月额度与反向试用都已用完，调用处于慢速通道，本次调用早于允许的间隔。",
     action: "按 retryAfterSeconds 等待后重试；升级 Connect Unlimited 可恢复全速。",
   },
+  ARC_DAILY_LIMIT_REACHED: {
+    category: "quota",
+    meaning: "该用户或任务今天的 Arc 模型额度已用完，第二天 UTC 00:00 重置。",
+    action: "等待每日重置；如需更多额度，查看试用条款或付费套餐。",
+  },
   DEVICE_TIMEOUT: {
     category: "execution",
     meaning: "设备未在等待窗口内返回。操作可能已执行，当前结果未知。",
@@ -413,6 +418,8 @@ const englishSpecial: Record<string, string> = {
   MONTHLY_LIMIT_REACHED: "The monthly tool-call allowance has been used up.",
   SLOW_LANE_RATE_LIMITED:
     "The Free allowance and reverse trial are used up, so calls are paced in the slow lane and this call came before the allowed interval.",
+  ARC_DAILY_LIMIT_REACHED:
+    "Today's Arc model allowance for this person or task is used up. It resets at 00:00 UTC.",
   DEVICE_TIMEOUT:
     "The device did not reply before the deadline. The operation may have executed; its result is unknown.",
   DEVICE_SIGNAL_STALE:

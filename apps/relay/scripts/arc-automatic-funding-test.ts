@@ -70,7 +70,6 @@ const at = new Date().toISOString(),
     ARC_PLATFORM_ENABLED: "1",
     OPENAI_API_KEY: "fixture",
     ARC_PLATFORM_DAILY_MICROS: "10000",
-    ARC_USER_DAILY_MICROS: "100000",
   };
 for (const id of ["admin", "free-one", "free-two", "paid"]) {
   sql
@@ -137,6 +136,22 @@ assert.equal(
 );
 assert.equal(pools.paid.limit, 39000000);
 assert.equal(pools.paid.dailyLimit, 1000000);
+// The platform-funded Auto grant must allow the whole trial daily allowance.
+// A separate, lower per-user cap once refused trial work after two short tasks.
+const trialDaily = Number(
+  sql.prepare("SELECT daily_allowance_micros AS d FROM arc_trials WHERE user_id=?").get("free-one")!
+    .d,
+);
+await prepareArcBudget(env, "free-one", "personal:free-one", "task:free-one", "auto");
+assert.equal(
+  Number(
+    sql
+      .prepare("SELECT max_cost_micros AS m FROM billing_model_grants WHERE id LIKE ?")
+      .get("arc-auto:free-one:%")!.m,
+  ),
+  trialDaily,
+  "The trial Auto grant follows the trial daily allowance",
+);
 const freeInputs = await Promise.all(
     ["free-one", "free-two"].map((user) => input(user, "free", 60000)),
   ),

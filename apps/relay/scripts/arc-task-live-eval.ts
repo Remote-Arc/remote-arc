@@ -159,7 +159,6 @@ const env = {
   ARC_CHAT_ENABLED: "1",
   ARC_CREDITS_ENABLED: "1",
   ARC_TRIAL_DAILY_MICROS: "100000",
-  ARC_USER_DAILY_MICROS: "100000",
   ARC_PLATFORM_DAILY_MICROS: String(maximumMicros),
   ARC_RUNTIME: { getByName: () => ({ fetch: async () => Response.json({ started: true }) }) },
   MODEL_GATEWAY: {

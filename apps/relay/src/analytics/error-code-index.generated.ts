@@ -316,6 +316,9 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
  "ARC_CREDITS_RECEIPT_MISMATCH": [
   "arc/arc-credits.ts"
  ],
+ "ARC_DAILY_LIMIT_REACHED": [
+  "billing/billing-ledger.ts"
+ ],
  "ARC_DEVICE_READ_FAILED": [
   "arc/arc-chat-runtime.ts"
  ],

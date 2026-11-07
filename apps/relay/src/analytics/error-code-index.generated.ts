@@ -1671,6 +1671,7 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
   "browser/browser-auth.ts",
   "browser/runner-attention.ts",
   "devices/device.ts",
+  "devices/live.ts",
   "devices/secret-requests.ts",
   "slack/slack-bot-install.ts"
  ],
@@ -1815,6 +1816,7 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
   "devices/approvals.ts",
   "devices/device-task-settings.ts",
   "devices/device.ts",
+  "devices/live.ts",
   "devices/secret-requests.ts",
   "followups/user-followups.ts",
   "index.ts",
@@ -1857,7 +1859,8 @@ export const ERROR_CODE_SOURCES:Record<string,readonly string[]>={
   "mcp/mcp-errors.ts"
  ],
  "WEBSOCKET_REQUIRED": [
-  "browser/runner-attention.ts"
+  "browser/runner-attention.ts",
+  "devices/live.ts"
  ],
  "WORKSPACE_CWD_REQUIRED": [
   "mcp/mcp-errors.ts"

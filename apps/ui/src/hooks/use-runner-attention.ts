@@ -1,5 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { requestJSON } from "../features/browser-runner/runner-requests.js";
+import { UI_PREVIEW } from "../preview/preview-mode.js";
+import { useLiveTopic } from "./use-live-topic.js";
+
+/** Without the change feed, a waiting browser task is noticed within seconds. */
+const POLL_MS = 5000;
+/** With the feed, polling only covers changes the Relay cannot announce. */
+const LIVE_FALLBACK_MS = 120_000;
 
 export type Attention = {
   id: string;
@@ -21,17 +28,26 @@ export function useRunnerAttention({
   const [rows, setRows] = useState<Attention[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [hidden, setHidden] = useState<string[]>([]);
+  const reload = useRef<(() => void) | undefined>(undefined);
+  const live = useLiveTopic("attention", () => reload.current?.(), enabled && !UI_PREVIEW);
+  const liveRef = useRef(live);
+  liveRef.current = live;
   useEffect(() => {
     if (!enabled) return;
     let timer: ReturnType<typeof setTimeout>;
     let request: AbortController | undefined;
+    let again = false;
     const stop = () => {
       clearTimeout(timer);
       request?.abort();
       request = undefined;
     };
     const load = async () => {
-      if (document.hidden || request) return;
+      if (document.hidden) return;
+      if (request) {
+        again = true; // a change arrived mid-request; read it once this one ends
+        return;
+      }
       clearTimeout(timer);
       const current = new AbortController();
       request = current;
@@ -62,7 +78,9 @@ export function useRunnerAttention({
       } finally {
         if (request === current) {
           request = undefined;
-          timer = setTimeout(load, 5000);
+          const delay = again ? 0 : liveRef.current ? LIVE_FALLBACK_MS : POLL_MS;
+          again = false;
+          timer = setTimeout(load, delay);
         }
       }
     };
@@ -70,9 +88,11 @@ export function useRunnerAttention({
       if (document.hidden) stop();
       else void load();
     };
+    reload.current = () => void load();
     document.addEventListener("visibilitychange", syncVisibility);
     syncVisibility();
     return () => {
+      reload.current = undefined;
       document.removeEventListener("visibilitychange", syncVisibility);
       stop();
     };

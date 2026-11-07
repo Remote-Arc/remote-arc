@@ -2,6 +2,7 @@ import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/err
 import { type DashboardTab } from "../../lib/dashboard-workspaces.js";
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../use-i18n.js";
+import { useLiveTopic } from "../use-live-topic.js";
 import { UI_PREVIEW } from "../../preview/preview-mode.js";
 import type { SecurityGrant, SecurityState } from "@remotearc/protocol";
 import {
@@ -135,20 +136,33 @@ export function useDashboardSecurity({
     }
   }
 
+  // With the change feed, new and decided approvals arrive at once and the
+  // slow poll only catches expiry. Without it, poll as before.
+  const approvalsLive = useLiveTopic(
+    "approvals",
+    () => void refreshPendingApprovals(),
+    active === "security" && !UI_PREVIEW,
+  );
+
   useEffect(() => {
     if (active !== "security") return;
     void refreshSecurity();
-    const approvalsTimer = window.setInterval(() => {
-      if (document.visibilityState === "visible") void refreshPendingApprovals();
-    }, 5_000);
     const securityTimer = window.setInterval(() => {
       if (document.visibilityState === "visible") void refreshSecurity();
     }, 60_000);
-    return () => {
-      window.clearInterval(approvalsTimer);
-      window.clearInterval(securityTimer);
-    };
+    return () => window.clearInterval(securityTimer);
   }, [active]);
+
+  useEffect(() => {
+    if (active !== "security") return;
+    const approvalsTimer = window.setInterval(
+      () => {
+        if (document.visibilityState === "visible") void refreshPendingApprovals();
+      },
+      approvalsLive ? 120_000 : 5_000,
+    );
+    return () => window.clearInterval(approvalsTimer);
+  }, [active, approvalsLive]);
 
   async function setMcpPaused(paused: boolean) {
     if (UI_PREVIEW || !securityState) return;

@@ -143,10 +143,44 @@ export const transferSize = (bytes: number) =>
   bytes >= 1024 ** 3
     ? (bytes / 1024 ** 3).toFixed(2).replace(/\.?0+$/, "") + " GB"
     : Math.round(bytes / 1024 ** 2) + " MB";
-/** Connect Unlimited: paid remote execution; no monthly Credits or hosted Arc beyond the one-time trial. */
+/** Connect Unlimited: paid remote execution. Older versions are Connect-only; a
+ * version with monthly Credits also includes hosted Arc (see planIncludesArc). */
 export const isConnectOnlyPlan = (plan: { id: string }) => plan.id === CONNECT_UNLIMITED_PLAN_ID;
-export function connectPlanFeatures(tr: Translate) {
+/** A plan that grants monthly Credits also includes hosted Arc. */
+export const planIncludesArc = (plan: { monthlyCredits?: number } | undefined) =>
+  (plan?.monthlyCredits ?? 0) > 0;
+/** Plus and Pro are no longer offered once Connect Unlimited includes Arc. Existing
+ * subscribers keep their saved terms: a plan the account already has stays listed,
+ * and a Connect-only subscriber can still add Arc with Plus. */
+export const offeredPlans = <P extends { id: string; monthlyCredits?: number }>(
+  plans: readonly P[],
+  current?: { id: string; monthlyCredits?: number },
+) => {
+  const bundled = planIncludesArc(plans.find(isConnectOnlyPlan)),
+    connectOnly = Boolean(current && isConnectOnlyPlan(current) && !planIncludesArc(current));
+  return plans.filter(
+    (plan) =>
+      !bundled ||
+      connectOnly ||
+      plan.id === "free" ||
+      isConnectOnlyPlan(plan) ||
+      plan.id === current?.id,
+  );
+};
+export function connectPlanFeatures(tr: Translate, plan?: { monthlyCredits?: number }) {
   const registrationsPerDay = CONNECT_FAIR_USE.computerRegistrationsPerDay;
+  if (planIncludesArc(plan))
+    return [
+      tr("billing.arcBillingClient.yourAgentsAtFullSpeedAll"),
+      tr("billing.arcBillingClient.arcCreditsEveryMonth", {
+        credits: plan!.monthlyCredits!.toLocaleString(),
+      }),
+      tr("billing.arcBillingClient.unlimitedConnectCallsPublishedFairUse"),
+      tr("billing.arcBillingClient.unlimitedRegisteredComputersEachAuthenticatedAnd"),
+      tr("billing.arcBillingClient.unlimitedFileTransfer"),
+      tr("billing.arcBillingClient.localTerminalFilesBrowserFleetAnd"),
+      tr("billing.arcBillingClient.bringYourOwnAiOrLetArc"),
+    ];
   return [
     tr("billing.arcBillingClient.yourAgentsAtFullSpeedAll"),
     tr("billing.arcBillingClient.unlimitedConnectCallsPublishedFairUse"),

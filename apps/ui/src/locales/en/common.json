@@ -310,6 +310,8 @@
     "auth.pairingErrors.thisPairingCodeWasAlreadyUsed": "This pairing code was already used or has expired. Start Remote Arc on your computer again to get a new one.",
     "auth.pairingErrors.tooManyNewComputersWereAdded": "Too many new computers were added in the last 24 hours. Try again later.",
     "billing.arcBillingClient.bringYourOwnChatgptClaudeOr": "Bring your own ChatGPT, Claude or Codex · no monthly Credits; Arc after the free trial needs Plus",
+    "billing.arcBillingClient.arcCreditsEveryMonth": "{credits} Arc Credits every month · Arc runs routines on your computers while you are away",
+    "billing.arcBillingClient.bringYourOwnAiOrLetArc": "Bring your own ChatGPT, Claude or Codex, or let Arc run the AI · Auto and named models",
     "billing.arcBillingClient.localTerminalFilesBrowserFleetAnd": "Local terminal, files, browser, Fleet and connected Apps",
     "billing.arcBillingClient.thisBillingRequestCouldNotBe": "This billing request could not be completed. Check your current payment status before retrying, and keep the error reference if you need help.",
     "billing.arcBillingClient.unlimitedConnectCallsPublishedFairUse": "Unlimited Connect calls · published fair-use rate limits only",

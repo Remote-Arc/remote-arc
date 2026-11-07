@@ -24,6 +24,36 @@ export const displayCredits = (units: number) => {
   return units / ARC_CREDIT_RATE.unitsPerCredit;
 };
 
+/** A yearly subscription invoice grants its plan's monthly Credits one month at a
+ * time: one lot per month of the paid year, each expiring when its month ends, so a
+ * paid year never front-loads twelve months of model spend. Each lot's source is
+ * the receipt plus this suffix and its 1-based month. */
+const MONTH_SLICE = "#month-";
+export const creditMonthRef = (receiptId: string, month: number) =>
+  receiptId + MONTH_SLICE + String(month).padStart(2, "0");
+const addUtcMonths = (value: string, months: number) => {
+  const d = new Date(value),
+    target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + months, 1)),
+    lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(d.getUTCDate(), lastDay));
+  target.setUTCHours(d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds());
+  return target.toISOString();
+};
+/** The monthly lots of one paid period, in order. The last lot ends with the period. */
+export function creditMonths(periodStart: string, periodEnd: string) {
+  const start = iso(periodStart),
+    end = iso(periodEnd),
+    months: Array<{ startsAt: string; expiresAt: string }> = [];
+  // A yearly period has twelve months; the bound only stops a malformed period.
+  for (let n = 0; n < 13; n++) {
+    const startsAt = addUtcMonths(start, n);
+    if (startsAt >= end) break;
+    const next = addUtcMonths(start, n + 1);
+    months.push({ startsAt, expiresAt: next < end ? next : end });
+  }
+  return months;
+}
+
 type Grant = {
   userId: string;
   source: CreditSource;
@@ -79,19 +109,30 @@ export async function grantArcCredits(db: D1Database, input: Grant, at = new Dat
     commercial_version_id: string | null;
     discount_cents: number;
   } | null = null;
+  // A monthly lot of a yearly invoice names its receipt and month.
+  const slice = /^(.+)#month-(\d{2})$/.exec(input.sourceRef),
+    receiptId = slice ? slice[1]! : input.sourceRef;
   if (input.source === "subscription" || input.source === "topup") {
     receipt = await db
       .prepare(
         "SELECT product_id,amount_cents,period_start,period_end,commercial_version_id,discount_cents FROM arc_payment_receipts WHERE id=?1 AND user_id=?2 AND state='paid' AND currency='usd'",
       )
-      .bind(input.sourceRef, input.userId)
+      .bind(receiptId, input.userId)
       .first();
     if (!receipt) throw new CreditError("ARC_CREDITS_GRANT_NOT_AUTHORIZED");
+    if (slice && input.source !== "subscription")
+      throw new CreditError("ARC_CREDITS_RECEIPT_MISMATCH");
     const version = await commercialVersion(
-        db,
-        receipt.commercial_version_id || "seed:live:" + receipt.product_id,
-      ),
-      product = commercialOffer(version);
+      db,
+      receipt.commercial_version_id || "seed:live:" + receipt.product_id,
+    );
+    let product: ReturnType<typeof commercialOffer>;
+    try {
+      // Only a version that published a yearly price can have paid for a year.
+      product = commercialOffer(version, slice ? "year" : "month");
+    } catch {
+      throw new CreditError("ARC_CREDITS_RECEIPT_MISMATCH");
+    }
     const credits = product.credits,
       price = product.cents;
     if (
@@ -113,11 +154,21 @@ export async function grantArcCredits(db: D1Database, input: Grant, at = new Dat
         .first())
     )
       throw new CreditError("ARC_CREDITS_RECEIPT_MISMATCH");
-    if (
-      input.source === "subscription" &&
-      (receipt.period_start !== start || receipt.period_end !== expiry || !expiry)
-    )
-      throw new CreditError("ARC_CREDITS_RECEIPT_MISMATCH");
+    if (input.source === "subscription") {
+      // A monthly invoice grants one lot for its period; a yearly invoice one lot
+      // for each month of its period, exactly as creditMonths divides it.
+      const month =
+        slice && receipt.period_start && receipt.period_end
+          ? creditMonths(receipt.period_start, receipt.period_end)[Number(slice[2]) - 1]
+          : null;
+      const expected = slice
+        ? month
+        : receipt.period_start && receipt.period_end
+          ? { startsAt: receipt.period_start, expiresAt: receipt.period_end }
+          : null;
+      if (!expected || expected.startsAt !== start || expected.expiresAt !== expiry || !expiry)
+        throw new CreditError("ARC_CREDITS_RECEIPT_MISMATCH");
+    }
     if (input.source === "topup" && expiry !== null)
       throw new CreditError("ARC_CREDITS_RECEIPT_MISMATCH");
   }
@@ -129,7 +180,7 @@ export async function grantArcCredits(db: D1Database, input: Grant, at = new Dat
       SELECT ?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11 WHERE
       (?3='trial' AND ?8 IS NULL AND EXISTS(SELECT 1 FROM arc_trials t WHERE t.user_id=?2 AND t.started_at=?7))
       OR (?3='promotion' AND EXISTS(SELECT 1 FROM users WHERE id=?10 AND role='admin'))
-      OR (?3 IN ('subscription','topup') AND EXISTS(SELECT 1 FROM arc_payment_receipts r WHERE r.id=?4 AND r.user_id=?2 AND r.state='paid' AND r.product_id=?12 AND r.amount_cents=?13 AND r.period_start IS ?14 AND r.period_end IS ?15 AND r.commercial_version_id IS ?16 AND r.discount_cents=?17))`,
+      OR (?3 IN ('subscription','topup') AND EXISTS(SELECT 1 FROM arc_payment_receipts r WHERE r.id=?18 AND r.user_id=?2 AND r.state='paid' AND r.product_id=?12 AND r.amount_cents=?13 AND r.period_start IS ?14 AND r.period_end IS ?15 AND r.commercial_version_id IS ?16 AND r.discount_cents=?17))`,
       )
       .bind(
         id,
@@ -149,6 +200,7 @@ export async function grantArcCredits(db: D1Database, input: Grant, at = new Dat
         receipt?.period_end ?? null,
         receipt?.commercial_version_id ?? null,
         receipt?.discount_cents ?? 0,
+        receiptId,
       ),
     db
       .prepare(

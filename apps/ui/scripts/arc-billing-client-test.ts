@@ -5,6 +5,9 @@ import {
   billingFailureMessage,
   secureBillingUrl,
   BillingFailure,
+  connectPlanFeatures,
+  offeredPlans,
+  planIncludesArc,
   transferSize,
   usageResetAt,
 } from "../src/features/billing/arc-billing-client.js";
@@ -97,6 +100,36 @@ assert.deepEqual(
   ],
   ["0 MB", "380 MB", "1.5 GB", "2 GB"],
 );
+// Plans on offer: Plus and Pro step back once Connect Unlimited includes Credits,
+// except for an account that already has them or a Connect-only subscriber.
+const catalog = (connectCredits: number) => [
+    { id: "free", monthlyCredits: 0 },
+    { id: "connect-unlimited-v1", monthlyCredits: connectCredits },
+    { id: "arc-plus-v1", monthlyCredits: 1500 },
+    { id: "arc-pro-v1", monthlyCredits: 5000 },
+  ],
+  ids = (plans: Array<{ id: string }>) => plans.map((plan) => plan.id);
+assert.deepEqual(ids(offeredPlans(catalog(0))), ids(catalog(0)), "Connect-only: every plan");
+assert.deepEqual(ids(offeredPlans(catalog(1000))), ["free", "connect-unlimited-v1"]);
+assert.deepEqual(ids(offeredPlans(catalog(1000), { id: "arc-pro-v1", monthlyCredits: 5000 })), [
+  "free",
+  "connect-unlimited-v1",
+  "arc-pro-v1",
+]);
+assert.deepEqual(
+  ids(offeredPlans(catalog(1000), { id: "connect-unlimited-v1", monthlyCredits: 0 })),
+  ids(catalog(1000)),
+  "A Connect-only subscriber can still add Arc with Plus",
+);
+assert.deepEqual(
+  [planIncludesArc({ monthlyCredits: 1000 }), planIncludesArc({ monthlyCredits: 0 })],
+  [true, false],
+);
+assert.equal(planIncludesArc(undefined), false);
+const bundledFeatures = connectPlanFeatures(en, { monthlyCredits: 1000 });
+assert(bundledFeatures.some((item) => item.includes("1,000 Arc Credits every month")));
+assert(!bundledFeatures.some((item) => /needs Plus/.test(item)));
+assert(connectPlanFeatures(en).some((item) => /no monthly Credits/.test(item)));
 const original = globalThis.fetch;
 let requests = 0;
 try {

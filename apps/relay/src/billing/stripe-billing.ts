@@ -11,7 +11,12 @@ import {
 } from "@remotearc/protocol";
 import { getSessionUser, sha256Hex } from "../auth/auth.js";
 import { isTrustedDashboardMutation } from "../auth/dashboard-origin.js";
-import { creditBalance, grantArcCredits } from "../arc/arc-credits.js";
+import {
+  creditBalance,
+  creditMonthRef,
+  creditMonths,
+  grantArcCredits,
+} from "../arc/arc-credits.js";
 import { currentArcPlan } from "../arc/arc-plan.js";
 import { getMonthlyUsage } from "./usage.js";
 import { queuePlanStartedEmail } from "../platform/lifecycle-email.js";
@@ -27,6 +32,7 @@ import {
   type StripeEnv,
 } from "./stripe-client.js";
 import {
+  CONNECT_HOSTED_PLAN_ID,
   activeCommercial,
   commercialVersion,
   commercialOffer,
@@ -170,13 +176,15 @@ type Receipt = {
   discountCents?: number;
   promotionId?: string;
   checkoutId?: string;
+  /** Subscription invoices only: a yearly invoice grants its Credits month by month. */
+  interval?: BillingInterval;
 };
 async function fulfill(env: BillingEnv, r: Receipt) {
   const version = await commercialVersion(env.DB, r.versionId),
-    p = commercialOffer(version),
+    p = commercialOffer(version, r.interval),
     at = now();
   if (p.id !== r.sku) throw new StripeError("BILLING_CATALOG_CONFLICT");
-  // Connect-only plans carry neither Credits nor hosted-model grants.
+  // Connect-only versions carry neither Credits nor hosted-model grants.
   const hosted = "allHostedModels" in version.config && version.config.allHostedModels;
   await env.DB.batch([
     env.DB.prepare(
@@ -216,21 +224,48 @@ async function fulfill(env: BillingEnv, r: Receipt) {
     .first();
   if (!paid) return;
   await linkBusinessReceipt(env, r.checkoutId, r.receipt, r.userId, r.sku);
-  if (p.credits > 0)
-    await grantArcCredits(env.DB, {
-      userId: r.userId,
-      source: p.subscription ? "subscription" : "topup",
-      sourceRef: r.receipt,
-      units: p.credits * ARC_CREDIT_RATE.unitsPerCredit,
-      ...(r.start ? { startsAt: r.start } : {}),
-      expiresAt: r.end,
-      reason: "Verified Stripe " + (p.subscription ? "subscription invoice" : "credit purchase"),
-    });
+  if (p.credits > 0) {
+    // A paid year grants one month of Credits per month, never twelve at once.
+    const lots: Array<{ sourceRef: string; startsAt: string | null; expiresAt: string | null }> =
+      p.subscription && p.interval === "year" && r.start && r.end
+        ? creditMonths(r.start, r.end).map((month, n) => ({
+            sourceRef: creditMonthRef(r.receipt, n + 1),
+            ...month,
+          }))
+        : [{ sourceRef: r.receipt, startsAt: r.start, expiresAt: r.end }];
+    for (const lot of lots)
+      await grantArcCredits(env.DB, {
+        userId: r.userId,
+        source: p.subscription ? "subscription" : "topup",
+        sourceRef: lot.sourceRef,
+        units: p.credits * ARC_CREDIT_RATE.unitsPerCredit,
+        ...(lot.startsAt ? { startsAt: lot.startsAt } : {}),
+        expiresAt: lot.expiresAt,
+        reason: "Verified Stripe " + (p.subscription ? "subscription invoice" : "credit purchase"),
+      });
+  }
   if (p.subscription) {
     await env.DB.batch([
       env.DB.prepare(
         `INSERT OR IGNORE INTO billing_plan_assignments(id,plan_id,subject_type,subject_id,expires_at,created_at,commercial_version_id) SELECT ?1,?2,'user',?3,?4,?5,?7 FROM arc_payment_receipts WHERE id=?6 AND state='paid'`,
       ).bind("stripe:" + r.receipt, r.sku, r.userId, r.end, at, r.receipt, r.versionId),
+      // Connect Unlimited's plan row is Connect-only; a version with Credits also
+      // carries the hosted-Arc entitlement for the same paid period.
+      ...(hosted && r.sku === CONNECT_UNLIMITED_PLAN_ID
+        ? [
+            env.DB.prepare(
+              `INSERT OR IGNORE INTO billing_plan_assignments(id,plan_id,subject_type,subject_id,expires_at,created_at,commercial_version_id) SELECT ?1,?2,'user',?3,?4,?5,?7 FROM arc_payment_receipts WHERE id=?6 AND state='paid'`,
+            ).bind(
+              "stripe:" + r.receipt + ":hosted",
+              CONNECT_HOSTED_PLAN_ID,
+              r.userId,
+              r.end,
+              at,
+              r.receipt,
+              r.versionId,
+            ),
+          ]
+        : []),
       ...(hosted ? (["openai", "anthropic", "openrouter"] as const) : []).map((provider) =>
         env.DB.prepare(
           `INSERT OR IGNORE INTO billing_model_grants(id,user_id,organization_id,provider,max_cost_micros,expires_at,created_at) SELECT ?1,?2,?3,?4,1000000000,?5,?6 FROM arc_payment_receipts WHERE id=?7 AND state='paid'`,
@@ -334,6 +369,7 @@ async function invoicePaid(env: BillingEnv, event: Record<string, any>, hash: st
     end,
     payment: pay,
     hash,
+    interval: p.interval,
     ...promotion,
     checkoutId:
       invoice.billing_reason === "subscription_create"
@@ -460,6 +496,11 @@ async function checkoutPaid(env: BillingEnv, event: Record<string, any>, hash: s
     .run();
   await recordCheckoutCompletion(env, user.user_id, id(session, "cs"), id(session, "cs"));
 }
+/** Credit lots paid through a payment intent: a receipt's own lot, or the monthly
+ * lots of a yearly receipt (receipt id + "#month-NN"). An exact prefix match, so
+ * underscores in Stripe ids are never LIKE wildcards. */
+const receiptLots = (intent: string) =>
+  `(source_ref IN (SELECT receipt_id FROM arc_payment_links WHERE payment_intent_id=${intent}) OR (instr(source_ref,'#month-')>0 AND substr(source_ref,1,instr(source_ref,'#month-')-1) IN (SELECT receipt_id FROM arc_payment_links WHERE payment_intent_id=${intent})))`;
 async function blockPayment(env: BillingEnv, charge: Record<string, any>, reason: string) {
   const intent = id(charge.payment_intent, "pi"),
     at = now();
@@ -471,13 +512,13 @@ async function blockPayment(env: BillingEnv, charge: Record<string, any>, reason
       "UPDATE arc_payment_receipts SET state='refunded' WHERE id IN (SELECT receipt_id FROM arc_payment_links WHERE payment_intent_id=?1)",
     ).bind(intent),
     env.DB.prepare(
-      "UPDATE arc_credit_lots SET revoked_at=COALESCE(revoked_at,?1) WHERE source_ref IN (SELECT receipt_id FROM arc_payment_links WHERE payment_intent_id=?2)",
+      `UPDATE arc_credit_lots SET revoked_at=COALESCE(revoked_at,?1) WHERE ${receiptLots("?2")}`,
     ).bind(at, intent),
     env.DB.prepare(
-      "INSERT OR IGNORE INTO arc_credit_events(id,user_id,event_type,lot_id,units,reason,created_at) SELECT 'refund:'||id,user_id,'revoked',id,granted_units-spent_units-reserved_units,?1,?2 FROM arc_credit_lots WHERE source_ref IN (SELECT receipt_id FROM arc_payment_links WHERE payment_intent_id=?3)",
+      `INSERT OR IGNORE INTO arc_credit_events(id,user_id,event_type,lot_id,units,reason,created_at) SELECT 'refund:'||id,user_id,'revoked',id,granted_units-spent_units-reserved_units,?1,?2 FROM arc_credit_lots WHERE ${receiptLots("?3")}`,
     ).bind("Stripe " + reason, at, intent),
     env.DB.prepare(
-      "UPDATE billing_plan_assignments SET revoked_at=COALESCE(revoked_at,?1) WHERE id IN (SELECT 'stripe:'||receipt_id FROM arc_payment_links WHERE payment_intent_id=?2)",
+      "UPDATE billing_plan_assignments SET revoked_at=COALESCE(revoked_at,?1) WHERE id IN (SELECT 'stripe:'||receipt_id FROM arc_payment_links WHERE payment_intent_id=?2 UNION ALL SELECT 'stripe:'||receipt_id||':hosted' FROM arc_payment_links WHERE payment_intent_id=?2)",
     ).bind(at, intent),
     ...(["openai", "anthropic", "openrouter"] as const).map((provider) =>
       env.DB.prepare(

@@ -310,6 +310,8 @@
     "auth.pairingErrors.thisPairingCodeWasAlreadyUsed": "这个配对码已被使用或已过期。请在电脑上重新启动 Remote Arc，获取新的配对码。",
     "auth.pairingErrors.tooManyNewComputersWereAdded": "过去 24 小时内新增的电脑过多，请稍后再试。",
     "billing.arcBillingClient.bringYourOwnChatgptClaudeOr": "使用你自己的 ChatGPT、Claude 或 Codex · 不含月度 Credits；免费试用后使用 Arc 需要 Plus",
+    "billing.arcBillingClient.arcCreditsEveryMonth": "每月 {credits} Arc Credits · 你不在时，Arc 在你的电脑上运行定时任务",
+    "billing.arcBillingClient.bringYourOwnAiOrLetArc": "使用你自己的 ChatGPT、Claude 或 Codex，或让 Arc 运行 AI · 包含 Auto 与手动选择模型",
     "billing.arcBillingClient.localTerminalFilesBrowserFleetAnd": "本地终端、文件、浏览器、Fleet 与已连接应用",
     "billing.arcBillingClient.thisBillingRequestCouldNotBe": "支付请求未能完成。请先核对当前付款状态再重试，如需帮助请保留错误编号。",
     "billing.arcBillingClient.unlimitedConnectCallsPublishedFairUse": "无限 Connect 调用 · 仅有公开的合理使用速率限制",

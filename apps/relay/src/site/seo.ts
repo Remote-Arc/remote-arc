@@ -1151,7 +1151,7 @@ const crawlPages: Record<string, CrawlPage> = {
       },
       {
         heading: "Connect Unlimited removes call and computer limits",
-        text: "Connect Unlimited is a paid Connect-only plan for people who bring their own ChatGPT, Claude or Codex. It has no monthly hosted MCP call cap and no limit on registered computers; each computer is authenticated separately and can be revoked. Published fair-use rate limits still apply, including at most 20 new computer registrations per day. It includes the durable-work capabilities below, but no Arc-hosted AI or monthly Credits beyond the one-time Arc trial.",
+        text: "Connect Unlimited is a paid plan for people who bring their own ChatGPT, Claude or Codex. It has no monthly hosted MCP call cap and no limit on registered computers; each computer is authenticated separately and can be revoked. Published fair-use rate limits still apply, including at most 20 new computer registrations per day. It includes the durable-work capabilities below. Whether it also includes monthly Arc Credits for Arc-hosted AI is shown on the pricing page and at checkout.",
       },
       {
         heading: "Connect tools are available on every plan",

@@ -44,13 +44,13 @@ Migration 0046 stores a cumulative $3 rated-cost budget and $0.50 shared daily l
 
 ## Plans and usage
 
-| Plan              |  Monthly price |                                                      Arc Credits | Connect calls | Parallel runs |   Run time |
-| ----------------- | -------------: | ---------------------------------------------------------------: | ------------: | ------------: | ---------: |
-| Free              |             $0 |                       One explicit 14-day trial with 200 Credits |        10,000 |             1 |  3 minutes |
-| Connect Unlimited | $19 ($99/year) | None by default; a published version may include monthly Credits |     Unlimited |             1 |  3 minutes |
-| Plus              |            $39 |                                           1,500 / billing period |     Unlimited |             2 | 10 minutes |
-| Pro               |            $79 |                                           5,000 / billing period |     Unlimited |             5 | 30 minutes |
-| Enterprise        |       Contract |                                                       Negotiated |    Negotiated |    Negotiated | Negotiated |
+| Plan                                                     |                                      Monthly price |                                                       Arc Credits | Connect calls | Parallel runs |   Run time |
+| -------------------------------------------------------- | -------------------------------------------------: | ----------------------------------------------------------------: | ------------: | ------------: | ---------: |
+| Free                                                     |                                                 $0 |                        One explicit 14-day trial with 200 Credits |        10,000 |             1 |  3 minutes |
+| Pro (`connect-unlimited-v1`, formerly Connect Unlimited) | Set by the published version (seed $19, no yearly) | None in the seed; a published version may include monthly Credits |     Unlimited |             1 |  3 minutes |
+| Plus                                                     |                                                $39 |                                            1,500 / billing period |     Unlimited |             2 | 10 minutes |
+| Pro                                                      |                                                $79 |                                            5,000 / billing period |     Unlimited |             5 | 30 minutes |
+| Enterprise                                               |                                           Contract |                                                        Negotiated |    Negotiated |    Negotiated | Negotiated |
 
 Connect Unlimited versions are either Connect-only or include Arc: a version with monthly Credits must also allow hosted models, and the other way round. A paid invoice on such a version adds the `connect-unlimited-hosted-v1` hosted-Arc entitlement (migration 0083) for the same period. A yearly invoice grants the monthly Credits one month at a time: one lot per month of the paid year, each starting at the start of its month and expiring at its end, so a paid year never holds twelve months of Credits at once. A refund revokes every lot of that invoice, including months not yet started. Subscribers on a Connect-only version keep those terms. Once the Connect Unlimited on offer includes Credits, the pricing page and checkout stop offering Plus and Pro to new customers; current Plus/Pro subscribers, and Connect-only subscribers adding Arc, still see them. For paid plans Auto runs every step on the escalation model (GPT-6.1 Terra); trials keep the base model and escalate only the first plan, recovery and repairs.
 

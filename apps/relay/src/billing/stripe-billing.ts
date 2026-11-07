@@ -290,6 +290,8 @@ async function fulfill(env: BillingEnv, r: Receipt) {
       cents: r.cents,
       start: r.start,
       end: r.end,
+      interval: p.interval,
+      credits: p.credits,
     });
   await recordProductEvent(env, {
     domain: "billing",

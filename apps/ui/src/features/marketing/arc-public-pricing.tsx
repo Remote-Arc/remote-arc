@@ -223,9 +223,12 @@ export function ArcPublicPricing({
         ))}
       </section>
       <p className="pricingFinePrint">
-        {tr("marketing.arcPublicPricing.connectUnlimitedFollowsPublishedFairUse", {
-          computerRegistrationsPerDay: CONNECT_FAIR_USE.computerRegistrationsPerDay,
-        })}
+        {tr(
+          planIncludesArc(catalog.plans.find(isConnectOnlyPlan))
+            ? "marketing.arcPublicPricing.proFollowsPublishedFairUse"
+            : "marketing.arcPublicPricing.connectUnlimitedFollowsPublishedFairUse",
+          { computerRegistrationsPerDay: CONNECT_FAIR_USE.computerRegistrationsPerDay },
+        )}
       </p>
       <section className="pricingEnterprise" aria-label="Enterprise">
         <div>

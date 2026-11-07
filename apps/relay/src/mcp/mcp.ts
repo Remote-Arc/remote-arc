@@ -146,7 +146,7 @@ const hasScope = (identity: OAuthIdentity, scope: Scope) =>
   identity.scope.split(/\s+/).includes(scope);
 
 const QUOTA_UPGRADE_GUIDANCE =
-  "If a tool returns MONTHLY_LIMIT_REACHED, show its upgrade_url in chat so the user can review upgrade options or wait for the monthly reset. Do not keep retrying while the allowance is exhausted. If a tool returns SLOW_LANE_RATE_LIMITED, Free calls are in the slow lane: wait retry_after_seconds before the next Remote Arc tool call, combine work into fewer calls, and tell the user once, with its upgrade_url, that Connect Unlimited restores full speed. Never retry it immediately.";
+  "If a tool returns MONTHLY_LIMIT_REACHED, show its upgrade_url in chat so the user can review upgrade options or wait for the monthly reset. Do not keep retrying while the allowance is exhausted. If a tool returns SLOW_LANE_RATE_LIMITED, Free calls are in the slow lane: wait retry_after_seconds before the next Remote Arc tool call, combine work into fewer calls, and tell the user once, with its upgrade_url, that the Pro plan restores full speed. Never retry it immediately.";
 
 const toolErrorResult = (
   message: string,
@@ -181,7 +181,7 @@ const slowLaneResult = (env: Env, error: SlowLaneRateLimitedError) => {
     env.DASHBOARD_ORIGIN || env.APP_ORIGIN || env.PUBLIC_ORIGIN,
   ).toString();
   return toolErrorResult(
-    `${error.message} Connect Unlimited restores full speed: ${upgradeUrl}`,
+    `${error.message} The Pro plan restores full speed: ${upgradeUrl}`,
     error.code,
     upgradeUrl,
     { retry_after_seconds: error.retryAfterSeconds },

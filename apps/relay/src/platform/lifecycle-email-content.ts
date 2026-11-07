@@ -19,10 +19,19 @@ export type LifecycleContent = {
   freeCalls: number | null;
   trialDays: number;
   slowLaneCallsPerMinute: number;
-  /** Connect Unlimited monthly price, when the catalog has one. */
+  /** The paid plan's monthly price (Pro, product id connect-unlimited-v1), when the catalog has one. */
   unlimitedCents: number | null;
   trialEndsAt?: string;
-  plan?: { id: string; label: string; cents: number; periodEnd: string | null };
+  plan?: {
+    id: string;
+    label: string;
+    cents: number;
+    periodEnd: string | null;
+    /** Absent on confirmations queued before yearly billing: monthly. */
+    interval?: "month" | "year";
+    /** Monthly Credits the plan includes; 0 for Connect-only versions. */
+    credits?: number;
+  };
   links: { setup: string; checkout: string; billing: string; unsubscribe: string | null };
 };
 
@@ -73,7 +82,7 @@ function copy(content: LifecycleContent): Copy {
       ? []
       : [
           {
-            label: "Connect Unlimited",
+            label: "Pro",
             value: tr(
               `${dollars(price)}/month, about ${dollars(Math.round(price / 30))} a day`,
               `${dollars(price)}/月，约每天 ${dollars(Math.round(price / 30))}`,
@@ -105,8 +114,8 @@ function copy(content: LifecycleContent): Copy {
               )
             : "") +
             tr(
-              `If you run out, your agents keep going: a one-time ${trialDays}-day Connect Unlimited trial starts automatically, then calls continue at ${perMinute} per minute until the monthly reset.`,
-              `用完也不会断：会自动开启一次 ${trialDays} 天 Connect Unlimited 试用，之后以每分钟 ${perMinute} 次继续，直到月度重置。`,
+              `If you run out, your agents keep going: a one-time ${trialDays}-day unlimited Connect trial starts automatically, then calls continue at ${perMinute} per minute until the monthly reset.`,
+              `用完也不会断：会自动开启一次 ${trialDays} 天无限调用试用，之后以每分钟 ${perMinute} 次继续，直到月度重置。`,
             ),
         ],
         cards: [
@@ -137,8 +146,8 @@ function copy(content: LifecycleContent): Copy {
     case "connect_trial_started":
       return {
         subject: tr(
-          `Your ${trialDays}-day Connect Unlimited trial has started`,
-          `你的 ${trialDays} 天 Connect Unlimited 试用已开启`,
+          `Your ${trialDays}-day unlimited Connect trial has started`,
+          `你的 ${trialDays} 天无限调用试用已开启`,
         ),
         preheader: tr(
           "You used this month’s free calls. Your agents keep running at full speed.",
@@ -149,12 +158,12 @@ function copy(content: LifecycleContent): Copy {
         headline: tr("Your agents keep running at full speed", "你的 agent 会继续全速运行"),
         paragraphs: [
           tr(
-            `You used this month’s free Connect calls, so instead of stopping your work we started your one-time ${trialDays}-day Connect Unlimited trial. There is no call cap until it ends.`,
-            `你已用完本月的免费 Connect 调用。为了不打断你的工作，我们为你开启了一次性的 ${trialDays} 天 Connect Unlimited 试用，试用期间不限调用次数。`,
+            `You used this month’s free Connect calls, so instead of stopping your work we started your one-time ${trialDays}-day unlimited Connect trial. There is no call cap until it ends.`,
+            `你已用完本月的免费 Connect 调用。为了不打断你的工作，我们为你开启了一次性的 ${trialDays} 天无限调用试用，试用期间不限调用次数。`,
           ),
           tr(
-            "After that, Free continues in the slow lane until your allowance resets. Connect Unlimited keeps your agents at full speed all month.",
-            "试用结束后，Free 会进入慢速通道，直到额度重置。Connect Unlimited 可让你的 agent 整月保持全速。",
+            "After that, Free continues in the slow lane until your allowance resets. Pro keeps your agents at full speed all month.",
+            "试用结束后，Free 会进入慢速通道，直到额度重置。Pro 可让你的 agent 整月保持全速。",
           ),
         ],
         facts: trialFacts,
@@ -176,8 +185,8 @@ function copy(content: LifecycleContent): Copy {
             `试用结束后，Free 会回到每月额度；额度用完后，调用会以每分钟 ${perMinute} 次的慢速通道继续，直到月度重置。`,
           ),
           tr(
-            "Choose Connect Unlimited to keep your agents at full speed, with no call cap and no slow lane.",
-            "选择 Connect Unlimited，让你的 agent 保持全速：不限调用次数，也没有慢速通道。",
+            "Choose Pro to keep your agents at full speed, with no call cap and no slow lane.",
+            "选择 Pro，让你的 agent 保持全速：不限调用次数，也没有慢速通道。",
           ),
         ],
         facts: trialFacts,
@@ -186,7 +195,9 @@ function copy(content: LifecycleContent): Copy {
     case "plan_started": {
       const plan = content.plan;
       if (!plan) throw Error("plan_details_required");
-      const unlimited = plan.id === "connect-unlimited-v1";
+      const unlimited = plan.id === "connect-unlimited-v1",
+        credits = plan.credits ?? 0,
+        yearly = plan.interval === "year";
       return {
         subject: tr(`Your ${plan.label} plan is active`, `你的 ${plan.label} 套餐已开通`),
         preheader: tr(`Thanks for choosing ${plan.label}.`, `感谢选择 ${plan.label}。`),
@@ -194,15 +205,20 @@ function copy(content: LifecycleContent): Copy {
         eyebrow: tr("Plan confirmed", "套餐已开通"),
         headline: tr(`Thanks, ${plan.label} is active`, `感谢订阅，${plan.label} 已开通`),
         paragraphs: [
-          unlimited
+          unlimited && credits > 0
             ? tr(
-                "Your agents now run at full speed: no monthly call cap and no slow lane.",
-                "你的 agent 现在可以全速运行：不限每月调用次数，也没有慢速通道。",
+                `Your agents now run at full speed: no monthly call cap and no slow lane. ${credits.toLocaleString("en")} Arc Credits are ready for each month you have paid for.`,
+                `你的 agent 现在可以全速运行：不限每月调用次数，也没有慢速通道。每个已付费月份都有 ${credits.toLocaleString("en")} Arc Credits 可用。`,
               )
-            : tr(
-                "Your monthly Credits are ready for Arc, along with unlimited Connect calls.",
-                "本月 Credits 已可用于 Arc，Connect 调用也不限次数。",
-              ),
+            : unlimited
+              ? tr(
+                  "Your agents now run at full speed: no monthly call cap and no slow lane.",
+                  "你的 agent 现在可以全速运行：不限每月调用次数，也没有慢速通道。",
+                )
+              : tr(
+                  "Your monthly Credits are ready for Arc, along with unlimited Connect calls.",
+                  "本月 Credits 已可用于 Arc，Connect 调用也不限次数。",
+                ),
           tr(
             "You can review usage, change or cancel your plan at any time in Settings → Plan & usage. Stripe sends your payment receipt separately.",
             "你可以随时在“设置 → 套餐与用量”中查看用量、变更或取消套餐。Stripe 会另外发送付款收据。",
@@ -212,7 +228,9 @@ function copy(content: LifecycleContent): Copy {
           { label: tr("Plan", "套餐"), value: plan.label },
           {
             label: tr("Price", "价格"),
-            value: tr(`${dollars(plan.cents)}/month`, `${dollars(plan.cents)}/月`),
+            value: yearly
+              ? tr(`${dollars(plan.cents)}/year`, `${dollars(plan.cents)}/年`)
+              : tr(`${dollars(plan.cents)}/month`, `${dollars(plan.cents)}/月`),
           },
           ...(plan.periodEnd
             ? [{ label: tr("Renews on", "续费日期"), value: date(plan.periodEnd) }]

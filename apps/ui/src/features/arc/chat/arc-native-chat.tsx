@@ -400,6 +400,15 @@ export function ArcNativeChat({
     </nav>
   );
   const errorText = (code: string) => {
+    // Show the daily reset in the reader's own time zone, not as UTC.
+    if (code === "ARC_DAILY_LIMIT_REACHED") {
+      const now = new Date();
+      return tr("arc.chat.arcNativeChat.todaysArcAllowanceIsUsedUp", {
+        time: new Date(
+          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1),
+        ).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }),
+      });
+    }
     const recovery = billingRecovery(code);
     if (recovery) return tr(...recovery.message);
     if (code === "ARC_DEVICE_REQUIREMENTS_UNMET")

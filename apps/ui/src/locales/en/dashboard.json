@@ -404,6 +404,7 @@
     "arc.chat.arcNativeChat.theModelDidNotReturnA": "The model did not return a complete next step. Saved actions and observations remain available below.",
     "arc.chat.arcNativeChat.theSelectedResultCouldNotBe": "The selected result could not be verified. Review the receipt before continuing.",
     "arc.chat.arcNativeChat.thisModelNeedsAPaidModel": "This model needs a paid model allowance. Choose Auto to continue.",
+    "arc.chat.arcNativeChat.todaysArcAllowanceIsUsedUp": "Today's Arc allowance is used up. It resets at {time}. Your Credits and saved work are kept.",
     "arc.chat.arcNativeChat.thisRequestStoppedBeforeANew": "This request stopped before a new model call could start. Refresh your allowance, then send a new message.",
     "arc.chat.arcNativeChat.thisRunReachedItsWorkLimit": "This run reached its work limit. The results above are saved; you can continue in a new message.",
     "arc.chat.arcNativeChat.thisRunUsedItsTokenAllowance": "This run used its token allowance. Your results are saved; send a new message to continue.",

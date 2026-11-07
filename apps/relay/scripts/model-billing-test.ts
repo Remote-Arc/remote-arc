@@ -1211,7 +1211,11 @@ await setBillingLimit(db, "admin", {
   period_key: day,
   limit: 2000,
 });
-await deny(() => runModelGateway(terraGateway, terraRequest(), validate), /BILLING_QUOTA/);
+// A used-up daily allowance is named rather than reported as a generic quota error.
+await deny(
+  () => runModelGateway(terraGateway, terraRequest(), validate),
+  /ARC_DAILY_LIMIT_REACHED/,
+);
 assert.equal(
   terraCalls,
   1,

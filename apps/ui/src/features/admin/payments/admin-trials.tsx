@@ -16,7 +16,8 @@ type Trial = {
   succeeded: number;
   last_run_at: string | null;
 };
-type Trials = { items: Trial[]; total: number; pageSize: number };
+type Funnel = Record<"opened" | "trials" | "ran" | "succeeded" | "returned" | "routines", number>;
+type Trials = { items: Trial[]; total: number; pageSize: number; funnel?: Funnel };
 export function AdminTrials({ preview = false }: { preview?: boolean }) {
   const { tr } = useI18n(),
     [data, setData] = useState<Trials | null>(null),
@@ -72,6 +73,29 @@ export function AdminTrials({ preview = false }: { preview?: boolean }) {
           <p>{tr("admin.payments.adminTrials.recordedWhenAUserExplicitlyActivates")}</p>
         </div>
       </div>
+      {data?.funnel && (
+        <div className="adminTrialFunnel">
+          <h3>{tr("admin.payments.adminTrials.arcFunnelLast30Days")}</h3>
+          <ol>
+            {(
+              [
+                ["opened", tr("admin.payments.adminTrials.openedArc")],
+                ["trials", tr("admin.payments.adminTrials.startedATrial")],
+                ["ran", tr("admin.payments.adminTrials.ranATask")],
+                ["succeeded", tr("admin.payments.adminTrials.hadASuccess")],
+                ["returned", tr("admin.payments.adminTrials.cameBackAnotherDay")],
+                ["routines", tr("admin.payments.adminTrials.ranARoutine")],
+              ] as const
+            ).map(([key, label]) => (
+              <li key={key}>
+                <strong>{data.funnel![key].toLocaleString()}</strong>
+                <span>{label}</span>
+              </li>
+            ))}
+          </ol>
+          <p>{tr("admin.payments.adminTrials.eachStepCountsPeopleOnItsOwn")}</p>
+        </div>
+      )}
       <form className="adminTrialFilters" onSubmit={submit}>
         <label>
           <span className="arcSrOnly">{tr("admin.payments.adminTrials.searchTrialUsers")}</span>

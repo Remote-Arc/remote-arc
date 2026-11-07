@@ -317,6 +317,14 @@ await assert.rejects(
   /BILLING_QUOTA_OR_AUTHORITY_UNAVAILABLE/,
   "An affordable step denied for another reason keeps the general code",
 );
+// A used-up daily allowance is named, so the person waits for the reset
+// instead of being told the service budget is unavailable.
+sql
+  .prepare(
+    "INSERT INTO billing_budgets(scope_type,scope_id,lane,metric,period_key,limit_units,updated_at) VALUES('user','member','arc_hosted','cost_micros','2026-10-24',1500,?)",
+  )
+  .run(now);
+await assert.rejects(() => reserve(2000), /ARC_DAILY_LIMIT_REACHED/);
 console.log(
-  "PASS: operator allowance is admin-only, bounded, monthly, idempotent, audited, and keeps manually selected models on the paid Pro path with Credit-backed, expiring, revocation-safe provider grants.",
+  "PASS: operator allowance is admin-only, bounded, monthly, idempotent, audited, and keeps manually selected models on the paid Pro path with Credit-backed, expiring, revocation-safe provider grants, and names a used-up daily allowance.",
 );

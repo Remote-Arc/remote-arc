@@ -493,3 +493,23 @@ test("Payments lead with what needs action, explain each tab and keep the budget
   await panel.getByRole("tab", { name: /Discount codes|优惠码/ }).click();
   await expect(purpose).toContainText(/discount code|折扣码/);
 });
+
+test("Trial users show the 30-day Arc funnel from the server", async ({ page }) => {
+  const { panel } = await mount(page, "normal", "payments");
+  await page.route(/\/api\/admin\/payments\/trials(?:\?|$)/, (route) =>
+    route.fulfill({
+      json: {
+        page: 0,
+        pageSize: 30,
+        total: 0,
+        items: [],
+        funnel: { opened: 12, trials: 5, ran: 4, succeeded: 2, returned: 1, routines: 0 },
+      },
+    }),
+  );
+  await panel.getByRole("tab", { name: /Trial users|试用用户/ }).click();
+  const funnel = panel.locator(".adminTrialFunnel");
+  await expect(funnel.locator("li strong")).toHaveText(["12", "5", "4", "2", "1", "0"]);
+  await expect(funnel.locator("li").first()).toContainText(/Opened Arc|打开 Arc/);
+  await expect(funnel).toContainText(/without administrators|不含管理员/);
+});

@@ -30,6 +30,7 @@ import {
 } from "./arc-chat-model.js";
 import { listArcWork, arcSessionWork } from "./arc-work.js";
 import { activateArcTrial, publicArcAccess } from "./arc-trial.js";
+import { recordProductEvent } from "../analytics/product-events.js";
 import { currentArcPlan } from "./arc-plan.js";
 import {
   arcMemoryInput,
@@ -342,6 +343,16 @@ export async function handleArcChat(request: Request, env: ArcEnv): Promise<Resp
     }
     if (path === "/api/arc/status" && request.method === "GET") {
       const access = await publicArcAccess(env, user.id);
+      // The first step of the Arc funnel: someone opened Arc. The access
+      // state shows whether they still had to start a trial.
+      await recordProductEvent(env, {
+        domain: "arc",
+        name: "arc.workspace.opened",
+        source: "server",
+        outcome: "accepted",
+        userId: user.id,
+        operation: String(access.status),
+      });
       return json({
         enabled: ready,
         access,

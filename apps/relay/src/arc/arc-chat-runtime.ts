@@ -39,7 +39,7 @@ import {
   type ModelUsage,
   type ModelProvider,
 } from "./model-provider-adapters.js";
-import { prepareArcBudget } from "./arc-chat-model.js";
+import { prepareArcBudget, arcAutoStepModel } from "./arc-chat-model.js";
 import {
   arcActive,
   arcSession,
@@ -826,6 +826,12 @@ export async function runArcStep(
             .bind(runId)
             .first<{ step: number; result_ciphertext: string; repair_count: number }>(),
         ]);
+      let stepModel = arcAutoStepModel(env, access, {
+        auto: run.model_id === "auto",
+        step: run.step,
+        lastToolStatus: [...journal].reverse().find((m) => m.role === "tool")?.status,
+        repairing: rejectedDecision?.step === run.step - 1,
+      });
       const rejected = rejectedDecision
         ? await unseal<{ code: string }>(
             env,
@@ -991,34 +997,54 @@ export async function runArcStep(
         .bind(now, runId)
         .run();
       let result: Awaited<ReturnType<typeof runModelGateway<Decision>>>;
+      const current = run;
       try {
-        result = await runModelGateway(
-          access.gateway,
-          {
-            decisionTool: true,
-            context: {
-              userId: run.user_id,
-              organizationId: session.organization_id,
-              taskId: session.id,
-              runId,
-              operationId: `chat:${run.step}`,
-              lane: "arc_hosted",
+        const decide = (modelId: string) =>
+          runModelGateway(
+            access.gateway,
+            {
+              decisionTool: true,
+              context: {
+                userId: current.user_id,
+                organizationId: session.organization_id,
+                taskId: session.id,
+                runId,
+                operationId: `chat:${current.step}`,
+                lane: "arc_hosted",
+              },
+              modelId,
+              system,
+              user: prompt.user,
+              ...(inputContext.images.length ? { images: inputContext.images } : {}),
+              schema,
+              maxOutputTokens: prompt.maxOutputTokens,
+              timeoutMs: Math.min(90000, Math.max(1, Date.parse(current.deadline) - Date.now())),
             },
-            modelId: access.definition.id,
-            system,
-            user: prompt.user,
-            ...(inputContext.images.length ? { images: inputContext.images } : {}),
-            schema,
-            maxOutputTokens: prompt.maxOutputTokens,
-            timeoutMs: Math.min(90000, Math.max(1, Date.parse(run.deadline) - Date.now())),
-          },
-          (value) => {
-            const parsed = validateArcDecision(value);
-            if (system === ARC_CLOSING_SYSTEM && parsed.decision !== "reply")
-              throw new Error("ARC_INVALID_DECISION");
-            return parsed;
-          },
-        );
+            (value) => {
+              const parsed = validateArcDecision(value);
+              if (system === ARC_CLOSING_SYSTEM && parsed.decision !== "reply")
+                throw new Error("ARC_INVALID_DECISION");
+              return parsed;
+            },
+          );
+        try {
+          result = await decide(stepModel.id);
+        } catch (error) {
+          // The stronger model reserves more per step. When it does not fit the
+          // remaining daily allowance, Credits or shared funding, the step runs
+          // on the base model rather than failing work the base model can still
+          // afford. The reservation was refused, so nothing was sent.
+          if (
+            stepModel === access.definition ||
+            !(error instanceof Error) ||
+            !/ARC_DAILY_LIMIT_REACHED|BILLING_CREDITS_EXHAUSTED|ARC_FUNDING_PAUSED_OR_LIMIT/.test(
+              error.message,
+            )
+          )
+            throw error;
+          stepModel = access.definition;
+          result = await decide(stepModel.id);
+        }
       } catch (error) {
         // A confirmed, settled malformed or incomplete decision has no tool effect to replay.
         // Consume ordinary steps/request identities for at most two repairs per run.
@@ -1041,7 +1067,7 @@ export async function runArcStep(
           .bind(JSON.stringify([run.user_id, runId, `chat:${run.step}`]), run.user_id, runId)
           .first<{ status: string }>();
         if (settled?.status !== "failed") throw error;
-        const consumed = consumedModelTokens(access.definition.provider, error.usage);
+        const consumed = consumedModelTokens(stepModel.provider, error.usage);
         if (
           (rejectedDecision?.repair_count || 0) >= 2 ||
           run.step + 1 >= run.max_steps ||

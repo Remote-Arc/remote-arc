@@ -144,7 +144,7 @@ func TestOwnedRuntimeOptionsPersistAndReleaseExecution(t *testing.T) {
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
-			_ = runOwned(ctx, options, cfg, "test", owned, bg, log, nil, io.Discard, nil, os.Stdin)
+			_ = runOwned(ctx, options, cfg, "test", owned, bg, log, nil, io.Discard, nil, os.Stdin, nil)
 			got, err := config.Load()
 			if err != nil {
 				t.Fatal(err)

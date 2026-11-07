@@ -344,6 +344,11 @@ export type AgentResultMessage = {
   error?: string;
 };
 
+/** Relay to Agent: a write approval for this device is waiting for a decision. */
+export type ApprovalPendingSignal = {
+  type: "approval_pending";
+};
+
 /** Internal Dashboard control; not part of the AI tool surface. */
 export type RunnerViewControl = {
   type: "runner_view";

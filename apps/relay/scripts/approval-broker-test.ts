@@ -87,10 +87,24 @@ const identity = {
 };
 
 const registryBodies: Array<Record<string, unknown>> = [];
+const approvalSignals: Array<{ name: string; userId: string | null; body: unknown }> = [];
+let failNextSignal = false;
 const registry = {
-  getByName() {
+  getByName(name: string) {
     return {
       async fetch(request: Request) {
+        if (new URL(request.url).pathname === "/approval-pending") {
+          if (failNextSignal) {
+            failNextSignal = false;
+            throw new Error("registry unavailable");
+          }
+          approvalSignals.push({
+            name,
+            userId: request.headers.get("x-remote-link-user-id"),
+            body: await request.json(),
+          });
+          return Response.json({ ok: true, delivered: 1 });
+        }
         const body = (await request.json()) as {
           tool: string;
           policy?: { workspaceRoots?: string[] };
@@ -128,6 +142,18 @@ await assert.rejects(
   callDevice(env as never, identity, "device-1", "write_file", outsideArgs),
   /approval required/,
 );
+assert.deepEqual(
+  approvalSignals,
+  [{ name: "user:owner", userId: "owner", body: { deviceId: "device-1" } }],
+  "a new approval must signal the owner's device once",
+);
+
+// Retrying the same write reuses the pending approval and must not prompt again.
+await assert.rejects(
+  callDevice(env as never, identity, "device-1", "write_file", outsideArgs),
+  /approval required/,
+);
+assert.equal(approvalSignals.length, 1, "a reused pending approval must not signal again");
 
 const pending = sqlite
   .prepare(
@@ -340,6 +366,28 @@ assert.equal(
   "caller must not forge the relay approval bit",
 );
 
+// The signal is best effort: a Registry failure must not lose the approval.
+failNextSignal = true;
+const unsignalled = { path: "/Users/test/Desktop/unsignalled.txt", content: "x" };
+await assert.rejects(
+  callDevice(env as never, identity, "device-1", "write_file", unsignalled),
+  /approval required/,
+);
+assert.equal(
+  (
+    sqlite
+      .prepare(
+        "SELECT COUNT(*) AS n FROM approval_requests WHERE target_path=? AND status='pending'",
+      )
+      .get(unsignalled.path) as { n: number }
+  ).n,
+  1,
+);
+sqlite
+  .prepare("UPDATE approval_requests SET status='denied' WHERE target_path=?")
+  .run(unsignalled.path);
+const signalsBeforeScope = approvalSignals.length;
+
 const widerScope = {
   ...initialScope,
   allowed_origins: ["https://jobs.example.test", "https://ats.example.test"],
@@ -351,6 +399,11 @@ await assert.rejects(
   /SCOPE_CHANGE_REQUIRED/,
 );
 assert.equal(registryBodies.length, callsBeforeApproval, "unapproved scope must not reach device");
+assert.equal(
+  approvalSignals.length,
+  signalsBeforeScope + 1,
+  "a scope-change approval must signal the device",
+);
 const scopeRequest = sqlite
   .prepare(
     "SELECT id,target_path FROM approval_requests WHERE tool_name='browser_runner_start' AND status='pending' ORDER BY requested_at DESC LIMIT 1",

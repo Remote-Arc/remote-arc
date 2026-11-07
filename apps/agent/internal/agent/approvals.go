@@ -22,6 +22,14 @@ type Approval struct {
 }
 type Ask func(context.Context, string) (string, error)
 
+// ApprovalPendingLog is written to the operation log when the Relay signals a
+// waiting approval, so a terminal that only follows the log can ask as well.
+const ApprovalPendingLog = "Approval requested · answer in this terminal or Dashboard → Security."
+
+// approvalFallback bounds how long a missed signal (for example during a
+// reconnect) can leave a pending approval unseen. The request lives 15 min.
+var approvalFallback = 5 * time.Minute
+
 func Decision(answer string) string {
 	switch strings.ToLower(strings.TrimSpace(answer)) {
 	case "1":
@@ -100,11 +108,19 @@ func (c *Client) PromptApproval(ctx context.Context, cfg config.Config, output i
 	}
 	return e
 }
-func (c *Client) PollApprovals(ctx context.Context, cfg config.Config, output io.Writer, ask Ask) {
+
+// PollApprovals asks about pending approvals when the Relay signals one, and
+// otherwise only on a slow fallback schedule, so an open terminal does not keep
+// requesting an empty list.
+func (c *Client) PollApprovals(ctx context.Context, cfg config.Config, output io.Writer, ask Ask, signals <-chan struct{}) {
 	for ctx.Err() == nil {
 		_ = c.PromptApproval(ctx, cfg, output, ask)
-		if pause(ctx, 8*time.Second) != nil {
-			return
+		fallback := time.NewTimer(approvalFallback)
+		select {
+		case <-ctx.Done():
+		case <-signals:
+		case <-fallback.C:
 		}
+		fallback.Stop()
 	}
 }

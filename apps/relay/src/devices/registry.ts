@@ -4,7 +4,12 @@ import { RunnerVideoRelay, type VideoAttachment } from "../browser/runner-video.
 import { deviceCallTimeoutMs, processTimeoutError } from "./call-timeout.js";
 import { HEARTBEAT_INTERVAL_MS, recordDeviceConnection } from "../analytics/device-reliability.js";
 import { recordProductEvent } from "../analytics/product-events.js";
-import type { AgentCallMessage, AgentToRelayMessage, DeviceMetadata } from "@remotearc/protocol";
+import type {
+  AgentCallMessage,
+  AgentToRelayMessage,
+  ApprovalPendingSignal,
+  DeviceMetadata,
+} from "@remotearc/protocol";
 
 /** An error the device itself returned for a call, as opposed to no reply. */
 class DeviceReportedError extends Error {}
@@ -135,6 +140,8 @@ export class DeviceRegistry {
     }
     if (url.pathname === "/reconnect" && request.method === "POST")
       return this.handleReconnect(request);
+    if (url.pathname === "/approval-pending" && request.method === "POST")
+      return this.handleApprovalPending(request);
 
     return new Response("Not found", { status: 404 });
   }
@@ -411,6 +418,36 @@ export class DeviceRegistry {
     }
 
     return applicationJson({ ok: true, disconnected });
+  }
+
+  /**
+   * Tells the device's Agent that a write approval is waiting, so a terminal
+   * can show it without polling. Agents that predate the signal ignore it.
+   */
+  private async handleApprovalPending(request: Request): Promise<Response> {
+    const userId = request.headers.get("x-remote-link-user-id");
+    if (!userId) {
+      return applicationJson({ error: "missing user identity" }, { status: 401 });
+    }
+
+    const body = (await request.json().catch(() => ({}))) as { deviceId?: string };
+    if (!body.deviceId) {
+      return applicationJson({ error: "deviceId is required" }, { status: 400 });
+    }
+
+    let delivered = 0;
+    for (const socket of this.ctx.getWebSockets("device:" + body.deviceId)) {
+      const attachment = socket.deserializeAttachment() as SocketAttachment | null;
+      if (attachment?.userId !== userId || attachment.viewer) continue;
+      try {
+        socket.send(JSON.stringify({ type: "approval_pending" } satisfies ApprovalPendingSignal));
+        delivered++;
+      } catch {
+        // Best effort: the Agent also checks on its own fallback schedule.
+      }
+    }
+
+    return applicationJson({ ok: true, delivered });
   }
 
   private async handleCall(request: Request): Promise<Response> {

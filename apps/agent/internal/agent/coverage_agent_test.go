@@ -123,7 +123,7 @@ func TestApprovalPollingStopsWhenCancelled(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		client.PollApprovals(ctx, cfg, &output, func(context.Context, string) (string, error) { return "", errors.New("should not ask") })
+		client.PollApprovals(ctx, cfg, &output, func(context.Context, string) (string, error) { return "", errors.New("should not ask") }, nil)
 	}()
 	select {
 	case <-done:

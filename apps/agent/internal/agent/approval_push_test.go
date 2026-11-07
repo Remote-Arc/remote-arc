@@ -81,8 +81,13 @@ func TestApprovalFallbackCheckRunsWithoutSignal(t *testing.T) {
 	var polls atomic.Int32
 	server := pendingApprovalServer(t, &polls)
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go NewClient().PollApprovals(ctx, config.Config{Origin: server.URL, DeviceToken: "test"}, &bytes.Buffer{}, func(context.Context, string) (string, error) { return "", errors.New("should not ask") }, nil)
+	done := make(chan struct{})
+	// Cleanups run last-in first-out: stop the loop before the interval is restored.
+	t.Cleanup(func() { cancel(); <-done })
+	go func() {
+		defer close(done)
+		NewClient().PollApprovals(ctx, config.Config{Origin: server.URL, DeviceToken: "test"}, &bytes.Buffer{}, func(context.Context, string) (string, error) { return "", errors.New("should not ask") }, nil)
+	}()
 	deadline := time.Now().Add(2 * time.Second)
 	for polls.Load() < 3 && time.Now().Before(deadline) {
 		time.Sleep(5 * time.Millisecond)

@@ -50,6 +50,7 @@
       ["tsx", "scripts/security-controls-test.ts"],
       ["tsx", "scripts/approval-broker-test.ts"],
       ["tsx", "scripts/approval-push-test.ts"],
+      ["tsx", "scripts/dashboard-live-test.ts"],
       ["tsx", "scripts/mcp-error-contract-test.ts"],
       ["tsx", "scripts/browser-tools-test.ts"],
       ["tsx", "scripts/secret-requests-test.ts"],

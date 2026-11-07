@@ -4,6 +4,7 @@ import { RunnerVideoRelay, type VideoAttachment } from "../browser/runner-video.
 import { deviceCallTimeoutMs, processTimeoutError } from "./call-timeout.js";
 import { HEARTBEAT_INTERVAL_MS, recordDeviceConnection } from "../analytics/device-reliability.js";
 import { recordProductEvent } from "../analytics/product-events.js";
+import { LIVE_TOPICS, type LiveTopic } from "./live.js";
 import type {
   AgentCallMessage,
   AgentToRelayMessage,
@@ -25,6 +26,8 @@ type SocketAttachment = VideoAttachment & {
   lastSignalAt?: number;
   staleRecorded?: boolean;
   viewer?: boolean;
+  /** A Dashboard change feed; never an Agent and never a runner viewer. */
+  live?: boolean;
   sessionId?: string;
   heartbeatAt?: number;
   frameTimes?: Record<string, number>;
@@ -38,6 +41,9 @@ type SocketAttachment = VideoAttachment & {
   disconnectRecorded?: boolean;
 };
 
+/** One feed per Dashboard tab; more than this is a runaway reconnect loop. */
+const MAX_LIVE_SOCKETS = 12;
+
 export class DeviceRegistry {
   private pending = new Map<string, PendingCall>();
   private attentionChain: Promise<void> = Promise.resolve();
@@ -47,6 +53,10 @@ export class DeviceRegistry {
     private readonly ctx: DurableObjectState,
     private readonly env?: RunnerEnv,
   ) {
+    // Dashboard keepalives are answered without waking this object. Agents and
+    // runner viewers send JSON pings, which this exact string does not match.
+    if (typeof WebSocketRequestResponsePair !== "undefined")
+      ctx.setWebSocketAutoResponse?.(new WebSocketRequestResponsePair("ping", "pong"));
     if (env)
       this.video = new RunnerVideoRelay(
         ctx,
@@ -142,6 +152,9 @@ export class DeviceRegistry {
       return this.handleReconnect(request);
     if (url.pathname === "/approval-pending" && request.method === "POST")
       return this.handleApprovalPending(request);
+    if (url.pathname === "/live") return this.handleLive(request);
+    if (url.pathname === "/live-notify" && request.method === "POST")
+      return this.handleLiveNotify(request);
 
     return new Response("Not found", { status: 404 });
   }
@@ -447,7 +460,52 @@ export class DeviceRegistry {
       }
     }
 
+    this.notifyLive(userId, "approvals");
     return applicationJson({ ok: true, delivered });
+  }
+
+  private handleLive(request: Request): Response {
+    if (request.headers.get("upgrade")?.toLowerCase() !== "websocket")
+      return new Response("WebSocket required", { status: 426 });
+    const userId = request.headers.get("x-remote-link-user-id");
+    if (!userId) return new Response("Forbidden", { status: 403 });
+    if (this.ctx.getWebSockets("live:" + userId).length >= MAX_LIVE_SOCKETS)
+      return new Response("Too many open Dashboard tabs", { status: 429 });
+    const pair = new WebSocketPair();
+    pair[1].serializeAttachment({ live: true, userId, deviceId: "" } satisfies SocketAttachment);
+    this.ctx.acceptWebSocket(pair[1], ["live:" + userId]);
+    return new Response(null, {
+      status: 101,
+      webSocket: pair[0],
+      headers: { "cache-control": "no-store" },
+    });
+  }
+
+  private async handleLiveNotify(request: Request): Promise<Response> {
+    const userId = request.headers.get("x-remote-link-user-id");
+    if (!userId) {
+      return applicationJson({ error: "missing user identity" }, { status: 401 });
+    }
+    const body = (await request.json().catch(() => ({}))) as { topic?: string };
+    const topic = LIVE_TOPICS.find((candidate) => candidate === body.topic);
+    if (!topic) return applicationJson({ error: "unknown topic" }, { status: 400 });
+    return applicationJson({ ok: true, delivered: this.notifyLive(userId, topic) });
+  }
+
+  /** Tells this person's open Dashboards which list to reload. */
+  private notifyLive(userId: string, topic: LiveTopic) {
+    let delivered = 0;
+    for (const socket of this.ctx.getWebSockets("live:" + userId)) {
+      const attachment = socket.deserializeAttachment() as SocketAttachment | null;
+      if (!attachment?.live || attachment.userId !== userId) continue;
+      try {
+        socket.send(JSON.stringify({ type: "changed", topic }));
+        delivered++;
+      } catch {
+        // A closing tab reconnects and reloads everything.
+      }
+    }
+    return delivered;
   }
 
   private async handleCall(request: Request): Promise<Response> {
@@ -585,6 +643,8 @@ export class DeviceRegistry {
     if (!parsed || typeof parsed !== "object") return;
     const attachment = socket.deserializeAttachment() as SocketAttachment | null;
     if (!attachment) return;
+    // A Dashboard feed only listens; it can never act as an Agent or viewer.
+    if (attachment.live) return;
     if (attachment.viewer) {
       if (parsed.type === "ping") {
         const current = { ...attachment, heartbeatAt: Date.now() };
@@ -640,6 +700,7 @@ export class DeviceRegistry {
         .catch(() => {})
         .then(async () => {
           await recordRunnerAttention(this.env!, attachment.userId, attachment.deviceId, parsed);
+          this.notifyLive(attachment.userId, "attention");
           const event = parsed as unknown as { event_id: string; kind: string };
           socket.send(
             JSON.stringify({

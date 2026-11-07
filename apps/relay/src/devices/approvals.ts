@@ -2,6 +2,7 @@ import { applicationJson } from "../platform/application-json.js";
 import { authenticateDevice, getSessionUser, nowIso, type OAuthIdentity } from "../auth/auth.js";
 import { writeAudit } from "../analytics/audit.js";
 import { retryTransientD1Read } from "../platform/d1-read-retry.js";
+import { notifyDashboard } from "./live.js";
 
 type ApprovalDbEnv = {
   DB: D1Database;
@@ -10,6 +11,7 @@ type ApprovalDbEnv = {
 type ApprovalEnv = ApprovalDbEnv & {
   PUBLIC_ORIGIN: string;
   APP_ORIGIN?: string;
+  REGISTRY?: DurableObjectNamespace;
 };
 
 export type ApprovalDecision =
@@ -573,6 +575,7 @@ export async function handleApprovalDecision(request: Request, env: ApprovalEnv)
     decision: body.decision!,
     source: "dashboard",
   });
+  if (result.status === 200) await notifyDashboard(env, user.id, "approvals");
   return applicationJson(result.payload, { status: result.status });
 }
 
@@ -614,5 +617,6 @@ export async function handleDeviceApprovalDecision(request: Request, env: Approv
     decision: body.decision!,
     source: "terminal",
   });
+  if (result.status === 200) await notifyDashboard(env, identity.user_id, "approvals");
   return applicationJson(result.payload, { status: result.status });
 }

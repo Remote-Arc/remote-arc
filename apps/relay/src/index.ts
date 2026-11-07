@@ -12,6 +12,7 @@ import { serveDemoMedia } from "./platform/demo-media.js";
 import { handleAgentDownload } from "./platform/agent-downloads.js";
 import { handleBrowserAuth } from "./browser/browser-auth.js";
 import { handleRunnerRequest } from "./browser/runner-attention.js";
+import { handleLiveConnect } from "./devices/live.js";
 import { diagnosticError, isUnavailableD1Error } from "./platform/diagnostics.js";
 import { handleFollowupUnsubscribe } from "./followups/user-followups.js";
 import { runFollowupBatches } from "./followups/followup-batches.js";
@@ -718,6 +719,8 @@ async function handleFetch(request: Request, env: Env, ctx?: ExecutionContext): 
 
   if (/^\/api\/browser-auth\/[A-Za-z0-9_-]+$/.test(url.pathname))
     return handleBrowserAuth(request, env);
+  if (url.pathname === "/api/live" && request.method === "GET")
+    return handleLiveConnect(request, env);
   if (url.pathname.startsWith("/api/runner/")) return handleRunnerRequest(request, env);
 
   if (url.pathname === "/api/status" && request.method === "GET") {

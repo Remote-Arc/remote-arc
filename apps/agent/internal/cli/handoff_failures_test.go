@@ -93,7 +93,7 @@ func TestOwnedStartupControlMetadataFailureReleasesLease(t *testing.T) {
 	if err = os.Mkdir(filepath.Join(dir, "control.json"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	if err = runOwned(context.Background(), Options{Foreground: true}, cfg, "test", owned, bg, log, nil, io.Discard, nil, os.Stdin); err == nil {
+	if err = runOwned(context.Background(), Options{Foreground: true}, cfg, "test", owned, bg, log, nil, io.Discard, nil, os.Stdin, nil); err == nil {
 		t.Fatal("runtime started without durable authenticated control endpoint")
 	}
 	if lease.Active(dir, "execution") {

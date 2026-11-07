@@ -46,6 +46,7 @@ type Agent struct {
 	Journal            *journal.Journal
 	Background         Background
 	Stop               func()
+	ApprovalPending    func() // set by an interactive terminal that can ask
 	Save               func(config.Config) error
 	Load               func() (config.Config, error)
 	mu                 sync.Mutex
@@ -600,6 +601,13 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 		if json.Unmarshal(data, &control) == nil && control.Type == "runner_view" {
 			if a.Browser != nil && (control.Action == "watch" || control.Action == "stop") {
 				a.Browser.ViewHeartbeatMode(control.SessionID, control.Action == "watch", control.JPEG == nil || *control.JPEG)
+			}
+			continue
+		}
+		if control.Type == "approval_pending" {
+			a.log("warn", ApprovalPendingLog)
+			if a.ApprovalPending != nil {
+				a.ApprovalPending()
 			}
 			continue
 		}

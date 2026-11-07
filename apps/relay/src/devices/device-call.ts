@@ -56,6 +56,32 @@ const parseStoredStringArray = (value: string | null) => {
 
 const registry = (env: DeviceCallEnv, userId: string) => env.REGISTRY.getByName("user:" + userId);
 
+/**
+ * Records a write approval and, when this request created it, tells the
+ * device's Agent so an open terminal can ask at once instead of polling.
+ */
+async function requestApproval(
+  env: DeviceCallEnv,
+  input: Parameters<typeof requestWriteApproval>[1],
+) {
+  const approval = await requestWriteApproval(env, input);
+  if (approval?.status === "pending" && approval.request_id === input.requestId) {
+    await registry(env, input.identity.userId)
+      .fetch(
+        new Request("https://registry/approval-pending", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-remote-link-user-id": input.identity.userId,
+          },
+          body: JSON.stringify({ deviceId: input.deviceId }),
+        }),
+      )
+      .catch(() => undefined);
+  }
+  return approval;
+}
+
 export async function callDevice(
   env: DeviceCallEnv,
   identity: OAuthIdentity,
@@ -219,7 +245,7 @@ export async function callDevice(
   // An exact user-approved scope change (once or saved until revoked) is
   // needed before any new site reaches the Go Agent.
   if (scopeChange && !approvedWrite) {
-    const approval = await requestWriteApproval(env, { identity, deviceId, requestId, tool, args });
+    const approval = await requestApproval(env, { identity, deviceId, requestId, tool, args });
     throw new Error(
       "SCOPE_CHANGE_REQUIRED: approve the exact sites in Dashboard Security & access / Pending approvals (" +
         (approval?.id ?? "pending") +
@@ -228,7 +254,7 @@ export async function callDevice(
   }
 
   if (mutationTarget && workspaceRoots.length === 0 && !approvedWrite && !taskWorkspaceRoot) {
-    const approval = await requestWriteApproval(env, {
+    const approval = await requestApproval(env, {
       identity,
       deviceId,
       requestId,
@@ -362,7 +388,7 @@ export async function callDevice(
     (payload.error?.startsWith("Blocked by Remote Arc Trusted Write Locations:") ||
       payload.error?.startsWith("Blocked by Remote Arc Workspace Scope:"))
   ) {
-    const approval = await requestWriteApproval(env, {
+    const approval = await requestApproval(env, {
       identity,
       deviceId,
       requestId,

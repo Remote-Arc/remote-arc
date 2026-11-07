@@ -366,10 +366,17 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 		var cursor *int64
 		announced := false
 		stopApprovals := func() {}
+		approvalSignals := make(chan struct{}, 1)
+		signalApproval := func() {
+			select {
+			case approvalSignals <- struct{}{}:
+			default: // a check is already queued
+			}
+		}
 		if !o.Agent && isTerminal(input) && isOutputTerminal() {
 			approvalCtx, cancelApprovals := context.WithCancel(ctx)
 			stopped := make(chan struct{})
-			go func() { defer close(stopped); client.PollApprovals(approvalCtx, cfg, out, ask) }()
+			go func() { defer close(stopped); client.PollApprovals(approvalCtx, cfg, out, ask, approvalSignals) }()
 			stopApprovals = func() { cancelApprovals(); <-stopped }
 			defer stopApprovals()
 		}
@@ -400,6 +407,11 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 				cursor = &next
 				if text != "" {
 					fmt.Fprint(out, journal.FormatHistory(text, log.Color))
+					// The owning Agent logs a Relay approval signal; this
+					// viewer asks from its own terminal without polling.
+					if strings.Contains(text, agent.ApprovalPendingLog) {
+						signalApproval()
+					}
 				}
 			}
 			if e = wait(ctx, 500*time.Millisecond); e != nil {
@@ -409,7 +421,7 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 		if owned == nil {
 			return ctx.Err()
 		}
-		err = runOwned(ctx, o, cfg, version, owned, bg, log, client, out, ask, input)
+		err = runOwned(ctx, o, cfg, version, owned, bg, log, client, out, ask, input, signalApproval)
 		stopApprovals()
 		if errors.Is(err, agent.ErrRevoked) {
 			_ = bg.Disable(ctx)
@@ -432,7 +444,7 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 	}
 	return ctx.Err()
 }
-func runOwned(parent context.Context, o Options, cfg config.Config, version string, owned *lease.Lease, bg *service.Controller, log *journal.Journal, client *agent.Client, out io.Writer, ask agent.Ask, input *os.File) error {
+func runOwned(parent context.Context, o Options, cfg config.Config, version string, owned *lease.Lease, bg *service.Controller, log *journal.Journal, client *agent.Client, out io.Writer, ask agent.Ask, input *os.File, approvalPending func()) error {
 	defer owned.Release()
 	// A supervisor may have spawned this worker while the old foreground
 	// owner held the lease. Re-read the durable pause state *after* takeover.
@@ -483,6 +495,7 @@ func runOwned(parent context.Context, o Options, cfg config.Config, version stri
 	}
 	a.Stop = cancel
 	a.Client = client
+	a.ApprovalPending = approvalPending
 	if cfg.BackgroundEnabled == nil {
 		log.Log("info", "Background connection is not configured yet · finish setup in Dashboard → Devices.")
 	}

@@ -1,0 +1,79 @@
+{
+  "cwd": "apps/ui",
+  "tasks": {
+    "test:site": [
+      ["pnpm", "typecheck"],
+      ["node", "--import", "tsx", "scripts/native-downloads-test.mjs"],
+      ["pnpm", "test:workspaces"],
+      ["pnpm", "test:onboarding"],
+      ["pnpm", "test:arc-experience"],
+      ["pnpm", "test:onboarding-readability"],
+      ["pnpm", "test:device-removal"],
+      ["pnpm", "test:device-execution-log"],
+      ["pnpm", "test:security"],
+      ["pnpm", "test:background-recovery"],
+      ["pnpm", "test:oauth-consent"]
+    ],
+    "test:workspaces": [
+      ["node", "--import", "tsx", "scripts/connect-tasks-resilience-test.tsx"],
+      ["node", "scripts/app-entry-test.mjs"],
+      [
+        "node",
+        "--experimental-strip-types",
+        "--test",
+        "scripts/dashboard-workspaces-test.mjs",
+        "scripts/arc-chat-sessions-test.mjs",
+        "scripts/arc-transcript-test.mjs"
+      ],
+      ["node", "--import", "tsx", "scripts/arc-native-client-test.ts"],
+      ["node", "--import", "tsx", "scripts/arc-chat-races-test.ts"],
+      ["node", "--import", "tsx", "scripts/arc-verification-ui-test.tsx"],
+      ["node", "--import", "tsx", "scripts/arc-billing-client-test.ts"],
+      ["node", "--import", "tsx", "scripts/arc-skill-mentions-test.tsx"],
+      ["node", "--import", "tsx", "scripts/arc-home-brief-test.mjs"],
+      ["node", "--import", "tsx", "scripts/runtime-config-test.ts"],
+      ["node", "--import", "tsx", "scripts/product-hosts-test.ts"],
+      ["node", "--import", "tsx", "scripts/admin-events-model-test.ts"],
+      ["node", "--import", "tsx", "scripts/service-health-verdict-test.ts"],
+      ["node", "--import", "tsx", "scripts/monitor-reliability-test.tsx"],
+      ["node", "--import", "tsx", "scripts/computer-plan-limit-test.tsx"],
+      ["pnpm", "test:billing-preview"],
+      ["node", "--import", "tsx", "scripts/business-fetch-test.ts"],
+      ["node", "--import", "tsx", "scripts/service-health-test.tsx"],
+      ["node", "--import", "tsx", "scripts/payment-health-panel-test.tsx"]
+    ],
+    "test:onboarding": [
+      ["node", "scripts/onboarding-flow-test.mjs"],
+      ["node", "--import", "tsx", "scripts/pairing-errors-test.ts"]
+    ],
+    "test:arc-experience": [
+      ["node", "scripts/arc-capabilities-test.mjs"],
+      ["node", "--experimental-strip-types", "scripts/marketing-playback-test.mjs"],
+      ["node", "--import", "tsx", "scripts/arc-positioning-test.mjs"],
+      ["node", "--import", "tsx", "scripts/home-panorama-test.mjs"],
+      ["node", "--import", "tsx", "scripts/arc-use-cases-test.ts"],
+      ["node", "--import", "tsx", "scripts/skill-use-cases-test.ts"]
+    ],
+    "test:security": [
+      ["node", "--import", "tsx", "scripts/device-tools-test.ts"],
+      ["node", "--import", "tsx", "scripts/secret-crypto-test.ts"],
+      ["node", "--import", "tsx", "scripts/security-response-test.mjs"],
+      ["node", "--experimental-strip-types", "scripts/security-grant-groups-test.mjs"],
+      ["node", "--import", "tsx", "scripts/product-pwa-test.ts"],
+      ["node", "--import", "tsx", "scripts/live-updates-test.ts"],
+      ["node", "--import", "tsx", "scripts/runner-attention-live-test.tsx"],
+      ["pnpm", "test:runner-video"]
+    ],
+    "test:background-recovery": [
+      ["node", "--experimental-strip-types", "scripts/background-recovery-test.mjs"],
+      ["node", "--experimental-strip-types", "scripts/agent-update-guide-test.ts"]
+    ],
+    "test:arc-client": [
+      ["node", "--import", "tsx", "scripts/arc-native-client-test.ts"],
+      ["node", "--import", "tsx", "scripts/arc-chat-races-test.ts"],
+      ["node", "--import", "tsx", "scripts/arc-verification-ui-test.tsx"],
+      ["node", "--import", "tsx", "scripts/arc-billing-client-test.ts"],
+      ["node", "--import", "tsx", "scripts/arc-skill-mentions-test.tsx"]
+    ]
+  }
+}

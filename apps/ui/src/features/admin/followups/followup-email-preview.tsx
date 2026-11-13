@@ -1,0 +1,42 @@
+import { useState } from "react";
+import { useI18n } from "../../../hooks/use-i18n.js";
+import previewLogo from "../../../../public/remote-arc-192.png?inline";
+
+// Input is the escaped HTML produced by renderFollowupEmail, its saved snapshot, or a
+// lifecycle email preview from the relay.
+// Keep scripts, forms and same-origin access disabled. User-clicked links open a
+// separate tab so the official site cannot replace (and break) the preview.
+export function FollowupEmailPreview({ html, title }: { html: string; title: string }) {
+  const { tr } = useI18n(),
+    [revision, setRevision] = useState(0);
+  const document = html
+    .replaceAll("<a href=", '<a target="_blank" rel="noopener noreferrer" href=')
+    .replace('src="https://remotearc.app/remote-arc-192.png"', 'src="' + previewLogo + '"')
+    // The admin console only loads its own images; it serves the same email artwork.
+    .replaceAll(
+      'src="https://remotearc.app/email-art/',
+      'src="' + window.location.origin + "/email-art/",
+    );
+  return (
+    <div className="adminFollowupPreview">
+      <div className="adminFollowupPreviewToolbar">
+        <span>{tr("admin.followups.followupEmailPreview.previewLinksOpenInANew")}</span>
+        <button
+          type="button"
+          className="adminOutlineBtn"
+          onClick={() => setRevision((value) => value + 1)}
+        >
+          {tr("admin.followups.followupEmailPreview.reloadPreview")}
+        </button>
+      </div>
+      <iframe
+        key={revision}
+        className="adminFollowupEmailPreview"
+        title={title}
+        sandbox="allow-popups allow-popups-to-escape-sandbox"
+        referrerPolicy="no-referrer"
+        srcDoc={document}
+      />
+    </div>
+  );
+}

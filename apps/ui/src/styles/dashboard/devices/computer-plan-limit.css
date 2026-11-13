@@ -1,0 +1,106 @@
+.computerPlanLimit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px 24px;
+  align-items: center;
+  border: 1px solid rgba(214, 158, 46, 0.32);
+  border-radius: 16px;
+  padding: 20px 22px;
+  margin: 0 0 18px;
+  background: rgba(214, 158, 46, 0.07);
+  color: var(--text);
+}
+
+.computerPlanLimit h2 {
+  font-size: 17px;
+  line-height: 1.3;
+  margin: 0 0 6px;
+}
+
+.computerPlanLimit p {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+}
+
+.computerPlanLimitActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.computerPlanLimitActions a {
+  text-decoration: none;
+}
+
+.computerPlanLimitChooser {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.computerPlanLimitChooser ul {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.computerPlanLimitChooser label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.computerPlanLimitChooser label:hover {
+  background: rgba(127, 127, 127, 0.08);
+}
+
+.computerPlanLimitChooser label.disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.computerPlanLimitName {
+  font-weight: 650;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.computerPlanLimitMeta {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.computerPlanLimitError {
+  color: var(--danger, #c0392b);
+  margin-bottom: 10px;
+}
+
+.computerPlanLimitChooserActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.badge.planPaused {
+  color: #b7791f;
+}
+
+@media (max-width: 720px) {
+  .computerPlanLimit {
+    grid-template-columns: 1fr;
+  }
+
+  .computerPlanLimitActions {
+    justify-content: flex-start;
+  }
+}

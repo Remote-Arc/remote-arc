@@ -1,0 +1,209 @@
+import { readFileSync, writeFileSync } from "node:fs";
+import { parseChangelog, releaseNotesMarkdown } from "./release-content.mjs";
+
+const root = new URL("../", import.meta.url);
+const changelogPath = new URL("CHANGELOG.md", root);
+const cliPackagePath = new URL("packages/cli/package.json", root);
+const cliReadmePath = new URL("packages/cli/README.md", root);
+const cliLicensePath = new URL("packages/cli/LICENSE", root);
+const rootLicense = readFileSync(new URL("LICENSE", root), "utf8").replaceAll("\r\n", "\n");
+const cliLicense = readFileSync(cliLicensePath, "utf8").replaceAll("\r\n", "\n");
+
+const changelog = readFileSync(changelogPath, "utf8").replaceAll("\r\n", "\n");
+const releases = parseChangelog(changelog);
+if (!releases.length) throw new Error("No release sections found in CHANGELOG.md");
+
+const cliPackage = JSON.parse(readFileSync(cliPackagePath, "utf8"));
+const latest = releases[0];
+const candidateMatch = cliPackage.version.match(
+  /^(\d+\.\d+\.\d+)-(?:alpha|beta|rc|canary)\.[0-9A-Za-z.-]+$/,
+);
+if (candidateMatch) {
+  // An RC is not the published "Latest release": keep stable docs untouched.
+  if (!changelog.includes("## " + candidateMatch[1] + " - Unreleased")) {
+    throw new Error("Candidate " + cliPackage.version + " needs an unreleased CHANGELOG section.");
+  }
+} else if (latest.version !== cliPackage.version) {
+  throw new Error(
+    "Latest CHANGELOG version " +
+      latest.version +
+      " does not match remotelink package version " +
+      cliPackage.version,
+  );
+}
+
+const mode = process.argv[2] || "--write";
+if (mode === "--notes") {
+  const requested = process.argv[3] || latest.version;
+  let release = releases.find((item) => item.version === requested);
+  if (!release && candidateMatch && requested === cliPackage.version) {
+    const header = "## " + candidateMatch[1] + " - Unreleased";
+    const start = changelog.indexOf(header);
+    if (start < 0) throw new Error("Candidate notes require an Unreleased CHANGELOG section.");
+    const next = changelog.indexOf("\n## ", start + header.length);
+    const section = changelog.slice(start + header.length, next < 0 ? undefined : next);
+    const title = section.match(/^###\s+(.+)$/m)?.[1];
+    const changes = [...section.matchAll(/^-\s+(.+)$/gm)].map((match) => match[1].trim());
+    if (!title || !changes.length) throw new Error("Candidate release notes are incomplete.");
+    release = {
+      version: requested,
+      title: requested + " — " + title,
+      date: new Date().toISOString().slice(0, 10),
+      changes,
+    };
+  }
+  if (!release) throw new Error("Release " + requested + " was not found in CHANGELOG.md");
+  process.stdout.write(releaseNotesMarkdown(release));
+  process.exit(0);
+}
+
+const start = "<!-- latest-release:start -->";
+const end = "<!-- latest-release:end -->";
+const releaseBlock = [
+  start,
+  "## Latest release",
+  "",
+  "**remotelink " + latest.version + " — " + latest.title + "**",
+  "",
+  "Published " + latest.date,
+  "",
+  ...latest.changes.slice(0, 6).map((change) => "- " + change),
+  "",
+  "See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/Remote-Arc/remote-arc/blob/master/CHANGELOG.md).",
+  end,
+].join("\n");
+
+const readme = readFileSync(cliReadmePath, "utf8").replaceAll("\r\n", "\n");
+let expected;
+if (readme.includes(start) && readme.includes(end)) {
+  const startIndex = readme.indexOf(start);
+  const endIndex = readme.indexOf(end, startIndex) + end.length;
+  expected = readme.slice(0, startIndex) + releaseBlock + readme.slice(endIndex);
+} else {
+  const anchor = "## Connect your AI client";
+  if (!readme.includes(anchor)) throw new Error("Could not find README insertion anchor");
+  expected = readme.replace(anchor, releaseBlock + "\n\n" + anchor);
+}
+
+const rootReadmePath = new URL("README.md", root);
+const rootReadme = readFileSync(rootReadmePath, "utf8").replaceAll("\r\n", "\n");
+// Keep npm's product description aligned with GitHub, while npm's quick start
+// remains specific to the npm/npx package rather than other installers.
+const overviewStart = "<!-- github-overview:start -->";
+const overviewEnd = "<!-- github-overview:end -->";
+const introduction = rootReadme.match(/^# Remote Arc\n\n([\s\S]*?)\n\n\[Website\]/m)?.[1];
+const productSection = rootReadme.match(
+  /## Two ways to work\n[\s\S]*?(?=\n## From a goal to a result)/,
+)?.[0];
+if (
+  !introduction ||
+  !productSection ||
+  !expected.includes(overviewStart) ||
+  !expected.includes(overviewEnd)
+) {
+  throw new Error("GitHub/npm product overview markers or source sections are missing");
+}
+const overviewBlock = [overviewStart, introduction, "", productSection.trimEnd(), overviewEnd].join(
+  "\n",
+);
+const overviewIndex = expected.indexOf(overviewStart);
+expected =
+  expected.slice(0, overviewIndex) +
+  overviewBlock +
+  expected.slice(expected.indexOf(overviewEnd, overviewIndex) + overviewEnd.length);
+if (cliPackage.license !== "SEE LICENSE IN LICENSE")
+  throw new Error("npm must reference the bundled custom LICENSE");
+const installStart = "<!-- native-install:start -->";
+const installEnd = "<!-- native-install:end -->";
+const nativeVersion = latest.version;
+const installerPath = new URL("apps/ui/public/install.sh", root);
+const installer = readFileSync(installerPath, "utf8");
+if (
+  !installer.includes("releases/latest/download/go-binaries.json") ||
+  !installer.includes("REMOTEARC_INSTALL_VERSION")
+)
+  throw new Error(
+    "Native installer must follow the stable channel and support explicit version pins",
+  );
+const nativeRelease =
+  "https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v" + nativeVersion + "/";
+const nativeTargets = [
+  ["macOS Apple Silicon", "darwin", "arm64"],
+  ["macOS Intel", "darwin", "amd64"],
+  ["Windows x64", "windows", "amd64"],
+  ["Windows ARM64", "windows", "arm64"],
+  ["Linux x64", "linux", "amd64"],
+  ["Linux ARM64", "linux", "arm64"],
+];
+const nativeBlock = [
+  installStart,
+  "### Native downloads and Homebrew",
+  "",
+  "Standalone " +
+    nativeVersion +
+    " needs no Node.js or Go compiler. [Installation and upgrade guide](https://remotearc.app/downloads).",
+  "",
+  "On macOS or Linux (including WSL), install without Node.js:",
+  "",
+  "```sh",
+  "curl -fsSL https://remotearc.app/install.sh | sh",
+  "```",
+  "",
+  "The script verifies SHA256 and installs to ~/.local/bin without sudo. On a first install from a terminal it then starts the Agent, so you can pair the computer and choose its permissions. Upgrades, runs without a terminal and `REMOTEARC_NO_START=1` only install; start the Agent with `remotelink`. Set REMOTEARC_INSTALL_DIR to an absolute path to choose another directory. Rerun the installer to upgrade after stopping the Agent.",
+  "",
+  "| Platform | Download |",
+  "| --- | --- |",
+  ...nativeTargets.map(
+    ([label, os, arch]) =>
+      "| " +
+      label +
+      " | [remotelink](" +
+      nativeRelease +
+      "remotelink-v" +
+      nativeVersion +
+      "-" +
+      os +
+      "-" +
+      arch +
+      (os === "windows" ? ".exe" : "") +
+      ") |",
+  ),
+  "",
+  "[SHA256SUMS](" +
+    nativeRelease +
+    "SHA256SUMS) · [Release notes](https://github.com/Remote-Arc/remote-arc/releases/tag/remotelink-v" +
+    nativeVersion +
+    ")",
+  "",
+  "```bash",
+  "brew tap remote-arc/remote-arc https://github.com/Remote-Arc/remote-arc",
+  "if brew command trust >/dev/null 2>&1; then brew trust --formula remote-arc/remote-arc/remotelink remote-arc/remote-arc/remotelink-go; fi",
+  "brew install remote-arc/remote-arc/remotelink",
+  "remotelink",
+  "```",
+  "",
+  "The existing `remotelink-go` formula remains available for upgrades; install one formula at a time.",
+  installEnd,
+].join("\n");
+if (!rootReadme.includes(installStart) || !rootReadme.includes(installEnd))
+  throw new Error("Root README native install markers are missing");
+const rootStart = rootReadme.indexOf(installStart);
+const expectedRootReadme =
+  rootReadme.slice(0, rootStart) +
+  nativeBlock +
+  rootReadme.slice(rootReadme.indexOf(installEnd, rootStart) + installEnd.length);
+
+if (mode === "--check") {
+  if (expected !== readme || expectedRootReadme !== rootReadme || cliLicense !== rootLicense) {
+    console.error("Release or native download documentation is out of sync with CHANGELOG.md");
+    process.exit(1);
+  }
+  console.log("release docs in sync for remotelink " + latest.version);
+  process.exit(0);
+}
+
+if (mode !== "--write") throw new Error("Unknown mode: " + mode);
+if (expected !== readme) writeFileSync(cliReadmePath, expected);
+if (expectedRootReadme !== rootReadme) writeFileSync(rootReadmePath, expectedRootReadme);
+if (cliLicense !== rootLicense) writeFileSync(cliLicensePath, rootLicense);
+console.log("synced release docs for remotelink " + latest.version);

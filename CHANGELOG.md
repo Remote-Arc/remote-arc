@@ -1,0 +1,301 @@
+# Changelog
+
+All notable changes to Remote Arc are documented here.
+
+## 0.7.1 - 2026-11-13
+
+### Downloads and the Homebrew tap move to Remote-Arc
+
+- Homebrew now taps `remote-arc/remote-arc` from `github.com/Remote-Arc/remote-arc`, and the formulas, the npm launcher's fallback and the install page download from Remote-Arc's GitHub Releases. Remote Arc's own download mirror is still tried first.
+- If you installed with Homebrew before, re-tap once: `brew untap yaohuangguan/remote-arc`, then `brew tap remote-arc/remote-arc https://github.com/Remote-Arc/remote-arc` and `brew install remote-arc/remote-arc/remotelink`.
+
+### Agent and installers
+
+- After a first install, the installer starts the Agent, and the Windows executable shows the Remote Arc logo.
+- Background Agents on Linux, macOS and Windows can be updated from the Dashboard with "Update now", and the update card shows its progress inline. The Agent checks the release against GitHub Releases itself and refuses while work is running. Agents from 0.7.1 on can take later releases this way; older Agents keep the copy-command upgrade.
+- After an update, the Agent removes older release files once the new background service is running, and keeps the previous stable release so going back one version needs no download.
+- An Agent left waiting for pairing with nobody at the computer slows down and stops polling instead of polling forever.
+- An upgrade handoff that was cancelled is reported as cancelled instead of failed.
+
+### Safety Guard
+
+- The owner of a computer can allow shutdown and restart for it, in File boundaries & recovery on the Dashboard. It is off by default; disk erasure, raw disk writes and deleting system folders stay blocked either way.
+- `systemctl poweroff` and `reboot`, `loginctl`, `init 0` and `6`, `Stop-Computer` and `Restart-Computer` now count as shutdown and restart commands. Commands such as `systemctl restart nginx` are not affected.
+- Ordinary deletes the delete guard refused now run: contents of `/root` and `/srv`, an app's own folder under Program Files, and paths built from `$(pwd)` or `$PWD` when the working directory is known. The folders themselves, credentials folders such as `/root/.ssh`, and Program Files' shared parts stay protected.
+
+### MCP
+
+- New `fleet_run` tool runs one command, file read or directory listing on several computers at once (up to 25) and returns each computer's result. Targets are always named, or `all_devices` is set explicitly; computers that cannot take the call are reported as skipped with the reason.
+
+### Website, Dashboard and email
+
+- Free accounts see what happens after their 10,000 monthly calls before they reach it, and each pricing card shows the plan's full terms.
+- Lifecycle emails were redesigned; the welcome email follows setup progress, a reminder follows a day later if setup is unfinished, and the follow-ups admins send match them.
+- Overview shows size-matched loading placeholders.
+- Manage individual skills shows each switch with a plain name and help text instead of the MCP tool name.
+- A plan paid with Link from a US bank account is now granted. Before, the payment went through but the plan was not applied; refunds and disputes of such payments now also revoke what they granted.
+
+## 0.7.0 - 2026-11-09
+
+### Free, Pro and Max plans with computer limits
+
+- Offer Free, Pro and Max plans, with Connect Unlimited now sold as Pro. Each plan publishes how many computers it covers; computers beyond the current plan's limit are paused, never unpaired, and the owner chooses in the Dashboard which ones stay active. Paused computers return on their own when the account subscribes again. Existing Connect-only subscribers can switch to the current Pro offer.
+- When a Free account uses its monthly Connect calls, it gets a one-time 7-day trial of unlimited Connect calls, then a slow lane of 2 calls a minute until the monthly reset, instead of a hard stop. Accounts that have subscribed before do not get the trial. MCP answers an exhausted quota with an upgrade link.
+- Offer Pro at US$149/year with monthly Arc Credits, and resume or replace an unfinished checkout instead of failing.
+
+### Agent: pushed approvals, own download mirror and Linux recovery
+
+- The Relay signals the Agent when a write approval is created, so a terminal sees it immediately instead of polling every 8 seconds; it still checks every 5 minutes as a fallback.
+- Installers and upgrades download native Agent files from Remote Arc's own mirror, checked against the release's `go-binaries.json` and `SHA256SUMS`, so a GitHub download outage no longer blocks installs.
+- Linux background recovery keeps running after the user logs out and starts at boot (systemd linger), also for installs made by older Agents. The Agent establishes its wake signal before advertising a session.
+
+### Dashboard, website and reliability
+
+- The Dashboard follows a live change feed instead of 5-second polling, and browser tasks appear in pending approvals.
+- Build Agent Playbook into the Skill catalog, and send welcome, trial and plan confirmation emails.
+- Production releases no longer lock the database while migrating, production is probed every minute, and a regression suite checks the live site after every release.
+
+## 0.6.6 - 2026-11-03
+
+### Mac connection recovery and clearer execution health
+
+- Reconnect the Go Agent after suspension or long peer-signal gaps before reading buffered calls. Reject expired Relay dispatch deadlines before starting an operation, while retaining pairing and legacy compatibility.
+- Request macOS system sleep protection on AC power during explicitly authorized task keep-awake leases. Preserve bounded expiry, renewal and release; allow the display to sleep. A ten-minute closed-lid test passed on the tested Intel Mac; this does not enable an idle always-on mode or guarantee every Mac power state.
+- Package the post-0.6.5 native fixes in a new release: the complete Go runtime, browser cold-start and authorization handoff reliability, Windows file-replacement retries and owner-scoped one-time secret handoff.
+- Show expired device signals and unconfirmed execution responses, provide an owner-only connection recovery check, and surface device timeouts and failed keep-awake leases in Admin separately from HTTP server errors. Never automatically replay an uncertain operation.
+
+### Apps Beta, operations and website
+
+- Add Google Apps Beta requests and operator admission while keeping basic Google sign-in separate. Apply the agreed seven-day Google invocation-content retention policy; Google Apps verification is still separate from Beta access.
+- Add per-user work and partial-cost insights, a compact monthly request estimate on the homepage, clearer support replies and unsubscribe pages, and a retryable task-page error fallback.
+
+## 0.6.5 - 2026-10-28
+
+### Dashboard browser authentication and reliable process admission
+
+- Add per-device, exact-website Dashboard approval and revocation for OTP sign-in/registration and supported CAPTCHA controls. Snapshots report effective authorization; missing approval and outdated clients return actionable errors.
+- Make legacy shared-tab fill and current action tools use the same OTP policy. Approved Runner verification providers expose visible controls and optional cropped challenge images; response tokens stay private, unsupported challenges retain human handoff and final submissions remain separately authorized.
+- Record authentication permission changes without recording code values, and remove authentication codes from resumable URLs.
+- Raise the default running-command limit from 32 to 64, configurable from 1 to 256 with REMOTEARC_MAX_ACTIVE_PROCESSES. Completed jobs no longer occupy running slots; retain at most 128 finished records for up to 30 minutes in both Go and TypeScript runtimes.
+- Publish Remote Arc Browser 0.4.1 with Dashboard OTP enforcement and corrected legacy tool behavior.
+- Promote the qualified Agent changes to the stable 0.6.5 npm/native release.
+
+### Device tools, browser handoff and local media
+
+- Add read-only Codex and Claude Code session/worktree discovery, filtered process details, credential redaction and bounded Git metadata. Last activity is metadata, not proof that another agent is still running.
+- Expose scoped Skill search/read and a generated bilingual directory of 43 Remote MCP tools. Skills are instructions; executors, downloads and account permissions remain separate requirements.
+- Hand off delayed browser verification, retain unverified final-submit records, support explicit waits for page/upload/network and user-completion conditions, and report missing fields/uploads after restart without storing their values.
+- Provide an owner-only, view-only browser stream while the Dashboard is watching, with bounded memory-only frames, heartbeat expiry and cancellable viewport capture. Remote input is not included.
+- Let managed process status wait locally for output or completion, up to 40 seconds. Preserve existing tools and policy grants during upgrades.
+- Add OpenFilm/HyperFrames video, map and Whisper guidance with size-aware download permission rules. Windows synthetic video/map/subtitle outputs were verified; Qwen/ACE, other OS media paths and production host discovery remain pending in #350.
+- The earlier 0.6.5-rc.1 prerelease qualified the tool-capability changes; this release updates stable downloads, npm latest and Homebrew formulas to 0.6.5.
+
+### Video uploads and clearer setup on Windows and WSL
+
+- Browser Runner can attach video (mp4, mov, m4v, webm, up to 2 GB), audio (mp3, wav, m4a, up to 512 MB) and more document/image types (csv, xlsx, pptx, gif, webp). Rejections now return `UNSUPPORTED_UPLOAD_TYPE` or `UPLOAD_SIZE_LIMIT`.
+- Automatic Codex setup works with Codex 0.163+, which rejected the empty connector-list cursor. When Codex cannot list its ChatGPT connectors, the message now says why and how to continue: `npx remotelink setup install --global --agent codex --skip-connector-check`.
+- In WSL, a missing Claude Code or Codex now explains that Windows apps are configured by running `npx remotelink@latest` in Windows PowerShell.
+- When an old global install makes `npx remotelink` run an older version than the running Agent, the message leads with `npx remotelink@latest` and labels `--force-update` as an explicit rollback.
+- A manually dispatched stable publish now marks its GitHub release as Latest.
+- On Windows, command output written in the console code page (for example GBK on Chinese Windows) is decoded instead of returned as mojibake.
+- `start_process` now tells the AI which shell runs the command (`/bin/sh` or `cmd.exe`), how to use PowerShell, and when to raise the 5-second timeout or run in the background.
+- A connection that predates a newer permission (for example Apps access) now explains that the person should reconnect Remote Arc in the AI app's connector settings.
+- The Video Creator skill explains how to hand over or upload the finished video.
+
+### Correct systemd service log paths
+
+- Render literal systemd output paths so Linux and WSL user services can append Agent logs without non-absolute-path warnings. Preserve paths containing spaces, percent signs, quotes and Unicode. WSL lifetime and reconnect acceptance remain separate from this log-path correction.
+
+## 0.6.3 - 2026-10-23
+
+### Connected browsers, Slack conversations and responsive setup
+
+- Keep Browser Runner task windows out of sight by default on desktop computers. Show or hide the same window without reopening the page or losing entered values, and return it out of sight when the user has finished a sign-in or other handoff. Computers without a display continue to use a windowless browser.
+- Fix Slack account confirmation, clickable association links and member lookup. Linked users use their own Arc account, device access and allowance; failed verification now returns an explanation instead of silently dropping the conversation.
+- Add immediate durable Slack processing receipts and optional native AI status. Target the newly received message when waking the queue, preserve leases through admission, and bound optional status calls so they cannot hold up normal replies.
+- Align homepage actions, security information and Arc links on phones. Use balanced columns on wider iPads and a shared content column on smaller tablets; retain the same alignment in English and Chinese.
+- Replace the old stop/start upgrade instructions with one versioned command that hands over an older idle Agent, asks before interrupting active work, and preserves the device's recovery setting.
+- Rewrite Connect setup into four concrete steps and clarify when to use the default Runner, the browser extension or the advanced existing-Chrome connection.
+- Serialize browser extension submit reservations across tabs. Space-key actions and legacy click calls now use the same submission checks as ordinary clicks.
+- Publish 0.6.3 native binaries for six targets, npm and Homebrew packages, with stable-only website downloads and refreshed browser extension packaging.
+
+### Remote Arc Browser extension 0.4.0
+
+- The extension can now work on its own in the user's browser, on sites the user allowed. `shared_tab_open` opens a tab there (in the background, in a "Remote Arc" tab group), signed in as the user is, and `shared_tab_act` clicks, fills (including rich text boxes such as comment fields), selects, checks, presses keys, scrolls, navigates, goes back, reloads, waits for text or a URL, fills a whole form in one call and closes tabs it opened. Each action waits for what it started instead of a fixed delay, and `snapshot=true` returns the page as the action left it.
+- Sites are allowed one at a time through Chrome's own permission prompt: from the popup ("Allow AI on this site"), or from a page with one Allow button that opens when the AI asks for a site it may not use yet (`SITE_NOT_ALLOWED`). The popup lists allowed sites and removes them. A tab keeps access while it moves between allowed sites and is paused on any other. The extension still has no `<all_urls>`, `tabs`, `debugger`, cookie or password permission.
+- Orders, payments, posts, comments, messages and submissions are final submits: they need `effect=submit` and an `idempotency_key`, a key is sent once (`SUBMIT_KEY_USED`), and the same form and button is refused under a new key (`SUBMIT_ALREADY_RECORDED`) until the earlier one is settled with `action=confirm`. English and Chinese button wording is recognised.
+- Passwords, card numbers and file pickers are never filled; one-time codes can be, unless the user turns that off in the popup.
+- Sharing a single tab works as before (read-only until Click & fill is enabled for it); a shared tab that moves to an allowed site keeps access.
+- The popup and the new approval page use the dark Remote Arc website design.
+- Already paired extensions need no new pairing: the Relay allows the new tools wherever the browser allows click & fill. An extension older than 0.4.0 answers `EXTENSION_UPDATE_REQUIRED` with a download link.
+- The website's browser page, MCP reference, use cases and the browser skill describe the new behaviour, and CI runs the extension in a real Chromium against local test sites.
+
+## 0.6.2 - 2026-10-23
+
+### Browser Runner, native client setup and device upgrades
+
+- Add Browser Runner (beta) to the native Go Agent: task-scoped Chrome, Edge or Chromium sessions, declared site boundaries, durable submit receipts and restart recovery. Enable it separately for each device in Dashboard.
+- Let Browser Runner connect to the user's running Chrome with `browser=your_chrome`, reusing existing sign-ins in a task-owned window. Chrome 144+ requires remote debugging and approval for each new connection; tasks share a connection that disconnects five minutes after the last task detaches. Closing a task preserves the user's Chrome profile.
+- Replace fixed action delays with page, network and DOM settling. Batch ordinary fields with `action=fill_form`, request the resulting page with `snapshot=true`, and wait for uploaded-file parsing. Older Agents receive compatible sequential field entry and snapshots through the Relay.
+- Separate repeatable sign-in steps, intermediate form pages and final submissions. Intermediate steps settle from the next page's evidence; final submit, pay, book, post and send actions retain one-time dispatch and confirmation. A click that sent nothing can be retried with the same key until something leaves the page.
+- Hand off only open CAPTCHA challenges, resume when they close, and report visible checkboxes as non-blocking attention notes. CAPTCHA response values remain secret and cannot be filled or read by the agent.
+- Preserve browser profiles and saved sign-ins across conversations. Restarted pages report the labels of missing fields, choices and uploads without retaining their values; relabelled controls stay unverified until checked.
+- Support filling one-time sign-in codes through authorized connected sources without recording their values. Each device can disable this with `browserRunnerOneTimeCodes=false`. Passwords and payment details are never typed from the conversation; CAPTCHAs still require the user.
+- Add local saved sign-ins with `remotelink vault add` and `action=fill_secret`, constrained to the saved site and credential part. Use Windows DPAPI, macOS Keychain or a user-restricted credential file as appropriate. Completed browser sign-ins can be saved automatically and disabled with `browserRunnerSaveLogins=false`.
+- Attempt Codex and Claude Code MCP setup independently in the background during normal startup. Preserve existing registrations, disabled entries, pairing and permissions; missing clients, uncertain inventories and setup failures never block the Agent.
+- Discover official Windows npm client binaries in local and global prefixes, including nested native packages, without evaluating command wrappers. Add project-scoped setup inspection, read-only MCP, coding-session metadata discovery and repair commands; session discovery does not resume another agent.
+- Replace an older idle Agent when a newer release starts, preserving pairing, permissions, pause state and recovery ownership. Active or uninstrumented Agents require terminal confirmation or explicit `--force-update`; unattended updates leave them running.
+- Use `browser_runner_*` and `shared_tab_*` consistently while keeping cached legacy shared-tab tool calls working during upgrades. Existing AI clients should refresh their connector's tool list after updating.
+- Add bounded CPU and available-memory telemetry and resource-aware Fleet placement, respecting device ownership, tool permissions, trusted directories, explicit OS requirements and Windows/WSL shared hardware. Active work is not silently migrated.
+- Publish fresh 0.6.2 npm, six native binaries, SHA256 manifests and Homebrew formulas. The website's default Agent downloads and version badge use the latest stable release rather than the development package's RC version.
+- Keep the shared Chrome connection alive until a task tab's closure is confirmed, then release it when idle. This avoids reporting a lost connection while Chrome is still finishing a close.
+
+## 0.6.1 - 2026-10-11
+
+### Native pause, resume and recovery fixes
+
+- Pause a device from Dashboard without exposing its filesystem, terminal or process tools. The native Go runtime retains only an authenticated, supervised wake connection; an explicit owner-authorized request resumes execution.
+- Preserve the paused state across worker restarts and foreground/background execution-lease handoffs, without allocating an execution core while paused.
+- Disconnect Completely disables background supervision and login recovery, closes execution and wake connections, and requires a local restart before the device can reconnect. A paused device can also be fully disconnected.
+- Restore capability-gated remote Stop Agent for supported foreground and background runtimes, and verify that the device actually disconnects before reporting success.
+- Use a hidden, per-user Windows Script Host launcher for Windows login recovery and migrate owned legacy startup entries while preserving pairing. This remains user-login recovery rather than a privileged Windows service.
+- Wait for an abandoned TS/Go execution lease to expire before Windows Go recovery; never take over a live execution owner.
+- Migrate idle legacy macOS launchd Node/TS jobs to the native Go service, while preserving pairing and refusing takeover of an active foreign owner.
+- Publish six native binaries, checksum manifests, npm and Homebrew artifacts under version 0.6.1. Keep existing 0.6.0 and RC release assets unchanged.
+
+## 0.6.0 - 2026-10-09
+
+### Native Go Agent and Execution Core by default
+
+- Make the complete Go Agent the default for `npx remotelink`. Put the Go runtime in `apps/agent` and its independent filesystem/process/policy/Undo module in `packages/execution-core`; keep `apps/agent-ts` and `packages/execution-core-ts` as explicit `--ts` compatibility implementations.
+- Keep device configuration and Undo snapshots in the existing local `~/.remotearc` location and preserve current operation contracts, guards and runtime fallback.
+- Restore the Go terminal's colored status messages, readable connection and approval prompts, and approval expiry in the computer's local date and timezone. Keep journal files as plain text.
+- Preserve Undo ordering during rapid edits and clock rollback in both engines, and retain recovery evidence when an atomic replacement may have succeeded before a synchronization error.
+- Make file and Undo durability explicit, retaining the TS atomic default and Go durable default. Pairing, configuration and Go recovery checkpoints remain durable independently of workspace benchmark settings.
+- Reduce Windows path-policy overhead with fresh native metadata handles while preserving junction, protected-path and alternate-stream checks without a path cache.
+- Keep connection timestamps stable within a WebSocket session, record new session sequences, and normalize Go binary-file results in Relay file resources.
+- Add reproducible Core and full-Agent benchmarks, two-hour Mac/Windows residency results, and Linux/macOS/Windows compatibility, race, recovery, process, journal and distribution verification.
+- Publish six standalone `remotelink` binaries in one GitHub release, a primary Homebrew `remotelink` formula and the existing `remotelink-go` compatibility formula. Native installations need no Node.js. Keep `--go` as a compatibility alias and preserve one execution owner across both runtimes.
+- Update the website download page, installation guide, GitHub/npm documentation and system architecture together. Pin embedded contract line endings and verify stable Homebrew checksums before merging.
+- Keep TS recovery explicitly on `--ts`, including launchd, systemd, Windows supervision and child restart, so recovery cannot accidentally switch runtimes.
+
+## 0.5.0 - 2026-10-08
+
+### Complete native Go device runtime
+
+- Add an opt-in complete Go device agent with native pairing, Relay connection, filesystem and process tools, Local Undo, task checkpoints, local MCP, execution logs and background recovery.
+- Select Go with `npx remotelink@latest --go`; retain the TS default and explicit `--ts` fallback during the transition. Both runtimes share device identity and a single execution lease.
+- Publish verified native binaries for Windows, macOS and Linux on amd64 and arm64, plus a Homebrew formula for installation without Node.
+- Cover the Go runtime with three-platform race and integration tests, bidirectional TS/Go Undo and task compatibility, real MCP negotiation, native crash recovery and process cleanup.
+
+## 0.4.8 - 2026-10-08
+
+### Device-local execution logs in Dashboard
+
+- Add a live Device execution log to Dashboard → Activity & details, read on demand from the paired computer's local Remote Arc operation log.
+- Show recent tool calls, completion/failure state, reconnect and recovery events without turning the hosted audit store into a file-content or stdout archive.
+- Keep logs local when a device is offline and surface a clear update requirement for older remotelink Agents that do not support on-demand log reads.
+
+## 0.4.7 - 2026-10-07
+
+### Pairing repair and clearer onboarding
+
+- Make Forget device complete the full revocation lifecycle: live Relay sockets are disconnected immediately, and interactive CLI startup validates saved pairing before viewer/background attach so revoked local identities automatically stop old background owners, clear credentials and return to fresh pairing.
+- Improve first-run onboarding readability with larger permission, workspace, recovery and connector copy, and render the ChatGPT/OpenAI mark correctly for dark and light themes.
+- Keep the 0.4.6 controlled background handoff and runtime-version visibility improvements.
+
+## 0.4.6 - 2026-10-07
+
+### Safe Agent handoff and runtime visibility
+
+- Fix in-place upgrades from lease-owning older background Agents: a known older worker now performs a controlled stop, lease release, bundle replacement and verified restart instead of leaving the new CLI as a passive viewer.
+- Surface running Agent and installed recovery-bundle versions in Dashboard and flag devices that are behind the current CLI release.
+- Restore the shipped product boundary to controlled remote-computer access plus deterministic durable Tasks; autonomous ordinary-Chat reasoning remains experimental and is no longer advertised as production capability.
+- Hide experimental Agent Goal/source-decision tools from the production MCP surface while retaining the implementation behind an explicit deployment flag for continued research.
+- Keep core device discovery and computer tool calls compatible with production databases that have not yet received the optional background/task-permission migrations.
+- Let the deploy workflow continue with the schema-compatible Worker when the configured Cloudflare token can deploy Workers but lacks D1 migration scope (error 7403); pending D1 migrations still require separately authorized credentials.
+
+## 0.4.5 - 2026-10-06
+
+### Safer background upgrades
+
+- Add safe in-place handoff from a known older background Agent to the current CLI release, preserving pairing/configuration while preventing dual executors. Unknown legacy processes continue to fail closed.
+- Position Remote Arc explicitly as a persistent, permissioned agent runtime for computers the user already owns.
+- Refresh the private ChatGPT Plugin release so ChatGPT re-discovers the full production MCP tool surface, including durable tasks and Agent Goals.
+- Align the ChatGPT app submission metadata with all 31 production MCP tools, including binary file resources and persistent task controls.
+- Add a runtime-surface contract check so Relay tool registration, app submission metadata, and the runtime positioning cannot silently drift apart.
+
+## 0.4.4 - 2026-10-05
+
+### Durable tasks and adaptive execution
+
+- Unify goal creation around objective, explicit decision executor, finite plan budget and independent triggers; retain command automation as an explicit code entry.
+- Add a versioned Dashboard contract and opt-in MCP goal contract while preserving legacy IDs and API defaults.
+- Repair registered task Cron dispatch; expose scheduler health and actual execution-start counts, preserve queued goal events on resume and meter planned hosted turns.
+- Simplify device management, default to dark, fix monochrome client marks, move the tutorial to Connect AI and update platform/safety/task documentation.
+- Repair Security preview authorization/approval fixtures, share response types, and show a recoverable unavailable state for malformed or failed API responses instead of crashing. Keep preview security changes disabled.
+
+- Retain the attached terminal and operation history when enabling recovery.
+- Use a single execution lease; additional terminals observe logs and the daemon takes over after an owner ends.
+- Add a hidden Windows login supervisor with bounded Agent restart backoff; require a live supervisor before reporting successful enable.
+- Make macOS enable idempotent and fix launchd PID/state parsing.
+- Separate verified recovery, supervisor status and execution/Relay presence in Dashboard. Disabling recovery preserves execution; stopping the background Agent is explicit.
+- Write pairing configuration atomically, serialize setting changes, safely discard results for disconnected sockets, and reject local permission-profile changes while another Agent owns execution.
+- Add native lifecycle and bundled attached-terminal regression checks.
+
+## 0.4.3 - 2026-10-05
+
+### Reliable background connections
+
+- Fixed background-agent packaging so the copied standalone agent bundle includes its WebSocket runtime and no longer crash-loops on macOS.
+- Windows background connection now uses the current user's Startup registry entry instead of Task Scheduler, avoiding administrator-only `Register-ScheduledTask` failures.
+- Background agents now advertise whether the live socket is the background process, plus PID, version, and connection time for Dashboard observability.
+- Dashboard distinguishes configured-vs-running background state and can repair or stop the live background agent.
+- Disabling background mode can stop the background process immediately rather than only removing login autostart.
+- Release CI now executes the copied standalone background bundle in addition to the installed npm package.
+
+## 0.4.2 - 2026-10-05
+
+### Publish artifact reliability
+
+- Fixed the published ESM bundle so the `ws` runtime dependency remains external instead of being incorrectly bundled with CommonJS dynamic requires.
+- Added a release smoke test that packs the npm artifact, installs it into a clean temporary project, and executes `remotelink --version` before publication.
+- Carries the current 0.4 security model and evergreen npm/GitHub product documentation.
+
+## 0.4.1 - 2026-10-05
+
+### Broken ESM publish, superseded
+
+- **Broken release:** the published CLI could install but failed at startup with `Dynamic require of "events" is not supported` because `ws` was incorrectly bundled into the ESM artifact.
+- Superseded by 0.4.2.
+
+## 0.4.0 - 2026-10-05
+
+### Trusted Write Locations and Approval Broker
+
+### Security and permissions
+
+- Reframed persistent filesystem mutation scope as **Trusted Write Locations** rather than treating workspace roots as the AI's entire visible filesystem.
+- Ordinary non-sensitive read-only file access can operate outside Trusted Write Locations.
+- Added the **Approval Broker** for out-of-scope `write_file` and `edit_block` requests.
+- Added approval decisions for **Allow once**, **Allow 10 min**, **Trust this folder**, and **Deny**.
+- Added Dashboard approval handling and interactive terminal approval support.
+- Bound approvals to user, device, OAuth client, OAuth grant, tool, target path, request, and arguments hash.
+- One-shot approvals are consumed after successful execution.
+- Sensitive Path Protection is enforced for remote MCP and can no longer be globally disabled through remote policy.
+- Narrow sensitive-path exceptions remain available for explicitly required files or directories.
+- OAuth authorizations are tracked and revoked per grant instead of collapsing all sessions for one client.
+- Added request/client/grant attribution to security audit events.
+- Narrowed Safety Guard matching to reduce false positives from commands that merely contain destructive keywords.
+
+### Reliability and compatibility
+
+- Added production D1 migrations for security attribution, enforced sensitive-path protection, and approval state.
+- Added regression coverage for approval flows, scoped mutation, OAuth consent, grant revocation, automation behavior, and native execution across Linux, macOS, and Windows.
+- Kept terminal execution as a separate high-risk capability; Trusted Write Locations are not described as an operating-system sandbox.
+- Added compatibility handling so older agents that still report the legacy Workspace Scope error can trigger the new Approval Broker flow.
+
+### Browser and product surface
+
+- Updated Dashboard, documentation, pricing, use-case copy, and security messaging to reflect Trusted Write Locations and boundary approvals.
+- Browser extension permissions remain separately controlled per tab and per device capability.

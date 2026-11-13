@@ -1,0 +1,204 @@
+/* /about and /careers. */
+.companyPage {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 72px 28px 24px;
+  color: var(--site-ink, #eeeef1);
+}
+
+.companyHeader {
+  max-width: 820px;
+}
+
+.companyHeader h1 {
+  margin: 12px 0 18px;
+  font-size: clamp(36px, 5vw, 60px);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.companyHeader p {
+  margin: 0;
+  color: var(--site-muted, #9c9ca6);
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+.companySection {
+  margin-top: 64px;
+}
+
+.companySection h2 {
+  margin: 0 0 16px;
+  font-size: clamp(24px, 2.6vw, 30px);
+  letter-spacing: -0.02em;
+}
+
+.companySection > p {
+  max-width: 760px;
+  margin: 0 0 14px;
+  color: var(--site-muted, #9c9ca6);
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.companyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.companyGrid li {
+  padding: 22px;
+  border: 1px solid var(--site-line, #2a2a30);
+  border-radius: 14px;
+  background: var(--site-surface, #19191e);
+}
+
+.companyGrid h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
+.companyGrid p {
+  margin: 0;
+  color: var(--site-muted, #9c9ca6);
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+.companyLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  margin-top: 20px;
+}
+
+.companyLinks a {
+  color: var(--site-ink, #eeeef1);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.companyLinks a:hover,
+.companyLinks a:focus-visible {
+  text-decoration: underline;
+}
+
+/* Careers: what we work on beside the form. */
+.careersLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 48px;
+  align-items: start;
+}
+
+.careersWork {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.careersWork li {
+  position: relative;
+  padding-left: 22px;
+  color: var(--site-ink, #eeeef1);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.careersWork li::before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  color: var(--site-muted, #9c9ca6);
+}
+
+.careersNote {
+  margin-top: 24px !important;
+  font-size: 14px !important;
+}
+
+.careersFormCard {
+  margin-top: 64px;
+  padding: 28px;
+  border: 1px solid var(--site-line, #2a2a30);
+  border-radius: 18px;
+  background: var(--site-surface, #19191e);
+}
+
+.careersFormCard h2 {
+  margin: 0 0 20px;
+  font-size: 22px;
+}
+
+.careersForm {
+  display: grid;
+  gap: 16px;
+}
+
+.careersForm > label:not(.engagementConsent) {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.careersForm input:not([type="checkbox"]),
+.careersForm select,
+.careersForm textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--site-line, #2a2a30);
+  border-radius: 10px;
+  background: var(--site-canvas, #111114);
+  color: var(--site-ink, #eeeef1);
+  font: inherit;
+  font-weight: 400;
+}
+
+.careersForm textarea {
+  resize: vertical;
+}
+
+.careersForm button {
+  justify-self: start;
+}
+
+.careersSent strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 18px;
+}
+
+.careersSent p {
+  margin: 0;
+  color: var(--site-muted, #9c9ca6);
+}
+
+@media (max-width: 900px) {
+  .careersLayout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .companyPage {
+    padding: 48px 16px 16px;
+  }
+
+  .companyGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .careersFormCard {
+    padding: 20px;
+  }
+}

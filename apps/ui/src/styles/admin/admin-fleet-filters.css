@@ -1,0 +1,8 @@
+/* A refused computer is unmet demand, not an error: warm, not red. */
+.opsPairingRefusals {
+  display: block;
+  width: fit-content;
+  color: #b7791f;
+  border-color: rgba(183, 121, 31, 0.4);
+  background: rgba(183, 121, 31, 0.12);
+}

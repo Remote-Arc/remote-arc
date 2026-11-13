@@ -1,0 +1,999 @@
+/* App discovery stays compact; account management lives in the details drawer. */
+.appsManager {
+  color: var(--dash-text, var(--text));
+  min-width: 0;
+}
+.appsManagerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+.appsManagerHeader h1 {
+  margin: 8px 0;
+  font-size: 32px;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+}
+.appsManagerHeader p {
+  margin: 0;
+  color: var(--dash-muted, var(--muted));
+  font-size: 16px;
+  line-height: 1.65;
+}
+:is(.appsManager, .appsPanel) button {
+  min-height: 40px;
+  border: 1px solid var(--dash-line, var(--line));
+  border-radius: 7px;
+  padding: 8px 13px;
+  background: var(--dash-surface, var(--panel));
+  color: var(--dash-text, var(--text));
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 550;
+  cursor: pointer;
+}
+:is(.appsManager, .appsPanel) button:hover:not(:disabled) {
+  background: var(--dash-subtle, var(--panel-2));
+  border-color: color-mix(
+    in srgb,
+    var(--dash-text, var(--text)) 24%,
+    var(--dash-line, var(--line))
+  );
+}
+:is(.appsManager, .appsPanel) button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+:is(.appsManager, .appsPanel) :is(button, a, input, summary):focus-visible {
+  outline: 2px solid var(--dash-accent, var(--accent));
+  outline-offset: 3px;
+}
+:is(.appsManager, .appsPanel) .appsManagerPrimary,
+:is(.appsManager, .appsPanel) .appsToolsPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--dash-inverse, #fff);
+  background: var(--dash-accent, var(--accent));
+  border-color: var(--dash-accent, var(--accent));
+}
+:is(.appsManager, .appsPanel) :is(.appsManagerPrimary, .appsToolsPrimary):hover:not(:disabled) {
+  background: var(--dash-accent-hover, var(--accent));
+  color: var(--dash-inverse, #fff);
+}
+.appsManager .appsManagerRefresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  background: transparent;
+}
+.appsManagerFilters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 290px);
+  align-items: center;
+  gap: 22px;
+  margin-bottom: 23px;
+}
+.appsManagerViewTabs {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  justify-self: start;
+  padding: 4px;
+  border: 1px solid var(--dash-line);
+  background: var(--dash-subtle);
+  border-radius: 9px;
+}
+.appsManager .appsManagerViewTabs button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 11px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--dash-muted);
+  white-space: nowrap;
+}
+.appsManager .appsManagerViewTabs button[aria-pressed="true"] {
+  color: var(--dash-text);
+  background: var(--dash-surface);
+  border-color: var(--dash-line);
+  box-shadow: 0 1px 2px #00000008;
+}
+.appsManagerViewTabs button span {
+  font-size: 12px;
+  color: var(--dash-muted);
+  font-variant-numeric: tabular-nums;
+}
+.appsSearchField {
+  display: flex;
+  align-items: center;
+  position: relative;
+  min-width: 0;
+}
+.appsSearchIcon,
+.appsToolsSearch > svg {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--dash-muted);
+  pointer-events: none;
+  display: flex;
+}
+.appsSearchField input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 14px 10px 38px;
+  border: 1px solid var(--dash-line);
+  border-radius: 8px;
+  background: var(--dash-surface);
+  color: var(--dash-text);
+  font: inherit;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+.appsSearchField input::placeholder {
+  color: var(--dash-muted);
+  opacity: 1;
+}
+.appsManagerCategories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  grid-column: 1/-1;
+}
+.appsManager .appsManagerCategories button {
+  min-height: 34px;
+  padding: 6px 11px;
+  border-radius: 6px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--dash-muted);
+  font-size: 13px;
+  font-weight: 450;
+}
+.appsManager .appsManagerCategories button[aria-pressed="true"] {
+  background: var(--dash-subtle);
+  border-color: var(--dash-line);
+  color: var(--dash-text);
+}
+.appsManagerGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.appsManagerCard {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 22px;
+  border: 1px solid var(--dash-line);
+  border-radius: 11px;
+  background: var(--dash-surface);
+  transition: border-color 0.15s;
+}
+.appsManagerCard > header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 45px;
+}
+.appsManagerCard > header > div {
+  min-width: 0;
+}
+.appsManagerCard h2 {
+  margin: 0 0 3px;
+  font-size: 17px;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.appsManager .appsCardTitle {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+}
+.appsManager .appsCardTitle:hover {
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.appsManagerCard header > div > span {
+  display: block;
+  color: var(--dash-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.appsManagerBrand {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border: 1px solid var(--dash-line, var(--line));
+  border-radius: 10px;
+  background: var(--dash-subtle, var(--panel-2));
+  color: var(--dash-text, var(--text));
+}
+.appsManagerBrand img {
+  width: 29px;
+  height: 29px;
+  object-fit: contain;
+  filter: none;
+}
+.appsManagerBrand > svg {
+  width: 25px;
+  height: 25px;
+}
+.appsManagerBrand:is(
+  [data-brand="github"],
+  [data-brand="notion"],
+  [data-brand="x"],
+  [data-brand="vercel"],
+  [data-brand="runway"]
+) {
+  background: #fff;
+  border-color: #e4e4e7;
+}
+.appsCardDescription {
+  margin: 17px 0 14px;
+  color: var(--dash-muted);
+  font-size: 14px;
+  line-height: 1.65;
+  flex: 1;
+}
+.appsCardState {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dash-muted);
+  margin-bottom: 16px;
+}
+.appsCardState[data-state="connected"] {
+  color: var(--dash-text);
+}
+.appsCardState[data-state="connected"] > svg {
+  color: #279dd2;
+}
+.appsCardState[data-state="attention"] {
+  color: var(--dash-text);
+}
+.appsCardStateDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #cc983f;
+  margin-right: 2px;
+}
+.appsCardState > span:not(.appsCardStateDot) {
+  color: var(--dash-muted);
+}
+.appsCardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--dash-line);
+  padding-top: 14px;
+}
+.appsManager :is(.appsCardTools, .appsCardManage) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 13px;
+}
+.appsManager .appsCardTools {
+  border-color: transparent;
+  color: var(--dash-muted);
+  background: transparent;
+  padding-inline: 0;
+}
+.appsManager .appsCardTools:hover {
+  border-color: transparent;
+  background: transparent;
+  color: var(--dash-text);
+}
+.appsCardFooter > button > svg[data-product-icon="chevron"] {
+  transform: rotate(-90deg);
+}
+.appsManager .appsCardManage {
+  padding-inline: 12px;
+}
+.appsCardFooter .appsManagerPrimary {
+  font-size: 13px;
+  min-height: 36px;
+  padding: 7px 12px;
+}
+.appsManagerMessage,
+.appsPanelFeedback {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 13px 15px;
+  margin: 0 0 20px;
+  border: 1px solid var(--dash-line);
+  border-radius: 8px;
+  background: var(--dash-subtle);
+  color: var(--dash-text);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.appsManagerMessage p {
+  flex: 1;
+  margin: 0;
+}
+.appsManagerMessage a {
+  color: inherit;
+  text-decoration: underline;
+}
+.appsManagerMessage button {
+  min-height: 30px;
+  padding: 4px 8px;
+  margin-left: auto;
+  font-size: 12px;
+}
+.appsManagerError,
+.appsPanelFeedback[data-error="true"] {
+  border-color: color-mix(in srgb, #c45252 40%, var(--dash-line));
+}
+.appsManagerLoading,
+.appsManagerEmpty,
+.appsManagerDisabled {
+  border: 1px solid var(--dash-line);
+  border-radius: 11px;
+  background: var(--dash-surface);
+  padding: 28px;
+  color: var(--dash-muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.appsManagerEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin: 10px 0;
+  padding: 45px 22px;
+}
+.appsManagerEmpty h2 {
+  margin: 16px 0 5px;
+  font-size: 18px;
+  font-weight: 550;
+  color: var(--dash-text);
+}
+.appsManagerEmpty p {
+  margin: 0 0 18px;
+}
+.appsManagerDisabled h2 {
+  color: var(--dash-text);
+  font-size: 23px;
+}
+.appsSrOnly {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* One drawer for tools and accounts, with a stable keyboard boundary. */
+.appsPanelOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  display: flex;
+  justify-content: flex-end;
+  background: #0b0b115c;
+  backdrop-filter: blur(3px);
+}
+.appsPanel,
+.appsPanel * {
+  box-sizing: border-box;
+}
+.appsPanel {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  height: 100dvh;
+  min-height: 0;
+  background: var(--dash-surface);
+  color: var(--dash-text);
+  border-left: 1px solid var(--dash-line);
+  box-shadow: -16px 0 60px #0000001a;
+  animation: appsPanelEnter 0.18s ease-out;
+}
+.appsPanelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 26px 26px 22px;
+}
+.appsPanelIdentity {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+.appsPanelIdentity > div {
+  min-width: 0;
+}
+.appsPanelHead .appsManagerBrand {
+  width: 48px;
+  height: 48px;
+  border-radius: 11px;
+}
+.appsPanelHead h2 {
+  margin: 0 0 3px;
+  font-size: 22px;
+  line-height: 1.35;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+}
+.appsPanelHead p {
+  margin: 0;
+  color: var(--dash-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.appsPanel .appsPanelClose {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+.appsPanelTabs {
+  display: flex;
+  align-items: center;
+  gap: 23px;
+  padding: 0 26px;
+  border-bottom: 1px solid var(--dash-line);
+}
+.appsPanel .appsPanelTabs button {
+  display: flex;
+  align-items: center;
+  position: relative;
+  gap: 7px;
+  min-height: 48px;
+  border: 0;
+  padding: 8px 1px 13px;
+  background: transparent;
+  color: var(--dash-muted);
+  border-radius: 0;
+}
+.appsPanel .appsPanelTabs button[aria-selected="true"] {
+  color: var(--dash-text);
+}
+.appsPanelTabs button[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 2px;
+  background: var(--dash-text);
+}
+.appsPanelTabs button span {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--dash-subtle);
+  color: var(--dash-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.appsPanelScroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 24px 26px;
+  scrollbar-gutter: auto;
+  overscroll-behavior: contain;
+}
+.appsPanelIntro {
+  margin: 0 0 23px;
+  font-size: 14px;
+  color: var(--dash-muted);
+  line-height: 1.75;
+}
+.appsPanelEmpty {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  padding: 30px 12px 22px;
+  text-align: center;
+  color: var(--dash-muted);
+}
+.appsPanelEmpty > svg {
+  color: var(--dash-text);
+  margin-bottom: 14px;
+}
+.appsPanelEmpty h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  color: var(--dash-text);
+  font-weight: 550;
+}
+.appsPanelEmpty p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 320px;
+}
+.appsPanelConnect {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: 18px;
+}
+.appsPanelConnect > .appsManagerPrimary {
+  align-self: flex-start;
+}
+.appsPanelConnect form {
+  width: 100%;
+}
+.appsPanelAccessNote {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  font-size: 12px;
+  color: var(--dash-muted);
+  line-height: 1.7;
+  margin: 15px 0 0;
+}
+.appsPanelAccessNote > svg {
+  flex: none;
+  margin-top: 2px;
+}
+.appsPanelAvailability {
+  font-size: 14px;
+  color: var(--dash-muted);
+  line-height: 1.7;
+  background: var(--dash-subtle);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.appsManagerConnection {
+  margin-bottom: 13px;
+  border: 1px solid var(--dash-line);
+  border-radius: 9px;
+  padding: 17px;
+  background: var(--dash-surface);
+}
+.appsManagerConnectionTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.appsManagerConnectionTop > strong {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  font-weight: 550;
+}
+.appsManagerStatus {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--dash-line);
+  padding: 3px 7px;
+  border-radius: 5px;
+  color: var(--dash-muted);
+  background: var(--dash-subtle);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.appsManagerStatus[data-status="active"] {
+  color: var(--dash-text);
+}
+.appsManagerStatus:is([data-status="limited"], [data-status="reauthorization_required"]) {
+  border-style: dashed;
+  color: var(--dash-text);
+}
+.appsManagerConnectionHint,
+.appsManagerConnectionCheck {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--dash-muted);
+}
+.appsManagerConnectionCheck {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  color: var(--dash-text);
+}
+.appsManagerConnectionCheck > svg {
+  flex: none;
+  margin-top: 3px;
+}
+.appsManagerConnectionActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 15px;
+}
+.appsPanel .appsManagerConnectionActions button {
+  min-height: 34px;
+  font-size: 12px;
+  padding: 6px 9px;
+}
+.appsPanel .appsManagerTextAction {
+  color: var(--dash-muted);
+  border-color: transparent;
+  background: transparent;
+}
+.appsManagerDisconnect {
+  border-top: 1px solid var(--dash-line);
+  margin-top: 15px;
+  padding-top: 12px;
+}
+.appsManagerDisconnect p {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--dash-muted);
+}
+.appsManagerDisconnect > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.appsPanel .appsManagerDanger {
+  color: #bf4a4a;
+  border-color: color-mix(in srgb, #bf4a4a 35%, var(--dash-line));
+}
+:root[data-theme="dark"] .appsPanel .appsManagerDanger {
+  color: #f09e9e;
+}
+.appsManagerProviderNotes {
+  border-top: 1px solid var(--dash-line);
+  margin-top: 25px;
+  padding-top: 16px;
+  color: var(--dash-muted);
+}
+.appsManagerProviderNotes summary {
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.appsManagerProviderNotes p {
+  font-size: 13px;
+  line-height: 1.75;
+  margin: 12px 0 0;
+}
+.appsManagerStore {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  color: var(--dash-muted);
+  font-size: 13px;
+}
+.appsManagerStore input,
+.appsCredentialForm input:not([type="checkbox"]) {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--dash-line);
+  border-radius: 7px;
+  padding: 10px 12px;
+  background: var(--dash-surface);
+  color: var(--dash-text);
+  font: inherit;
+}
+.appsCredentialForm {
+  margin: 0;
+}
+.appsCredentialForm fieldset {
+  display: grid;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+  margin: 0;
+  min-width: 0;
+}
+.appsCredentialForm legend {
+  margin-bottom: 17px;
+  padding: 0;
+  font-size: 15px;
+  font-weight: 550;
+}
+.appsCredentialForm fieldset > label {
+  display: grid;
+  gap: 8px;
+  color: var(--dash-muted);
+  font-size: 13px;
+}
+.appsCredentialForm fieldset > .appsCredentialConsent {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  line-height: 1.6;
+}
+.appsCredentialConsent input {
+  margin: 4px 0 0;
+  accent-color: #279dd2;
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.appsCredentialForm > p {
+  font-size: 12px;
+  color: var(--dash-muted);
+  line-height: 1.6;
+}
+.appsCredentialForm > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+.appsPanelAttribution {
+  flex: none;
+  border-top: 1px solid var(--dash-line);
+  padding: 14px 26px;
+}
+.appsRunwayAttribution {
+  display: inline-flex;
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: #fff;
+}
+.appsRunwayAttribution img {
+  display: block;
+  width: 125px;
+  max-height: 26px;
+}
+.appsToolsSearch {
+  margin-bottom: 20px;
+}
+.appsToolsItems {
+  border-top: 1px solid var(--dash-line);
+}
+.appsTool {
+  border-bottom: 1px solid var(--dash-line);
+}
+.appsTool h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.appsPanel .appsToolTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  text-align: left;
+  border: 0;
+  border-radius: 8px;
+  width: 100%;
+  min-height: 64px;
+  padding: 15px 10px;
+  background: transparent;
+}
+.appsToolTitle {
+  flex: 1;
+  min-width: 0;
+}
+.appsToolTrigger strong {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.appsToolMeta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+  color: var(--dash-muted);
+}
+.appsToolMeta > svg {
+  transition: transform 0.15s;
+}
+.appsToolTrigger[aria-expanded="true"] .appsToolMeta > svg {
+  transform: rotate(180deg);
+}
+.appsToolTrigger code {
+  color: var(--dash-muted);
+  font-size: 11px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.appsToolTrigger > svg {
+  flex: none;
+  color: var(--dash-muted);
+  transition: transform 0.15s;
+}
+.appsToolTrigger[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+.appsToolDetail {
+  margin: 0 0 18px;
+  padding: 15px;
+  border: 1px solid var(--dash-line);
+  border-radius: 8px;
+  background: var(--dash-subtle);
+}
+.appsToolPermission {
+  font-size: 11px;
+  color: var(--dash-text);
+  font-weight: 550;
+}
+.appsToolDetail p {
+  font-size: 13px;
+  color: var(--dash-muted);
+  line-height: 1.7;
+  margin: 8px 0 14px;
+}
+.appsToolDetail p:last-child {
+  margin-bottom: 0;
+}
+.appsToolDetail .appsToolsPrimary {
+  min-height: 36px;
+  font-size: 12px;
+}
+.appsToolsEmpty {
+  color: var(--dash-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 20px 0;
+}
+@keyframes appsPanelEnter {
+  from {
+    transform: translateX(24px);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .appsPanel {
+    animation: none;
+  }
+  .appsManagerCard,
+  .appsToolTrigger > svg {
+    transition: none;
+  }
+}
+@media (max-width: 1180px) {
+  .appsManagerGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .appsManagerFilters {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .appsManagerFilters .appsSearchField {
+    grid-row: 2;
+  }
+}
+@media (max-width: 700px) {
+  .appsManagerGrid {
+    grid-template-columns: 1fr;
+    gap: 13px;
+  }
+  .appsManagerHeader {
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 23px;
+  }
+  .appsManager .appsManagerRefresh {
+    padding: 8px;
+    font-size: 12px;
+  }
+  .appsManagerHeader p {
+    font-size: 14px;
+  }
+  .appsManagerCard {
+    padding: 20px;
+  }
+  .appsCardDescription {
+    margin: 14px 0 10px;
+  }
+  .appsManagerCategories {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+  .appsManager .appsManagerCategories button {
+    flex: none;
+    white-space: nowrap;
+  }
+  .appsManagerViewTabs {
+    justify-self: stretch;
+  }
+  .appsManager .appsManagerViewTabs button {
+    flex: 1;
+    justify-content: center;
+    padding: 7px;
+    font-size: 12px;
+    gap: 5px;
+  }
+  .appsPanelHead {
+    padding: 20px;
+  }
+  .appsPanelTabs {
+    padding-inline: 20px;
+  }
+  .appsPanelScroll {
+    padding: 20px;
+  }
+  .appsPanelAttribution {
+    padding: 12px 20px;
+  }
+}
+.appsToolFilters {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin: 14px 0 12px;
+  padding: 3px;
+  background: var(--dash-subtle);
+  border-radius: 9px;
+  width: fit-content;
+}
+.appsPanel .appsToolFilters button {
+  min-height: 32px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dash-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 11px;
+  cursor: pointer;
+}
+.appsPanel .appsToolFilters button[aria-pressed="true"] {
+  color: var(--dash-text);
+  background: var(--dash-surface);
+  box-shadow: 0 1px 3px #00000012;
+}
+.appsToolAccessBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: auto;
+  min-width: 42px;
+  padding: 3px 7px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.4;
+  background: var(--dash-subtle);
+  color: var(--dash-muted);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.appsToolAccessBadge[data-permission="write"] {
+  color: var(--dash-text);
+  border-color: var(--dash-line);
+  background: transparent;
+}

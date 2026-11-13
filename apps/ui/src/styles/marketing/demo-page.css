@@ -1,0 +1,8 @@
+/* /demo: the product film with chapters. */
+.pluginDemoPage .productFilm {
+  margin: 64px 0 0;
+}
+
+.pluginDemoPage .productFilm > header {
+  text-align: left;
+}

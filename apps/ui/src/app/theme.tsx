@@ -1,0 +1,69 @@
+import { ThemeContext, type ThemeContextValue, type ThemePreference } from "./theme-context.js";
+import { isConsoleHost } from "../config/hosts.js";
+import React, { useEffect, useMemo, useState } from "react";
+
+function resolveTheme(theme: ThemePreference): "light" | "dark" {
+  if (theme !== "system") return theme;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function dashboardSurface() {
+  const path = window.location.pathname;
+  return (
+    isConsoleHost(window.location.hostname) ||
+    path === "/admin-preview" ||
+    /^\/(dashboard(?:\/|$)|overview\/?$|device\/?$|devices\/?$|apps\/?$|automations\/?$|connect\/?$|security\/?$|settings\/?$|checkout\/?$|chat(?:\/|$)|tasks\/?$|routines\/?$|activity\/?$|skills\/?$)/.test(
+      path,
+    )
+  );
+}
+
+function preferenceKey() {
+  return dashboardSurface() ? "remote-arc-dashboard-theme-v3" : "remote-arc-theme";
+}
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setThemeState] = useState<ThemePreference>(() => {
+    try {
+      const saved = localStorage.getItem(preferenceKey());
+      return saved === "light" || saved === "dark" || saved === "system" ? saved : "dark";
+    } catch {
+      return "dark";
+    }
+  });
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() => resolveTheme(theme));
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const resolved = resolveTheme(theme);
+      setResolvedTheme(resolved);
+      document.documentElement.dataset.theme = resolved;
+      document.documentElement.style.colorScheme = resolved;
+      document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute("content", resolved === "light" ? "#fafafa" : "#111113");
+    };
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, [theme]);
+
+  const value = useMemo<ThemeContextValue>(
+    () => ({
+      theme,
+      resolvedTheme,
+      setTheme(next) {
+        try {
+          localStorage.setItem(preferenceKey(), next);
+        } catch {
+          /* Keep the in-memory preference when storage is unavailable. */
+        }
+        setThemeState(next);
+      },
+    }),
+    [theme, resolvedTheme],
+  );
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}

@@ -1,0 +1,26 @@
+apps/agent/**/*.go text eol=lf
+apps/agent/go.mod text eol=lf
+apps/agent/go.sum text eol=lf
+# Go embeds this script byte-for-byte; release checksums must match on every host.
+apps/agent/internal/browserrunner/page.js text eol=lf
+packages/execution-core/**/*.go text eol=lf
+packages/execution-core/go.mod text eol=lf
+packages/execution-core/go.sum text eol=lf
+packages/execution-core/execution/*.json text eol=lf
+# The inline bootstrap has a CSP hash; use browser-normalized newlines.
+/apps/ui/index.html text eol=lf
+# Served directly to POSIX sh; Windows checkouts must not add CRLF.
+/apps/ui/public/install.sh text eol=lf
+# Pinned skill snapshots and generated hashes must agree across Windows/Linux.
+/packages/skills/vendor/** text eol=lf
+/packages/skills/builtin/** text eol=lf
+/packages/skills/src/community.generated.ts text eol=lf
+/tests/fixtures/agent-sessions/**/*.jsonl text eol=lf
+
+# These two pinned snapshots retain upstream trailing spaces verbatim.
+/packages/skills/vendor/community-canvas-design/** whitespace=-blank-at-eol
+/packages/skills/vendor/community-algorithmic-art/** whitespace=-blank-at-eol
+# Preserve the pinned authors' Markdown whitespace and trailing blank lines.
+/packages/skills/vendor/community-a-stock-data/** whitespace=-blank-at-eol,-blank-at-eof
+/packages/skills/vendor/community-nuwa*/** whitespace=-blank-at-eol,-blank-at-eof
+/packages/skills/vendor/community-vibe-knowledge-film/** whitespace=-blank-at-eol,-blank-at-eof

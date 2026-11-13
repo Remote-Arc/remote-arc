@@ -1,0 +1,168 @@
+/* Payment alerts on the Business metrics page. Calm when nothing needs action. */
+.paymentHealth {
+  --paymentTone: var(--muted);
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--panel);
+}
+
+.paymentHealth.is-calm {
+  --paymentTone: #3b9a78;
+  padding: 14px 18px;
+}
+
+.paymentHealth.is-warning,
+.paymentHealth.is-not_configured,
+.paymentHealth.is-ok {
+  --paymentTone: #c58a1d;
+}
+
+.paymentHealth.is-critical {
+  --paymentTone: #d0574f;
+  border-color: color-mix(in srgb, #d0574f 45%, var(--line));
+}
+
+.paymentHealth header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+}
+
+.paymentHealth h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.paymentHealth.is-calm h2 {
+  font-size: 14px;
+}
+
+.paymentHealthSummary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.paymentHealthLight {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--paymentTone);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--paymentTone) 18%, transparent);
+}
+
+.paymentHealthTrust {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, #c58a1d 12%, var(--panel));
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.paymentHealthKpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.paymentHealthKpis article {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.paymentHealthKpis span,
+.paymentHealthKpis small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.paymentHealthKpis strong {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.paymentHealthSignals {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.paymentHealthSignals li {
+  --signalTone: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--signalTone) 8%, var(--panel));
+}
+
+.paymentHealthSignals li.is-warning {
+  --signalTone: #c58a1d;
+}
+
+.paymentHealthSignals li.is-critical {
+  --signalTone: #d0574f;
+}
+
+.paymentHealthSignals li div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.paymentHealthSignals strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.paymentHealthSignals small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.paymentHealthSignals .paymentHealthNext {
+  color: inherit;
+}
+
+.paymentHealthState {
+  flex: none;
+  color: var(--signalTone);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .paymentHealth {
+    padding: 14px 16px;
+  }
+
+  .paymentHealthSignals li {
+    flex-direction: column;
+  }
+}

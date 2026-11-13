@@ -1,0 +1,47 @@
+/* Hero headline: a fixed lead with the last words sliding through scenarios. */
+
+.landingHero {
+  --hero-accent-from: #7dd3fc;
+  --hero-accent-to: #a78bfa;
+}
+
+:root[data-theme="light"] .landingHero {
+  --hero-accent-from: #0284c7;
+  --hero-accent-to: #7c3aed;
+}
+
+/* Every word shares one grid cell, so the line keeps the size of the longest. */
+.publicPage .landingHero .heroSlotLine {
+  overflow: hidden;
+}
+
+.heroSlotWord {
+  background: linear-gradient(90deg, var(--hero-accent-from), var(--hero-accent-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  transition:
+    transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.45s ease;
+}
+
+.heroSlotWord[data-state="waiting"] {
+  opacity: 0;
+  transform: translateY(60%);
+}
+
+.heroSlotWord[data-state="leaving"] {
+  opacity: 0;
+  transform: translateY(-60%);
+}
+
+.heroSlotWord[data-state="active"] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroSlotWord {
+    transition: none;
+  }
+}

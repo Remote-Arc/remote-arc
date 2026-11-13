@@ -1,0 +1,45 @@
+{
+  "name": "@remotearc/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:site": "node ../../scripts/run-task.mjs ui test:site",
+    "dev": "vite",
+    "build": "vite build",
+    "email-art": "node scripts/render-email-art.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:workspaces": "node ../../scripts/run-task.mjs ui test:workspaces",
+    "test:billing-preview": "node --import tsx scripts/billing-preview-test.ts",
+    "test:onboarding": "node ../../scripts/run-task.mjs ui test:onboarding",
+    "test:onboarding-browser": "node --import tsx scripts/onboarding-browser-test.mjs",
+    "test:google-app-beta": "node --import tsx scripts/google-app-beta-browser-test.mjs",
+    "test:arc-experience": "node ../../scripts/run-task.mjs ui test:arc-experience",
+    "test:onboarding-readability": "node scripts/onboarding-readability-test.mjs",
+    "test:device-removal": "node scripts/device-removal-test.mjs",
+    "test:device-execution-log": "node scripts/device-execution-log-test.mjs",
+    "test:security": "node ../../scripts/run-task.mjs ui test:security",
+    "test:background-recovery": "node ../../scripts/run-task.mjs ui test:background-recovery",
+    "test:oauth-consent": "node --import tsx scripts/oauth-consent-summary-test.ts",
+    "test:pwa": "node --import tsx scripts/product-pwa-test.ts",
+    "test:runner-video": "node --import tsx scripts/runner-video-test.ts",
+    "test:arc-client": "node ../../scripts/run-task.mjs ui test:arc-client"
+  },
+  "dependencies": {
+    "@remotearc/protocol": "workspace:*",
+    "@stripe/stripe-js": "^10.1.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "typescript": "^6.0.3",
+    "vite": "^7.1.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.16",
+    "@types/react-dom": "^19.1.9",
+    "react-test-renderer": "19.3.0",
+    "tsx": "4.23.15"
+  }
+}

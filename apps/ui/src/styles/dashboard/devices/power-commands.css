@@ -1,0 +1,33 @@
+/* "Allow shutdown and restart" in a computer's File boundaries & recovery. */
+:root[data-theme] .appFrame .powerCommandsSetting {
+  --power-commands-warn: #9a5b08;
+  display: grid;
+  gap: 6px;
+}
+:root[data-theme="dark"] .appFrame .powerCommandsSetting {
+  --power-commands-warn: #f0b35a;
+}
+
+.powerCommandsNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--dash-muted);
+}
+.powerCommandsNote svg {
+  flex: 0 0 auto;
+  margin-top: 3px;
+}
+.powerCommandsNote.is-warning {
+  padding: 8px 10px;
+  border-left: 3px solid var(--power-commands-warn);
+  border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--power-commands-warn) 10%, transparent);
+  color: var(--dash-text);
+}
+.powerCommandsNote.is-warning svg {
+  color: var(--power-commands-warn);
+}

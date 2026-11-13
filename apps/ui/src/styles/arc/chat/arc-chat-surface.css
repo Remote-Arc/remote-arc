@@ -1,0 +1,706 @@
+/* Full-width conversation canvas. Keep the atmosphere separate from reading surfaces. */
+.arcChatShell .arcChatErrorInline {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 16px 0 0;
+  padding: 16px 18px;
+  border-radius: 12px;
+}
+.arcChatError > p {
+  margin: 0;
+  line-height: 1.7;
+}
+.arcChatErrorDetails {
+  margin-top: 12px;
+  color: var(--dash-muted);
+  font-size: 11px;
+}
+.arcChatErrorDetails summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.arcChatErrorDetails code {
+  display: block;
+  margin-top: 9px;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.arcChatErrorDetails small {
+  display: block;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+:root[data-theme] .appFrame .arcChatShell {
+  --arc-canvas: #fafbfc;
+  --arc-composer: #ffffffeb;
+  --arc-surface-line: #20202417;
+  --arc-orbit-opacity: 0.38;
+  background: var(--arc-canvas);
+  isolation: isolate;
+}
+:root[data-theme="dark"] .appFrame .arcChatShell {
+  --arc-canvas: #111315;
+  --arc-composer: #1c1f22f2;
+  --arc-surface-line: #ffffff16;
+  --arc-orbit-opacity: 0.4;
+}
+.arcChatAtmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--arc-canvas);
+}
+.arcChatAurora {
+  position: absolute;
+  width: max(1300px, 110%);
+  height: 950px;
+  left: 50%;
+  top: -460px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, #7dd3fc36, #7dd3fc0d 45%, transparent 72%);
+  filter: blur(34px);
+  animation: arc-sky-drift 28s ease-in-out infinite alternate;
+}
+:root[data-theme="dark"] .arcChatAurora {
+  background: radial-gradient(ellipse, #4282a03b, #38718b19 46%, transparent 72%);
+}
+.arcChatShell .arcChatOrbits {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  stroke-width: 0.65px;
+  opacity: var(--arc-orbit-opacity);
+  mask-image: linear-gradient(#000 0%, #0009 40%, transparent 74%);
+}
+.arcChatHorizon {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 44%, transparent 15%, var(--arc-canvas) 85%);
+  opacity: 0.65;
+}
+@keyframes arc-sky-drift {
+  from {
+    translate: -4% 0;
+    scale: 0.95;
+  }
+  to {
+    translate: 4% 35px;
+    scale: 1.06;
+  }
+}
+.arcChatTopbar {
+  min-height: 68px;
+  padding: 0 36px;
+}
+:root[data-theme] .appFrame .arcChatBeta {
+  border: 0;
+  padding: 0 0 0 10px;
+  border-left: 1px solid var(--arc-surface-line);
+  border-radius: 0;
+  font-size: 12px;
+}
+:root[data-theme] .appFrame .arcChatWelcome {
+  width: min(100%, 840px);
+  max-width: 840px;
+  min-height: 100%;
+  padding: clamp(32px, 4vh, 54px) 32px 32px;
+  justify-content: center;
+}
+:root[data-theme] .appFrame .arcChatStar {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 0 23px;
+  border: 1px solid var(--arc-surface-line);
+  border-radius: 20px;
+  background: linear-gradient(150deg, #ffffff75, #7dd3fc0c);
+  box-shadow:
+    0 5px 28px #0c4a6e05,
+    inset 0 1px 0 #ffffff0d;
+}
+:root[data-theme="dark"] .appFrame .arcChatStar {
+  background: linear-gradient(145deg, #ffffff07, #7dd3fc06);
+  box-shadow:
+    inset 0 1px 0 #ffffff08,
+    0 0 45px #7dd3fc04;
+}
+.arcChatStar:before {
+  display: none;
+}
+.arcChatStar img {
+  width: 37px;
+  height: 37px;
+}
+.arcChatWelcomeEyebrow {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  margin-bottom: 14px;
+  opacity: 0.8;
+}
+:root[data-theme] .appFrame .arcChatWelcome h1 {
+  font-size: clamp(30px, 3.3vw, 44px);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 1.2;
+}
+:root[data-theme] .appFrame .arcChatWelcome > p {
+  margin: 15px 0 34px;
+  max-width: 480px;
+  font-size: 15px;
+  line-height: 1.8;
+}
+:root[data-theme] .appFrame .arcChatComposer {
+  background: var(--arc-composer);
+  border: 1px solid var(--arc-surface-line);
+  border-radius: 20px;
+  padding: 22px 22px 16px;
+  box-shadow:
+    0 14px 45px #0c233208,
+    0 2px 5px #0c233204;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+:root[data-theme="dark"] .appFrame .arcChatComposer {
+  box-shadow:
+    0 16px 50px #0000001c,
+    inset 0 1px 0 #ffffff05;
+}
+.arcChatComposer:before {
+  display: none;
+}
+:root[data-theme] .appFrame .arcChatComposer:focus-within,
+:root[data-theme] .appFrame .arcChatComposer.isWorking {
+  border-color: #7dd3fc60;
+  box-shadow:
+    0 0 0 3px #7dd3fc08,
+    0 14px 45px #0c233208;
+}
+:root[data-theme] .appFrame .arcChatComposer textarea {
+  min-height: 88px;
+  font-size: 16px;
+  line-height: 1.75;
+}
+.arcChatComposerBottom {
+  padding-top: 13px;
+  gap: 12px;
+}
+:root[data-theme] .appFrame .arcChatTools button {
+  min-height: 32px;
+  border-color: transparent;
+  border-radius: 7px;
+  color: var(--dash-muted);
+  font-size: 12px;
+  padding: 6px 8px;
+}
+:root[data-theme] .appFrame .arcChatTools .arcModelTrigger {
+  background: color-mix(in srgb, var(--dash-text) 4%, transparent);
+  color: var(--dash-text);
+  padding-inline: 10px;
+}
+:root[data-theme] .appFrame .arcChatSend {
+  width: 35px;
+  height: 35px;
+  border-radius: 10px;
+}
+.arcChatDisclaimer {
+  font-size: 11px;
+  margin: 12px 0 0;
+  opacity: 0.75;
+}
+.arcChatWelcome .arcHomeBrief {
+  margin-top: 28px;
+}
+.arcChatWelcome .arcHomeMetrics {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+}
+:root[data-theme] .appFrame .arcChatWelcome .arcHomeMetrics > button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--dash-muted);
+}
+.arcChatWelcome .arcHomeMetrics > button > svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.7;
+}
+.arcChatWelcome .arcHomeMetrics > button > span {
+  font-size: 12px;
+}
+.arcChatWelcome .arcHomeMetrics strong {
+  font-size: 12px;
+  font-weight: 550;
+}
+.arcChatWelcome .arcHomeMetrics strong small {
+  font-size: 12px;
+}
+.arcChatWelcome .arcHomeAttention {
+  margin-top: 22px;
+  border-color: var(--arc-surface-line);
+  border-radius: 12px;
+  background: transparent;
+}
+.arcChatWelcome .arcHomeAttention > header {
+  padding: 12px 15px;
+  font-size: 11px;
+  border-color: var(--arc-surface-line);
+}
+.arcChatWelcome .arcHomeAttention > header strong {
+  font-weight: 500;
+}
+:root[data-theme] .appFrame .arcChatWelcome .arcHomeAttention > button {
+  padding: 13px 15px;
+  gap: 10px;
+}
+.arcChatWelcome .arcHomeAttention > button strong {
+  font-size: 13px;
+  font-weight: 450;
+}
+.arcChatWelcome .arcHomeAttention > button small {
+  font-size: 12px;
+}
+.arcChatWelcome .arcChatIdeas {
+  gap: 10px;
+  margin-top: 26px;
+}
+:root[data-theme] .appFrame .arcChatWelcome .arcChatIdea {
+  padding: 15px 13px;
+  min-height: 98px;
+  border: 1px solid var(--arc-surface-line);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--dash-surface) 55%, transparent);
+  box-shadow: none;
+}
+:root[data-theme] .appFrame .arcChatWelcome .arcChatIdea:hover {
+  border-color: #7dd3fc55;
+  background: color-mix(in srgb, #7dd3fc 3%, var(--dash-surface));
+  transform: translateY(-2px);
+}
+.arcChatWelcome .arcChatIdea strong {
+  font-size: 12px;
+  line-height: 1.65;
+  font-weight: 500;
+}
+.arcChatWelcome .arcChatIdea > span:not(.arcChatIdeaArrow) {
+  font-size: 11px;
+  line-height: 1.7;
+}
+.arcChatWelcome .arcChatIdeaIcon {
+  margin-bottom: 5px;
+  width: 20px;
+  height: 20px;
+}
+.arcChatWelcome .arcChatIdeaIcon svg {
+  width: 15px;
+  height: 15px;
+}
+.arcChatWelcome .arcChatIdeaArrow {
+  right: 9px;
+  top: 12px;
+  opacity: 0.4;
+}
+.arcChatShell[data-state="conversation"] .arcChatAtmosphere {
+  opacity: 0.55;
+}
+.arcChatShell[data-state="conversation"] .arcChatAurora {
+  top: -690px;
+}
+.arcChatShell > .arcTrialStatus {
+  width: min(776px, calc(100% - 64px));
+  margin: 0 auto 18px;
+}
+@media (min-width: 1800px) {
+  :root[data-theme] .appFrame .arcChatWelcome {
+    padding-top: 60px;
+    padding-bottom: 60px;
+  }
+}
+@media (max-height: 850px) and (min-width: 821px) {
+  :root[data-theme] .appFrame .arcChatWelcome {
+    justify-content: flex-start;
+    padding-top: 32px;
+  }
+}
+@media (max-width: 820px) {
+  :root[data-theme] .appFrame:has(.arcChatMount:not([hidden])) .arcChatMount {
+    order: 2;
+  }
+  :root[data-theme] .appFrame:has(.arcChatMount:not([hidden])) .previewModeBanner {
+    width: calc(100% - 28px);
+    flex: none;
+  }
+  .arcChatShell[data-state="welcome"] .arcChatTopbar {
+    display: none;
+  }
+  .arcChatTopbar {
+    padding-inline: 20px;
+    min-height: 54px;
+  }
+  .arcChatTopbar .arcChatMobileMenu {
+    display: none !important;
+  }
+  :root[data-theme] .appFrame .arcChatWelcome {
+    padding: 32px 20px 40px;
+    justify-content: flex-start;
+  }
+  :root[data-theme] .appFrame .arcChatStar {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+  }
+  .arcChatStar img {
+    width: 31px;
+    height: 31px;
+  }
+  :root[data-theme] .appFrame .arcChatWelcome h1 {
+    font-size: 31px;
+  }
+  :root[data-theme] .appFrame .arcChatWelcome > p {
+    font-size: 14px;
+    margin-bottom: 27px;
+  }
+  .arcChatWelcomeEyebrow {
+    font-size: 9px;
+  }
+  :root[data-theme] .appFrame .arcChatComposer {
+    padding: 18px 16px 13px;
+    border-radius: 17px;
+  }
+  .arcChatWelcome .arcHomeMetrics {
+    gap: 10px 15px;
+    justify-content: flex-start;
+  }
+  .arcChatWelcome .arcHomeMetrics > button > span {
+    font-size: 11px;
+  }
+  .arcChatWelcome .arcChatIdeas {
+    gap: 8px;
+  }
+  :root[data-theme] .appFrame .arcChatWelcome .arcChatIdea {
+    min-height: 90px;
+    padding: 13px 12px;
+  }
+  .arcChatShell > .arcTrialStatus {
+    width: calc(100% - 40px);
+    margin-bottom: 15px;
+  }
+  .arcChatShell .arcChatOrbits {
+    width: 160%;
+    left: -30%;
+    opacity: 0.2;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arcChatAurora {
+    animation: none;
+  }
+  :root[data-theme] .appFrame .arcChatWelcome .arcChatIdea:hover {
+    transform: none;
+  }
+}
+
+:root[data-theme] .appFrame:has(.arcChatMount:not([hidden])) .previewModeBanner {
+  align-self: stretch;
+  width: calc(100% - 48px);
+}
+@media (max-width: 820px) {
+  :root[data-theme] .appFrame:has(.arcChatMount:not([hidden])) .previewModeBanner {
+    width: calc(100% - 28px);
+  }
+}
+.arcRunProgress .arcThinkingLabel {
+  background: linear-gradient(
+    100deg,
+    var(--dash-muted) 25%,
+    var(--text) 48%,
+    var(--dash-muted) 70%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: arcThinkingSweep 2.1s linear infinite;
+}
+@keyframes arcThinkingSweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arcRunProgress .arcThinkingLabel {
+    animation: none;
+    background: none;
+    color: var(--dash-muted);
+  }
+}
+.arcActivityRun {
+  min-width: 0;
+}
+.arcActivityRun > .arcWorkRun {
+  width: 100%;
+  box-sizing: border-box;
+}
+.arcActivityExecutionLog {
+  padding: 0 18px 14px 58px;
+  font-size: 12px;
+  color: var(--dash-muted);
+}
+.arcActivityExecutionLog summary {
+  cursor: pointer;
+  padding: 7px 0;
+}
+.arcActivityExecutionLog > div {
+  max-height: 420px;
+  overflow: auto;
+  border-left: 1px solid var(--line);
+  padding-left: 14px;
+}
+.arcActivityExecutionLog pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 240px;
+  overflow: auto;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.arcChatComposer {
+  position: relative;
+}
+.arcMentionChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 20px 0;
+}
+.arcMentionChips > span,
+.arcMessageSkills > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  border: 1px solid var(--arc-surface-line);
+  border-radius: 7px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--text);
+  background: color-mix(in srgb, #7dd3fc 8%, var(--dash-surface));
+}
+.arcMentionChips button {
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  min-width: 24px;
+  min-height: 24px;
+}
+.arcSkillMentionMenu {
+  position: absolute;
+  z-index: 25;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  max-height: min(380px, 55dvh);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--arc-surface-line);
+  border-radius: 14px;
+  background: var(--dash-surface);
+  box-shadow: 0 16px 48px #0003;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--text);
+}
+.arcSkillMentionMenu > label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--arc-surface-line);
+}
+.arcSkillMentionMenu input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid var(--arc-surface-line);
+  border-radius: 7px;
+  background: var(--dash-bg);
+  color: var(--text);
+  padding: 8px;
+}
+.arcSkillMentionMenu [role="listbox"] {
+  overflow: auto;
+  min-height: 0;
+  padding: 5px;
+}
+.arcSkillMentionMenu [role="option"] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 10px;
+  text-align: left;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.arcSkillMentionMenu [aria-selected="true"] {
+  background: color-mix(in srgb, #7dd3fc 12%, var(--dash-surface));
+}
+.arcSkillMentionMenu small {
+  color: var(--dash-muted);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.arcSkillMentionMenu p {
+  padding: 12px;
+}
+.arcSkillMentionMenu footer {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-top: 1px solid var(--arc-surface-line);
+  color: var(--dash-muted);
+  font-size: 11px;
+}
+.arcSkillMentionMenu footer button {
+  background: none;
+  border: 0;
+  color: var(--text);
+  cursor: pointer;
+}
+.arcMessageSkills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+@media (max-width: 520px) {
+  .arcChatTools {
+    flex-wrap: wrap;
+  }
+  .arcSkillMentionMenu > label {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .arcMentionChips {
+    padding-left: 14px;
+  }
+}
+
+.arcWorkTrace {
+  margin: 22px 0;
+  color: var(--dash-muted);
+  font-size: 12px;
+}
+.arcWorkTrace > summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+.arcWorkTrace ol {
+  list-style: none;
+  padding: 0;
+}
+.arcWorkTrace li {
+  display: flex;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--dash-line);
+}
+.arcWorkTrace li > div {
+  min-width: 0;
+  flex: 1;
+}
+.arcWorkTrace strong {
+  display: block;
+  color: var(--dash-text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.arcWorkTrace small {
+  display: block;
+  margin: 3px 0 8px;
+}
+.arcWorkTrace pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 260px;
+  overflow: auto;
+  background: var(--dash-subtle);
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+.arcWorkTrace details summary {
+  cursor: pointer;
+}
+
+.arcTurnWork {
+  display: flex;
+  gap: 13px;
+  min-width: 0;
+}
+.arcTurnWorkBody {
+  flex: 1;
+  min-width: 0;
+}
+.arcTurnWork .arcWorkTrace {
+  margin: 0;
+}
+.arcTurnWork .arcWorkTrace > summary {
+  padding: 0;
+  line-height: 1.8;
+}
+.arcTurnWork .arcRunProgress {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+.arcTurnWork .arcChatErrorInline {
+  margin-top: 12px;
+}
+.arcTurnWork .arcRunReceipt {
+  margin-top: 14px;
+}
+.arcConversationLoading {
+  max-width: 740px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 28px 24px;
+}
+.arcConversationLoading button {
+  background: var(--dash-subtle);
+  color: var(--text);
+  border: 1px solid var(--dash-line);
+  border-radius: 8px;
+  padding: 9px 16px;
+  cursor: pointer;
+}

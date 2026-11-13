@@ -1,0 +1,65 @@
+.planSummary {
+  margin: 56px 0 24px;
+  padding-top: 36px;
+  border-top: 1px solid var(--site-line, #ffffff1f);
+  scroll-margin-top: 96px;
+}
+
+.planSummary > header h2 {
+  margin: 0 0 8px;
+  font-size: clamp(24px, 2.6vw, 30px);
+  letter-spacing: -0.02em;
+}
+
+.planSummary > header p {
+  margin: 0 0 22px;
+  color: var(--site-muted, #a8adb8);
+  font-size: 15px;
+}
+
+.planSummaryList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.planSummaryList li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  border: 1px solid var(--site-line, #ffffff1f);
+  border-radius: 14px;
+}
+
+.planSummaryList strong {
+  font-size: 15px;
+}
+
+.planSummaryPrice {
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.planSummaryPrice small,
+.planSummaryNote {
+  color: var(--site-muted, #a8adb8);
+  font-size: 13px;
+  font-weight: 450;
+  letter-spacing: 0;
+}
+
+.planSummaryList p {
+  margin: 4px 0 0;
+  color: var(--site-muted, #a8adb8);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.planSummaryLink {
+  font-weight: 600;
+}

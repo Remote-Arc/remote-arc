@@ -1,0 +1,57 @@
+/* Overview loading placeholders. They inherit the row and card classes they
+   stand in for; these rules only paint the placeholder shapes. The colour mixes
+   with the current text colour, so it follows the light and dark themes. */
+.overviewSkeleton,
+.overviewSkeletonBlock,
+:root[data-theme] .appFrame .overviewSkeletonList .overviewSkeletonRow > :is(i, .deviceIcon) {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  animation: workspaceLoadingPulse 2.2s ease-in-out infinite;
+}
+
+/* Inline so the line keeps the height of the text it replaces. */
+.overviewSkeleton {
+  display: inline-block;
+  max-width: 100%;
+  height: 0.75em;
+  vertical-align: middle;
+  border-radius: 6px;
+}
+
+.overviewSkeletonBlock {
+  border-radius: 19px;
+}
+
+.overviewSkeletonList {
+  overflow: hidden;
+}
+
+.overviewSkeletonRow,
+.overviewSkeletonRow:hover {
+  cursor: default;
+}
+/* Scoped like the theme rules for these icons, which they must override. */
+:root[data-theme] .appFrame .overviewSkeletonList .overviewSkeletonRow > :is(i, .deviceIcon) {
+  color: transparent;
+}
+
+/* One visible message is not needed: the placeholders say it. Screen readers
+   hear this once. */
+.overviewLoadingStatus {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overviewSkeleton,
+  .overviewSkeletonBlock,
+  :root[data-theme] .appFrame .overviewSkeletonList .overviewSkeletonRow > :is(i, .deviceIcon) {
+    animation: none;
+  }
+}

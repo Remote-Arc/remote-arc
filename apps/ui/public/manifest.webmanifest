@@ -1,0 +1,44 @@
+{
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#fafafa",
+  "icons": [
+    {
+      "src": "/remote-arc-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/remote-arc-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "name": "Remote Arc Connect",
+  "short_name": "Remote Arc",
+  "description": "Connect your AI to apps and your own computers.",
+  "id": "/overview",
+  "start_url": "/dashboard/connect/overview",
+  "categories": ["productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Overview",
+      "url": "/dashboard/connect/overview"
+    },
+    {
+      "name": "Devices",
+      "url": "/dashboard/connect/devices"
+    },
+    {
+      "name": "Apps",
+      "url": "/dashboard/connect/apps"
+    },
+    {
+      "name": "AI clients",
+      "url": "/dashboard/connect/clients"
+    }
+  ]
+}

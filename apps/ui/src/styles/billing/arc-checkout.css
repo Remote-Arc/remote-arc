@@ -1,0 +1,691 @@
+.appFrame.arcCheckoutFrame {
+  display: block;
+  min-height: 100dvh;
+  background: var(--dash-canvas);
+  color: var(--dash-text);
+}
+.arcCheckoutPage.raSettings {
+  display: block;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 28px 45px;
+  box-sizing: border-box;
+}
+.arcCheckoutHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 25px;
+  border-bottom: 1px solid var(--rs-border);
+}
+.arcCheckoutHeader a {
+  color: var(--rs-secondary);
+  text-decoration: none;
+  font-size: 13px;
+}
+.arcCheckoutHeader a:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--rs-text);
+}
+.arcCheckoutIntro {
+  padding: 52px 0 36px;
+}
+.arcCheckoutIntro h1 {
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+  margin: 12px 0 16px;
+}
+.arcCheckoutIntro p {
+  font-size: 15px;
+  color: var(--rs-secondary);
+  line-height: 1.7;
+}
+.arcCheckoutIntro small {
+  font-size: 12px;
+  color: var(--rs-secondary);
+  overflow-wrap: anywhere;
+}
+.arcCheckoutLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+.arcCheckoutLayout h2 {
+  font-size: 20px;
+  letter-spacing: -0.025em;
+  margin: 0 0 22px;
+}
+.arcCheckoutOptions {
+  min-width: 0;
+}
+.arcCheckoutChoices,
+.arcCheckoutCycle {
+  display: grid;
+  gap: 12px;
+}
+.arcCheckoutCycle {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-top: 12px;
+}
+.arcCheckoutChoices button,
+.arcCheckoutCycle button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  width: 100%;
+  padding: 22px;
+  border: 1px solid var(--rs-border);
+  border-radius: 12px;
+  background: var(--rs-surface);
+  color: var(--rs-text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.arcCheckoutChoices button[aria-pressed="true"],
+.arcCheckoutCycle button[aria-checked="true"] {
+  border-color: var(--rs-accent);
+  box-shadow: inset 0 0 0 1px var(--rs-accent);
+  background: var(--rs-accent-bg);
+}
+.arcCheckoutChoices strong,
+.arcCheckoutCycle strong {
+  font-size: 18px;
+  font-weight: 550;
+}
+.arcCheckoutChoices small,
+.arcCheckoutCycle small {
+  display: block;
+  color: var(--rs-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 7px;
+}
+.arcCheckoutOfferPrice {
+  text-align: right;
+  white-space: nowrap;
+  font-size: 22px;
+  letter-spacing: -0.025em;
+}
+.arcCheckoutFeatures {
+  list-style: none;
+  padding: 10px 0;
+  margin: 18px 0;
+  color: var(--rs-secondary);
+  font-size: 14px;
+  line-height: 1.8;
+}
+.arcCheckoutFeatures li {
+  margin: 10px 0;
+  padding-left: 21px;
+  position: relative;
+}
+.arcCheckoutFeatures li:before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--rs-accent);
+}
+.arcCheckoutOptions > a {
+  font-size: 13px;
+  color: var(--rs-secondary);
+}
+.arcCheckoutSummary {
+  padding: 28px;
+  border: 1px solid var(--rs-border);
+  border-radius: 16px;
+  background: var(--rs-surface);
+  min-width: 0;
+}
+.arcCheckoutSummary h2 {
+  margin-top: 15px;
+  margin-bottom: 15px;
+}
+.arcCheckoutTotal {
+  font-size: 38px;
+  letter-spacing: -0.045em;
+  line-height: 1.3;
+  margin: 10px 0 20px;
+}
+.arcCheckoutTotal small {
+  font-size: 14px;
+  letter-spacing: 0;
+}
+.arcCheckoutSummary > p:not(.arcCheckoutTotal),
+.arcCheckoutSummary small {
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--rs-secondary);
+}
+.arcCheckoutContinue {
+  width: 100%;
+  min-height: 46px;
+  margin: 21px 0 14px;
+  font-size: 14px;
+}
+.arcCheckoutSummary > small {
+  display: block;
+}
+.arcCheckoutPromo {
+  font-size: 12px;
+  color: var(--rs-secondary);
+  margin-top: 20px;
+}
+.arcCheckoutPromo summary {
+  cursor: pointer;
+}
+.arcCheckoutPromo label {
+  display: block;
+  margin: 14px 0 7px;
+}
+.arcCheckoutPromo input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--rs-border);
+  border-radius: 7px;
+  background: var(--rs-bg);
+  color: var(--rs-text);
+}
+.arcCheckoutPromo small {
+  display: block;
+  margin-top: 7px;
+}
+.arcCheckoutAlert,
+.arcCheckoutResult {
+  padding: 22px 24px;
+  border: 1px solid var(--rs-border);
+  border-radius: 12px;
+  margin-bottom: 25px;
+  background: var(--rs-surface);
+}
+.arcCheckoutAlert p,
+.arcCheckoutResult p {
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0 0 12px;
+}
+.arcCheckoutPendingOrder {
+  display: grid;
+  gap: 9px;
+  margin: 8px 0 17px;
+  padding: 16px;
+  border: 1px solid var(--rs-border);
+  border-radius: 10px;
+}
+.arcCheckoutPendingOrder strong {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.arcCheckoutPendingOrder small {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--rs-secondary);
+}
+.arcCheckoutPendingActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+.arcCheckoutPendingActions button {
+  min-height: 42px;
+}
+.arcCheckoutAlert details {
+  font-size: 12px;
+  color: var(--rs-secondary);
+  overflow-wrap: anywhere;
+}
+.arcCheckoutAlert summary {
+  cursor: pointer;
+}
+.arcCheckoutResult h2 {
+  font-size: 24px;
+}
+.arcCheckoutResult a {
+  margin-right: 12px;
+}
+.arcCheckoutQuiet {
+  color: var(--rs-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.arcCheckoutFooter {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  border-top: 1px solid var(--rs-border);
+  margin-top: 60px;
+  padding-top: 22px;
+  color: var(--rs-secondary);
+  font-size: 12px;
+}
+.arcCheckoutFooter div {
+  display: flex;
+  gap: 20px;
+}
+.arcCheckoutFooter a {
+  color: inherit;
+}
+.arcCheckoutPage :focus-visible {
+  outline: 2px solid var(--rs-accent);
+  outline-offset: 4px;
+}
+.raBillingActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.raBillingSummary.raSettingsSurface {
+  padding: 24px;
+}
+@media (max-width: 700px) {
+  .arcCheckoutPage.raSettings {
+    padding: 22px 20px 35px;
+  }
+  .arcCheckoutIntro {
+    padding: 32px 0 24px;
+  }
+  .arcCheckoutLayout {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .arcCheckoutSummary {
+    padding: 23px;
+  }
+  .arcCheckoutChoices button,
+  .arcCheckoutCycle button {
+    padding: 18px;
+  }
+  .arcCheckoutFooter {
+    margin-top: 38px;
+    flex-direction: column;
+  }
+  .arcCheckoutHeader a:last-child {
+    font-size: 12px;
+  }
+  .raBillingSummary.raSettingsSurface {
+    padding: 20px;
+  }
+}
+:root[data-theme] .appFrame.arcCheckoutFrame .arcCheckoutContinue {
+  background: var(--dash-accent);
+  color: var(--dash-inverse);
+  border-color: var(--dash-accent);
+}
+:root[data-theme] .appFrame.arcCheckoutFrame .arcCheckoutContinue:hover:not(:disabled) {
+  background: var(--dash-accent-hover);
+  color: var(--dash-inverse);
+}
+
+.arcCheckoutIntroPayment {
+  padding-top: 34px;
+  padding-bottom: 25px;
+}
+.arcCheckoutIntroPayment h1 {
+  font-size: clamp(28px, 4vw, 36px);
+}
+.arcCheckoutPreviewNotice {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  padding: 14px 18px;
+  margin-bottom: 24px;
+  border: 1px solid var(--rs-border);
+  border-radius: 10px;
+  background: var(--rs-surface);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--rs-secondary);
+}
+.arcCheckoutPreviewNotice strong {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--rs-text);
+}
+.arcCheckoutPreviewNotice a {
+  color: inherit;
+  margin-left: auto;
+}
+.arcPaymentPreview {
+  padding: 32px;
+  max-width: 500px;
+  margin: auto;
+}
+.arcPaymentPreview h3 {
+  font-size: 22px;
+  margin: 14px 0;
+}
+.arcPaymentPreview > p {
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 0 0 24px;
+}
+.arcPaymentPreview fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0 0 24px;
+}
+.arcPaymentPreview legend {
+  font-size: 12px;
+  margin-bottom: 15px;
+}
+.arcPaymentPreview label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+.arcPaymentPreview input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 13px;
+  margin-top: 7px;
+  background: var(--rs-surface);
+  border: 1px solid var(--rs-border);
+  border-radius: 7px;
+  color: var(--rs-text);
+  font: inherit;
+  opacity: 1;
+}
+.arcPaymentPreview fieldset > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.arcPaymentPreview > button {
+  width: 100%;
+  min-height: 44px;
+}
+.arcCheckoutSteps {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  list-style: none;
+  padding: 0 0 28px;
+  margin: 0 0 30px;
+  border-bottom: 1px solid var(--rs-border);
+  color: var(--rs-secondary);
+  font-size: 12px;
+}
+.arcCheckoutSteps li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.arcCheckoutSteps li > span {
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  border: 1px solid var(--rs-border);
+  border-radius: 50%;
+  font-size: 11px;
+}
+.arcCheckoutSteps [aria-current="step"] {
+  color: var(--rs-text);
+  font-weight: 600;
+}
+.arcCheckoutSteps [aria-current="step"] > span {
+  background: var(--rs-text);
+  border-color: var(--rs-text);
+  color: var(--dash-inverse);
+}
+.arcCheckoutEmbedded {
+  margin: 0 auto;
+  max-width: 1000px;
+}
+.arcCheckoutEmbedded > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.arcCheckoutEmbedded h2 {
+  font-size: 22px;
+  letter-spacing: -0.025em;
+  margin: 0 0 8px;
+}
+.arcCheckoutEmbedded p {
+  color: var(--rs-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0;
+}
+.arcCheckoutPaymentNote {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--rs-secondary);
+}
+.arcEmbeddedPayment {
+  border: 1px solid var(--rs-border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  min-height: 240px;
+  box-shadow: 0 8px 32px #00000008;
+}
+.arcEmbeddedPayment > div[role="alert"] {
+  padding: 24px;
+  background: var(--rs-surface);
+}
+@media (max-width: 620px) {
+  .arcCheckoutEmbedded > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .arcCheckoutPaymentNote {
+    flex-direction: column;
+    gap: 3px;
+  }
+  .arcCheckoutSteps {
+    gap: 22px;
+    padding-bottom: 22px;
+    margin-bottom: 24px;
+  }
+}
+/* Elements checkout: Remote Arc's layout around Stripe's themed payment fields. */
+.arcElementsCheckout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: 24px;
+  align-items: start;
+}
+.arcElementsPay,
+.arcElementsSummary {
+  border: 1px solid var(--rs-border);
+  border-radius: 16px;
+  background: var(--rs-surface);
+  min-width: 0;
+}
+.arcElementsPay {
+  display: grid;
+  gap: 18px;
+  padding: 28px;
+}
+.arcElementsPay > header h3 {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0 0 8px;
+  color: var(--rs-text);
+}
+.arcElementsPay > header p {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--rs-secondary);
+}
+.arcElementsPay > header p svg {
+  flex: none;
+  margin-top: 3px;
+}
+.arcElementsField {
+  min-width: 0;
+}
+.arcElementsError {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--dash-danger, #d92d20) 45%, var(--rs-border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--dash-danger, #d92d20) 8%, transparent);
+  color: var(--rs-text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.arcElementsError p {
+  margin: 0 0 10px;
+}
+:root[data-theme] .appFrame.arcCheckoutFrame .arcElementsSubmit {
+  width: 100%;
+  min-height: 50px;
+  font-size: 15px;
+  font-weight: 600;
+  background: var(--dash-accent);
+  border-color: var(--dash-accent);
+  color: var(--dash-inverse);
+}
+:root[data-theme] .appFrame.arcCheckoutFrame .arcElementsSubmit:hover:not(:disabled) {
+  background: var(--dash-accent-hover);
+}
+.arcElementsPay > small {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--rs-secondary);
+  text-align: center;
+}
+.arcElementsSummary {
+  padding: 24px;
+  position: sticky;
+  top: 24px;
+}
+.arcElementsSummary dl {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 0;
+}
+.arcElementsSummary dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.arcElementsSummary dt {
+  color: var(--rs-secondary);
+}
+.arcElementsSummary dd {
+  margin: 0;
+  color: var(--rs-text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.arcElementsSummary .arcElementsTotal {
+  padding-top: 14px;
+  margin-top: 4px;
+  border-top: 1px solid var(--rs-border);
+  align-items: baseline;
+}
+.arcElementsSummary .arcElementsTotal dt {
+  color: var(--rs-text);
+  font-weight: 600;
+}
+.arcElementsSummary .arcElementsTotal dd {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.arcElementsSummary .arcElementsTotal small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--rs-secondary);
+}
+.arcElementsSummary > p {
+  margin: 16px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--rs-secondary);
+}
+.arcPaymentPreview.arcPaymentPreviewElements {
+  max-width: none;
+  padding: 0;
+}
+.arcPaymentPreviewElements > p {
+  margin: 0 0 16px;
+}
+.arcPaymentPreviewElements .arcElementsPreviewFields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.arcPaymentPreviewElements .arcElementsPreviewFields input {
+  background: var(--rs-bg);
+  border-radius: 10px;
+}
+@media (max-width: 860px) {
+  .arcElementsCheckout {
+    grid-template-columns: 1fr;
+  }
+  .arcElementsSummary {
+    position: static;
+    order: -1;
+  }
+  .arcElementsPay {
+    padding: 22px;
+  }
+}
+/* One-tap wallets: collapsed until Stripe reports an available wallet. */
+.arcElementsExpress {
+  display: grid;
+  gap: 18px;
+}
+.arcElementsExpress[data-state="pending"],
+.arcElementsExpress[data-state="none"] {
+  height: 0;
+  overflow: hidden;
+  gap: 0;
+  margin-bottom: -18px;
+}
+.arcElementsDivider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--rs-secondary);
+}
+.arcElementsDivider:before,
+.arcElementsDivider:after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--rs-border);
+}
+.arcElementsStripeSlot {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px dashed var(--rs-border);
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--rs-secondary);
+  text-align: center;
+}

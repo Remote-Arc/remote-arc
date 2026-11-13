@@ -1,0 +1,146 @@
+/* "See full plan details" on each pricing card, and the dialog it opens. */
+.planDetailsButton {
+  align-self: flex-start;
+  margin: -10px 0 26px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, #269bbb 60%, transparent);
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.planDetailsButton:hover {
+  text-decoration-color: currentColor;
+}
+.planDetailsButton:focus-visible,
+.planDetailsClose:focus-visible {
+  outline: 2px solid #269bbb;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.planDetailsDialog {
+  width: min(640px, calc(100vw - 32px));
+  max-height: min(86vh, 900px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel-2, var(--bg));
+  color: var(--text);
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.planDetailsDialog::backdrop {
+  background: rgba(2, 4, 7, 0.66);
+  backdrop-filter: blur(6px);
+}
+.planDetailsPanel {
+  max-height: inherit;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 28px 30px 26px;
+}
+.planDetailsHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.planDetailsHeader h2 {
+  margin: 8px 0 6px;
+  font-size: 28px;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+.planDetailsHeader p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--pricing-muted, var(--muted));
+}
+.planDetailsClose {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: -6px -8px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.planDetailsSection {
+  margin-top: 22px;
+}
+.planDetailsSection h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pricing-muted, var(--muted));
+}
+.planDetailsSection dl {
+  margin: 0;
+}
+.planDetailsRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.planDetailsRow dt {
+  color: var(--pricing-muted, var(--muted));
+}
+.planDetailsRow dd {
+  margin: 0;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.planDetailsRow dd small {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--pricing-muted, var(--muted));
+}
+.planDetailsFinePrint {
+  margin: 20px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--pricing-muted, var(--muted));
+}
+
+/* Phones: a full-width sheet from the bottom, with one column per term. */
+@media (max-width: 620px) {
+  .planDetailsDialog {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 90vh;
+    margin: auto 0 0;
+    border-width: 1px 0 0;
+    border-radius: 18px 18px 0 0;
+  }
+  .planDetailsPanel {
+    padding: 22px 16px calc(22px + env(safe-area-inset-bottom));
+  }
+  .planDetailsHeader h2 {
+    font-size: 24px;
+  }
+  .planDetailsRow {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}

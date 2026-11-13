@@ -1,0 +1,7 @@
+{
+  "repository": "anthropics/skills",
+  "directory": "skills/mcp-builder",
+  "revision": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+  "license": "Apache-2.0",
+  "sourceUrl": "https://github.com/anthropics/skills/tree/dbd4588f9e1033efb41dad4bef2f7947c8993d44/skills/mcp-builder"
+}

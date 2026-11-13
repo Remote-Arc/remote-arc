@@ -1,0 +1,5 @@
+:root[data-theme] .appFrame .deviceOverviewActions .badge.uncertain {
+  color: #c18a3c !important;
+  background: #c18a3c0d !important;
+  border-color: #c18a3c42 !important;
+}

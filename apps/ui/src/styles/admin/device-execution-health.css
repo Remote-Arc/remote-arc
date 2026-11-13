@@ -1,0 +1,93 @@
+.deviceExecutionHealth {
+  margin: 20px 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+}
+.deviceExecutionHealth > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.deviceExecutionHealth h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.deviceExecutionHealth header p,
+.deviceExecutionBoundary,
+.deviceExecutionEmpty {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.deviceExecutionHealth header p {
+  margin: 6px 0 0;
+}
+.deviceExecutionHealth header > span {
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.deviceExecutionHealth .isDegraded {
+  color: #e9b66c;
+}
+.deviceExecutionMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 22px 0;
+}
+.deviceExecutionMetrics > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.deviceExecutionMetrics span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.deviceExecutionMetrics strong {
+  font-size: 24px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+}
+.deviceExecutionIssues article {
+  border-top: 1px solid var(--line);
+  padding: 14px 0;
+}
+.deviceExecutionIssues article > div {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.deviceExecutionIssues strong {
+  font-size: 13px;
+}
+.deviceExecutionIssues small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.deviceExecutionIssues p {
+  font-size: 12px;
+  margin: 8px 0;
+}
+.deviceExecutionBoundary {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  margin: 10px 0 0;
+}
+@media (max-width: 600px) {
+  .deviceExecutionHealth {
+    padding: 16px;
+  }
+  .deviceExecutionMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .deviceExecutionHealth > header {
+    flex-wrap: wrap;
+  }
+}

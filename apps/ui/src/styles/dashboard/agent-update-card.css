@@ -1,0 +1,223 @@
+/* Agent update card in a computer's Background & tasks panel. */
+:root[data-theme] .appFrame .agentUpdateCard {
+  --agent-update-ok: #1d7f5b;
+  --agent-update-warn: #9a5b08;
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--dash-accent) 28%, var(--dash-line));
+  border-radius: 12px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--dash-accent) 6%, var(--dash-surface)),
+    var(--dash-surface)
+  );
+  color: var(--dash-text);
+}
+:root[data-theme="dark"] .appFrame .agentUpdateCard {
+  --agent-update-ok: #5fd3a6;
+  --agent-update-warn: #f0b35a;
+}
+.agentUpdateCard.is-done {
+  border-color: color-mix(in srgb, var(--agent-update-ok) 40%, var(--dash-line));
+}
+.agentUpdateCard.is-failed,
+.agentUpdateCard.is-unconfirmed {
+  border-color: color-mix(in srgb, var(--agent-update-warn) 45%, var(--dash-line));
+}
+
+.agentUpdateHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.agentUpdateHeader strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.agentUpdateIcon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--dash-accent);
+  background: color-mix(in srgb, var(--dash-accent) 12%, transparent);
+}
+.agentUpdateCard.is-done .agentUpdateIcon {
+  color: var(--agent-update-ok);
+  background: color-mix(in srgb, var(--agent-update-ok) 14%, transparent);
+}
+
+.agentUpdateVersions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 0;
+}
+.agentUpdateVersion {
+  padding: 1px 8px;
+  border: 1px solid var(--dash-line);
+  border-radius: 999px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.agentUpdateVersion.current {
+  color: var(--dash-muted);
+}
+.agentUpdateVersion.latest {
+  border-color: color-mix(in srgb, var(--dash-accent) 45%, var(--dash-line));
+  color: var(--dash-accent);
+  font-weight: 600;
+}
+.agentUpdateArrow {
+  color: var(--dash-muted);
+  font-size: 12px;
+}
+
+.agentUpdateText,
+.agentUpdateNote,
+.agentUpdateResult p,
+.agentUpdateMeta {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--dash-muted);
+}
+.agentUpdateNote {
+  padding: 10px 12px;
+  border-left: 3px solid color-mix(in srgb, var(--dash-accent) 55%, transparent);
+  border-radius: 0 8px 8px 0;
+  background: var(--dash-subtle);
+  color: var(--dash-text);
+}
+.agentUpdateMeta {
+  font-size: 12px;
+}
+.agentUpdateActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.agentUpdateActions button {
+  white-space: nowrap;
+}
+
+.agentUpdateManual summary {
+  width: fit-content;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--dash-muted);
+}
+.agentUpdateManual[open] summary {
+  margin-bottom: 8px;
+}
+
+.agentUpdateCommand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid var(--dash-line);
+  border-radius: 8px;
+  background: var(--dash-subtle);
+}
+.agentUpdateCommand code {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.agentUpdateCommand button {
+  flex: 0 0 auto;
+}
+
+/* Three steps: download and verify, restart, reconnected. */
+.agentUpdateProgress {
+  display: grid;
+  gap: 8px;
+}
+.agentUpdateProgress ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agentUpdateProgress li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-top: 8px;
+  border-top: 2px solid var(--dash-line);
+  font-size: 12px;
+  color: var(--dash-muted);
+}
+.agentUpdateProgress li.complete {
+  border-top-color: var(--agent-update-ok);
+  color: var(--dash-text);
+}
+.agentUpdateProgress li.active {
+  border-top-color: var(--dash-accent);
+  color: var(--dash-text);
+  font-weight: 600;
+}
+.agentUpdateStepDot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dash-line);
+}
+.agentUpdateProgress li.complete .agentUpdateStepDot {
+  background: var(--agent-update-ok);
+}
+.agentUpdateProgress li.active .agentUpdateStepDot {
+  background: var(--dash-accent);
+  animation: agentUpdatePulse 1.2s ease-in-out infinite;
+}
+@keyframes agentUpdatePulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentUpdateProgress li.active .agentUpdateStepDot {
+    animation: none;
+  }
+}
+.agentUpdateCard.is-failed .agentUpdateResult p,
+.agentUpdateCard.is-unconfirmed .agentUpdateResult p {
+  color: var(--dash-text);
+}
+
+.agentUpdateCard .srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .agentUpdateProgress ol {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.agentUpdateResult {
+  display: grid;
+  gap: 10px;
+}

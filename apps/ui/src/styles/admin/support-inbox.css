@@ -1,0 +1,562 @@
+.adminSupportInbox {
+  min-height: 560px;
+}
+.adminSupportToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.adminSupportToolbar p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.7;
+}
+.adminSupportLayout {
+  display: grid;
+  grid-template-columns: minmax(255px, 30%) minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 18px;
+  align-items: start;
+}
+.adminSupportList,
+.adminSupportConversation {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.adminSupportList {
+  padding: 16px;
+}
+.adminSupportListTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+.adminSupportListTitle h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+.adminSupportListTitle small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.adminSupportFilters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.adminSupportFilters label,
+.adminSupportConversationHead label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.adminSupportInbox select {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  font: inherit;
+  font-size: 12px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--text);
+}
+:root[data-theme="dark"] .adminSupportInbox select {
+  color-scheme: dark;
+}
+:root[data-theme="light"] .adminSupportInbox select {
+  color-scheme: light;
+}
+.adminSupportInbox select option {
+  background: var(--panel);
+  color: var(--text);
+}
+.adminSupportInbox :is(button, select, textarea, a):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.adminSupportThreadList {
+  display: grid;
+  gap: 6px;
+}
+.adminSupportThread {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 12px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.adminSupportThread:hover {
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+.adminSupportThread.active {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  border-color: color-mix(in srgb, var(--text) 23%, var(--line));
+}
+.adminSupportThreadTop {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.adminSupportThreadTop strong {
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  flex: 1;
+}
+.adminSupportThreadTop time {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.adminSupportSubject {
+  font-size: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  min-width: 0;
+  color: var(--muted);
+}
+.adminSupportThreadMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.adminSupportTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  line-height: 1.5;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.adminSupportTag[data-source="google-beta"] {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+.adminSupportThreadMeta small,
+.adminSupportLastDirection {
+  font-size: 10px;
+  color: var(--muted);
+}
+.adminSupportLastDirection {
+  letter-spacing: 0.01em;
+}
+.adminSupportEmpty {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 18px 0;
+}
+.adminSupportConversation {
+  padding: 22px;
+}
+.adminSupportConversationHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.adminSupportConversationHead > div {
+  min-width: 0;
+}
+.adminSupportEyebrow {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+.adminSupportConversationHead h3 {
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.45;
+  margin: 7px 0;
+  overflow-wrap: anywhere;
+}
+.adminSupportConversationHead p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.adminSupportConversationHead label {
+  flex: 0 0 145px;
+}
+.adminSupportBeta {
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 2%, transparent);
+}
+.adminSupportBetaHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+.adminSupportAddresses {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 18px 0 14px;
+}
+.adminSupportAddresses > div,
+.adminSupportMailAddresses > div {
+  min-width: 0;
+}
+.adminSupportAddresses dt {
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.adminSupportAddresses dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.adminSupportProviders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.adminSupportProviders > span {
+  font-size: 10px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 4px 7px;
+}
+.adminSupportSteps {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 17px 0;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.adminSupportSteps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.adminSupportSteps li > span {
+  font-size: 11px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--muted);
+}
+.adminSupportSteps li[data-done="true"] > span {
+  background: var(--text);
+  color: var(--panel);
+}
+.adminSupportSteps strong {
+  display: block;
+  font-size: 11px;
+  font-weight: 550;
+  line-height: 1.5;
+}
+.adminSupportSteps small {
+  display: block;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.adminSupportBetaActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.adminSupportBetaActions :is(a, button) {
+  font-size: 11px !important;
+  padding: 9px 10px !important;
+  line-height: 1.5;
+  text-decoration: none;
+  border-radius: 7px;
+}
+.adminSupportBetaActions small,
+.adminSupportBeta > p {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.adminSupportMessages {
+  display: grid;
+  gap: 14px;
+  margin: 22px 0;
+  max-height: 540px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 2px;
+}
+.adminSupportMail {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  margin-right: 6%;
+}
+.adminSupportMail.outbound {
+  margin-right: 0;
+  margin-left: 6%;
+  background: color-mix(in srgb, var(--text) 3%, var(--panel));
+  border-left: 3px solid color-mix(in srgb, var(--text) 40%, var(--line));
+}
+.adminSupportMail > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 7px;
+  font-size: 12px;
+}
+.adminSupportMail time {
+  font-size: 10px;
+  color: var(--muted);
+}
+.adminSupportMailAddresses {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0 12px;
+}
+.adminSupportMailAddresses > div {
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+  line-height: 1.6;
+}
+.adminSupportMailAddresses dt {
+  color: var(--muted);
+  min-width: 30px;
+  flex: none;
+}
+.adminSupportMailAddresses dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.adminSupportMail > p,
+.adminSupportApplicationRecord > p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 0;
+}
+.adminSupportDelivery {
+  display: inline-block;
+  font-size: 10px;
+  margin-top: 12px;
+  color: var(--muted);
+}
+.adminSupportDelivery[data-status="unknown"],
+.adminSupportDelivery[data-status="failed"] {
+  color: var(--danger, #e6a56b);
+}
+.adminSupportApplicationRecord {
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+}
+.adminSupportApplicationRecord summary {
+  font-size: 11px;
+  cursor: pointer;
+}
+.adminSupportApplicationRecord > p {
+  margin-top: 14px;
+  font-size: 11px;
+}
+.adminSupportReview {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.adminSupportReview strong {
+  font-size: 11px;
+  font-weight: 500;
+  flex-basis: 100%;
+  line-height: 1.7;
+}
+.adminSupportReview button {
+  font: inherit;
+  font-size: 11px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.adminSupportPlaceholder {
+  display: grid;
+  place-content: center;
+  min-height: 320px;
+  text-align: center;
+  padding: 25px;
+}
+.adminSupportPlaceholder strong {
+  font-size: 14px;
+  font-weight: 550;
+}
+.adminSupportPlaceholder p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 300px;
+}
+.adminSupportCompose {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+.adminSupportComposeHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.adminSupportComposeHead label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.adminSupportComposeHead span {
+  font-size: 10px;
+  color: var(--muted);
+}
+.adminSupportRecipient {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.adminSupportRecipient strong {
+  font-weight: 500;
+  color: var(--text);
+}
+.adminSupportCompose textarea {
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.adminSupportCompose > div:last-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.adminSupportCompose small {
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.adminSupportCompose button {
+  font-size: 12px;
+  white-space: nowrap;
+  padding: 10px 14px;
+  border-radius: 7px;
+}
+.adminSupportInbox button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.adminSupportNotice {
+  font-size: 12px;
+  line-height: 1.7;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+@media (max-width: 1000px) {
+  .adminSupportLayout {
+    grid-template-columns: 1fr;
+  }
+  .adminSupportThreadList {
+    max-height: 320px;
+    overflow: auto;
+  }
+  .adminSupportConversation {
+    padding: 18px;
+  }
+  .adminSupportThreadTop time {
+    margin-left: auto;
+  }
+}
+@media (max-width: 600px) {
+  .adminSupportConversationHead {
+    flex-direction: column;
+  }
+  .adminSupportConversationHead label {
+    flex: auto;
+    width: 100%;
+  }
+  .adminSupportAddresses {
+    grid-template-columns: 1fr;
+  }
+  .adminSupportSteps {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .adminSupportBeta {
+    padding: 14px;
+  }
+  .adminSupportConversation {
+    padding: 14px;
+  }
+  .adminSupportMail {
+    margin-right: 0;
+  }
+  .adminSupportMail.outbound {
+    margin-left: 0;
+  }
+  .adminSupportCompose > div:last-child {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .adminSupportCompose > div:last-child button {
+    width: 100%;
+  }
+}

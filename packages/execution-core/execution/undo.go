@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/config"
@@ -48,7 +49,29 @@ func hashFile(p string) (string, error) {
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
+
+const undoRetention = 7 * 24 * time.Hour
+const undoMaxBytes = 200 * 1024 * 1024
+
+// undoIndex caches the manifests this process has read, by snapshot ID, so a
+// write lists the store instead of reading every manifest. Only createSnapshot
+// trusts it, for ordering and pruning: listing and Undo read every manifest,
+// because finalizeSnapshot rewrites one after the write.
+var undoIndex struct {
+	mu   sync.Mutex
+	root string
+	byID map[string]manifest
+}
+
+// undoCandidates reads every manifest in the store and removes expired and
+// oversized history. It returns the snapshots newest first.
 func undoCandidates() ([]snapshot, error) {
+	return scanUndo(false)
+}
+
+// scanUndo lists the store, so snapshots other processes add or remove are
+// seen at once. With cached set, it reads only manifests it has not seen.
+func scanUndo(cached bool) ([]snapshot, error) {
 	root := undoRoot()
 	if e := os.MkdirAll(root, 0700); e != nil {
 		return nil, e
@@ -57,19 +80,27 @@ func undoCandidates() ([]snapshot, error) {
 	if e != nil {
 		return nil, e
 	}
+	undoIndex.mu.Lock()
+	defer undoIndex.mu.Unlock()
+	known := undoIndex.byID
+	if !cached || undoIndex.root != root {
+		known = nil
+	}
 	items := []snapshot{}
 	for _, entry := range es {
 		if !entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
 			continue
 		}
 		dir := filepath.Join(root, entry.Name())
-		var m manifest
-		b, e := os.ReadFile(filepath.Join(dir, "manifest.json"))
-		if e != nil || json.Unmarshal(b, &m) != nil {
-			continue
+		m, ok := known[entry.Name()]
+		if !ok {
+			b, e := os.ReadFile(filepath.Join(dir, "manifest.json"))
+			if e != nil || json.Unmarshal(b, &m) != nil {
+				continue
+			}
 		}
 		created, e := time.Parse(time.RFC3339Nano, m.Created)
-		if e != nil || time.Since(created) > 7*24*time.Hour {
+		if e != nil || time.Since(created) > undoRetention {
 			_ = os.RemoveAll(dir)
 			continue
 		}
@@ -88,16 +119,30 @@ func undoCandidates() ([]snapshot, error) {
 	for _, s := range items {
 		total += s.Manifest.Bytes
 	}
-	for len(items) > 0 && total > 200*1024*1024 {
+	for len(items) > 0 && total > undoMaxBytes {
 		last := items[len(items)-1]
 		_ = os.RemoveAll(last.Dir)
 		total -= last.Manifest.Bytes
 		items = items[:len(items)-1]
 	}
+	undoIndex.root = root
+	undoIndex.byID = make(map[string]manifest, len(items))
+	for _, s := range items {
+		undoIndex.byID[s.Manifest.ID] = s.Manifest
+	}
 	return items, nil
 }
+
+// rememberUndo indexes a snapshot this process just created.
+func rememberUndo(s snapshot) {
+	undoIndex.mu.Lock()
+	defer undoIndex.mu.Unlock()
+	if undoIndex.byID != nil && filepath.Clean(undoIndex.root) == filepath.Dir(s.Dir) {
+		undoIndex.byID[s.Manifest.ID] = s.Manifest
+	}
+}
 func createSnapshot(tool, target string) (*snapshot, error) {
-	items, e := undoCandidates()
+	items, e := scanUndo(true)
 	if e != nil {
 		return nil, e
 	}
@@ -146,6 +191,7 @@ func createSnapshot(tool, target string) (*snapshot, error) {
 		discardSnapshot(snap)
 		return nil, e
 	}
+	rememberUndo(*snap)
 	return snap, nil
 }
 func discardSnapshot(s *snapshot) {

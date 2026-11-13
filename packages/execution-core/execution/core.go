@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
-	"sync"
 
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/policy"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/protocol"
@@ -108,12 +107,14 @@ type Core struct {
 	Mode      string
 	Processes *Processes
 	// Secrets holds one-time values a user entered for start_process stdin_secret.
-	Secrets  *secrets.Store
-	mutation sync.Mutex
+	Secrets *secrets.Store
+	// mutation is a one-slot semaphore that serializes file changes and Undo.
+	// A channel, unlike sync.Mutex, lets a queued call give up at its deadline.
+	mutation chan struct{}
 }
 
 func New(mode string) *Core {
-	return &Core{Mode: mode, Processes: NewProcesses(), Secrets: secrets.New()}
+	return &Core{Mode: mode, Processes: NewProcesses(), Secrets: secrets.New(), mutation: make(chan struct{}, 1)}
 }
 func (c *Core) ListTools() []Definition {
 	result := []Definition{}
@@ -174,8 +175,11 @@ func (c *Core) Call(ctx context.Context, name string, args map[string]any, p pro
 	case "list_processes":
 		result, e = listProcesses(protocol.OptionalString(args, "filter"), protocol.Number(args, "limit", 200), protocol.Bool(args, "details"))
 	case "list_undo_actions", "undo_change", "undo_last_change":
-		c.mutation.Lock()
-		defer c.mutation.Unlock()
+		release, err := c.acquireMutation(ctx)
+		if err != nil {
+			return protocol.Result{}, err
+		}
+		defer release()
 		if name != "list_undo_actions" && !protocol.Enabled(p.UndoEnabled) {
 			return protocol.Result{}, errors.New("Local Undo is disabled for this device.")
 		}
@@ -292,8 +296,11 @@ func (c *Core) Call(ctx context.Context, name string, args map[string]any, p pro
 			result, e = c.Processes.Stop(id)
 		}
 	case "write_file", "edit_block":
-		c.mutation.Lock()
-		defer c.mutation.Unlock()
+		release, err := c.acquireMutation(ctx)
+		if err != nil {
+			return protocol.Result{}, err
+		}
+		defer release()
 		key := "path"
 		if name == "edit_block" {
 			key = "file_path"

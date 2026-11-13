@@ -114,6 +114,9 @@ func TestUndoOrderSurvivesClockRollback(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(items[0].Dir, "manifest.json"), b, 0600); err != nil {
 		t.Fatal(err)
 	}
+	// Such a record was on disk before this process started, so this
+	// process has not indexed it yet.
+	resetUndoIndex()
 	if _, err := core.Call(context.Background(), "write_file", map[string]any{"path": target, "content": "second"}, policy); err != nil {
 		t.Fatal(err)
 	}

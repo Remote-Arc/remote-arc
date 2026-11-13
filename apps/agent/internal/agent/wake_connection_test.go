@@ -106,7 +106,11 @@ func TestRelayExpiryBoundaryAndLegacyCompatibility(t *testing.T) {
 			t.Fatal("expired command ran")
 		}
 	}
-	for i, deadline := range []string{"", now.Add(time.Millisecond).Format(time.RFC3339Nano)} {
+	// One millisecond before the deadline still passes the dispatch gate.
+	if _, err := a.dispatch(context.Background(), protocol.Call{Tool: "get_file_info", ExpiresAt: now.Add(time.Millisecond).Format(time.RFC3339Nano), Arguments: map[string]any{"path": home}}, awake); err != nil {
+		t.Fatal("fresh deadline refused", err)
+	}
+	for i, deadline := range []string{"", now.Add(time.Minute).Format(time.RFC3339Nano)} {
 		target := filepath.Join(home, fmt.Sprintf("valid-%d", i))
 		_, err := a.dispatch(context.Background(), protocol.Call{Tool: "write_file", ExpiresAt: deadline, Arguments: map[string]any{"path": target, "content": "accepted"}}, awake)
 		if err != nil {
@@ -115,6 +119,16 @@ func TestRelayExpiryBoundaryAndLegacyCompatibility(t *testing.T) {
 		if b, _ := os.ReadFile(target); string(b) != "accepted" {
 			t.Fatal("valid operation did not execute")
 		}
+	}
+	// The deadline reaches the Core: a write that could not finish before the
+	// Relay stops waiting is refused as not started instead of running late.
+	late := filepath.Join(home, "too-late")
+	_, err := a.dispatch(context.Background(), protocol.Call{Tool: "write_file", ExpiresAt: now.Add(2 * time.Second).Format(time.RFC3339Nano), Arguments: map[string]any{"path": late, "content": "late"}}, awake)
+	if err == nil || !strings.HasPrefix(err.Error(), "DEVICE_BUSY:") {
+		t.Fatalf("late write was not refused as busy: %v", err)
+	}
+	if _, err := os.Stat(late); !os.IsNotExist(err) {
+		t.Fatal("refused write changed the file")
 	}
 }
 

@@ -211,11 +211,14 @@ func (a *Agent) heartbeat(ctx context.Context) error {
 	return e
 }
 func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.Manager) (any, error) {
+	// remaining is how long the Relay still waits for this call; 0 means no deadline.
+	var remaining time.Duration
 	if call.ExpiresAt != "" {
 		deadline, err := time.Parse(time.RFC3339Nano, call.ExpiresAt)
 		if err != nil || !a.wallNow().Before(deadline) {
 			return nil, errors.New("DEVICE_CALL_EXPIRED: the Relay deadline passed before dispatch; no operation was started")
 		}
+		remaining = deadline.Sub(a.wallNow())
 	}
 	if !a.identityValid() {
 		return nil, ErrRevoked
@@ -380,7 +383,16 @@ func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.M
 		if a.Core == nil {
 			return nil, errors.New("Execution core unavailable while paused.")
 		}
-		result, err := a.Core.Call(ctx, call.Tool, args, call.Policy)
+		// The Core gives up queued file changes before the Relay stops waiting,
+		// so one stalled write cannot make later writes run after their callers
+		// were told the outcome is unknown.
+		coreCtx := ctx
+		if remaining > 0 {
+			var cancel context.CancelFunc
+			coreCtx, cancel = context.WithTimeout(ctx, remaining)
+			defer cancel()
+		}
+		result, err := a.Core.Call(coreCtx, call.Tool, args, call.Policy)
 		if err == nil && call.Tool == "start_process" && call.Policy.BrowserRunnerEnabled && runnerBypass.MatchString(protocol.OptionalString(args, "command")) {
 			a.log("warn", "RUNNER_BYPASS: browser automation started outside Browser Runner; handoff and submit deduplication are unavailable.")
 			if len(result.Content) > 0 {

@@ -406,6 +406,9 @@
     "components.publicLayout.switchToDarkMode": "Switch to dark mode",
     "components.publicLayout.switchToLightMode": "Switch to light mode",
     "components.publicLayout.system": "System",
-    "components.publicLayout.terms": "Terms"
+    "components.publicLayout.terms": "Terms",
+    "app.appErrorBoundary.thisPageNeedsARefresh": "This page needs a refresh",
+    "app.appErrorBoundary.remoteArcWasUpdatedOrPart": "Remote Arc was updated, or part of this page could not load. Reload the page to continue.",
+    "app.appErrorBoundary.reloadPage": "Reload page"
   }
 }

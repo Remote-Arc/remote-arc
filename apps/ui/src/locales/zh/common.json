@@ -406,6 +406,9 @@
     "components.publicLayout.switchToDarkMode": "切换到深色模式",
     "components.publicLayout.switchToLightMode": "切换到浅色模式",
     "components.publicLayout.system": "跟随系统",
-    "components.publicLayout.terms": "条款"
+    "components.publicLayout.terms": "条款",
+    "app.appErrorBoundary.thisPageNeedsARefresh": "页面需要刷新",
+    "app.appErrorBoundary.remoteArcWasUpdatedOrPart": "Remote Arc 已更新，或页面的一部分没有加载成功。刷新页面后即可继续。",
+    "app.appErrorBoundary.reloadPage": "刷新页面"
   }
 }

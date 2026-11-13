@@ -49,6 +49,7 @@ import "./styles/dashboard/devices/device-recovery.css";
 import "./styles/product-typography.css";
 import "./styles/arc-product-polish.css";
 import "./styles/components/brand-wordmark.css";
+import "./styles/components/app-error-boundary.css";
 import "./styles/experience-refresh.css";
 import "./styles/marketing/public-nav-menu.css";
 import "./styles/marketing/site-footer.css";
@@ -69,12 +70,15 @@ import "./features/blog/intent-driven-article.js";
 import "./features/blog/blog-pages.js";
 import "./features/dashboard/dashboard.js";
 import { App } from "./app/app.js";
+import { AppErrorBoundary } from "./app/app-error-boundary.js";
+import { installStaleBuildRecovery } from "./lib/stale-build-recovery.js";
 
 // Production builds resolve ./preview/preview.js to preview-disabled.ts (see
 // vite.config.ts), so the website never ships the fixtures and Skill catalog.
 installUiPreviewFetchMock(MCP_ENDPOINT);
 
 startProductEvents();
+installStaleBuildRecovery();
 const locale = initialLocale();
 const surface = chooseLocaleSurface(
   location.pathname,
@@ -92,7 +96,9 @@ void loadLocale(locale, surface).then(
       <React.StrictMode>
         <ThemeProvider>
           <I18nProvider surface={surface} initialLanguage={locale}>
-            <App />
+            <AppErrorBoundary>
+              <App />
+            </AppErrorBoundary>
           </I18nProvider>
         </ThemeProvider>
       </React.StrictMode>,

@@ -17,15 +17,17 @@ test("MCP task links open Connect with Arc disabled and preserve the task refere
   await expect(task.locator(".automationDetails")).toHaveAttribute("open", "");
   await expect(task).toContainText(/No run has started|尚未开始任何执行/);
   await page.getByRole("button", { name: /Show all tasks|显示全部任务/ }).click();
-  await expect(page.locator(".connectTaskCard")).toHaveCount(3);
+  await expect(page.locator(".connectTaskCard")).toHaveCount(4);
   await page
     .getByRole("searchbox", { name: /Search Connect tasks|搜索 Connect 任务/ })
     .fill("Nightly");
   await expect(page.locator(".connectTaskCard")).toHaveCount(1);
   await page.getByRole("searchbox").fill("");
+  // Attention lists the offline device and the routine waiting for a decision.
   await page.getByRole("button", { name: /^(Attention|待关注)$/ }).click();
-  await expect(page.locator(".connectTaskCard")).toHaveCount(1);
-  await expect(page.locator(".connectTaskCard")).toContainText("Nightly build");
+  await expect(page.locator(".connectTaskCard")).toHaveCount(2);
+  await expect(page.locator("[data-task-id=preview-offline]")).toContainText("Nightly build");
+  await expect(page.locator("[data-task-id=preview-decision] .taskDecision")).toBeVisible();
   await expect(page.locator(".arcWorkPage")).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
@@ -54,6 +56,27 @@ test("Connect task controls update state, confirm cancellation and keep keyboard
   await expect(page.getByRole("dialog")).not.toBeVisible();
   await expect(task.locator(".connectTaskStatus")).toContainText(/Cancelled|已取消/);
   await expect(task.getByRole("button", { name: /^(Pause|Resume|暂停|恢复)$/ })).toHaveCount(0);
+});
+
+test("a routine waiting for a decision shows why and settles from its card", async ({ page }) => {
+  await page.goto("/dashboard/connect/tasks");
+  const task = page.locator("[data-task-id=preview-decision]");
+  const decision = task.locator(".taskDecision");
+  await expect(decision).toContainText(/automatic repair did not fix it|自动修复没有修好/);
+  await expect(decision).toContainText(/new access key/);
+  await expect(task).toContainText(/Waiting for your decision|等你决定/);
+  await expect(task.getByRole("button", { name: /^(Pause|Resume|暂停|恢复)$/ })).toHaveCount(0);
+  await decision.locator("summary").click();
+  await expect(decision.locator("pre")).toContainText("HTTP 401");
+  const turnOff = decision.getByRole("button", { name: /^(Turn off|关闭)$/ });
+  await turnOff.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(turnOff).toBeFocused();
+  await decision.getByRole("button", { name: /^(Skip this run|跳过这次)$/ }).click();
+  await expect(task.locator(".taskDecision")).toHaveCount(0);
+  await expect(task.locator(".connectTaskStatus")).toContainText(/Queued|已排队/);
 });
 
 test("source goals remain visible, Arc work stays separate, and saved output is readable", async ({
@@ -199,5 +222,5 @@ test("an unknown task shows a missing-record state without opening Arc", async (
   await expect(page.locator(".connectTasksEmpty")).toContainText(/not found|未找到/);
   await expect(page.locator(".arcWorkPage")).toHaveCount(0);
   await page.getByRole("button", { name: /Show all tasks|显示全部任务/ }).click();
-  await expect(page.locator(".connectTaskCard")).toHaveCount(3);
+  await expect(page.locator(".connectTaskCard")).toHaveCount(4);
 });

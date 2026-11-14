@@ -1,4 +1,5 @@
 import type { Translate } from "../../locales/locale-catalog.js";
+import { taskDecision } from "../../hooks/tasks/use-task-decision.js";
 import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import React, { useEffect, useRef, useState } from "react";
@@ -86,7 +87,11 @@ export function taskNeedsAgent(task: Pick<Task, "state_json" | "status">) {
 }
 
 export function taskNeedsAttention(task: Pick<Task, "state_json" | "status">) {
-  return taskNeedsAgent(task) || ["waiting_for_device", "failed", "expired"].includes(task.status);
+  return (
+    taskNeedsAgent(task) ||
+    taskDecision(task) !== null ||
+    ["waiting_for_device", "failed", "expired"].includes(task.status)
+  );
 }
 
 export function taskActivity(
@@ -99,6 +104,7 @@ export function taskActivity(
     return tr("tasks.dashboardTaskView.cancelledOrchestrationStopped");
   if (task.status === "expired")
     return tr("tasks.dashboardTaskView.timeLimitReachedInspectTheOutcome");
+  if (taskDecision(task)) return tr("tasks.dashboardTaskView.waitingForYourDecision");
   if (task.status === "paused") return tr("tasks.dashboardTaskView.pausedResumeWhenReady");
   if (task.status === "waiting_for_device")
     return tr("tasks.dashboardTaskView.waitingForTheComputerToReconnect");

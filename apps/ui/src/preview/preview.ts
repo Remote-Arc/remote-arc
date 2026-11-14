@@ -462,6 +462,50 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       created_at: previewAgo(6 * 86400000),
       updated_at: previewAgo(20 * 60000),
     },
+    {
+      id: "preview-decision",
+      user_id: "preview-user",
+      name: "Daily store export",
+      kind: "schedule_watch",
+      status: "paused",
+      device_id: "preview-mac",
+      trigger_json: JSON.stringify({ type: "interval", every_seconds: 86400 }),
+      action_json: JSON.stringify({
+        steps: [
+          {
+            type: "device_command",
+            command: "node export-orders.mjs",
+            cwd: "/Users/sam/work/store",
+          },
+        ],
+      }),
+      goal_json: null,
+      state_json: JSON.stringify({
+        phase: "idle",
+        decision: {
+          id: "preview-decision-1",
+          kind: "repair_failed",
+          reason:
+            "Automatic repair ended paused: The store API now needs a new access key, which only you can create.",
+          evidence:
+            "stdout:\nExporting orders since 2026-11-13\nstderr:\nHTTP 401: access key revoked",
+          options: ["retry_now", "skip_run", "turn_off"],
+          created_at: previewAgo(25 * 60000),
+          timeout_at: new Date(Date.now() + 95 * 60000).toISOString(),
+          on_timeout: "skip_run",
+        },
+      }),
+      interval_seconds: 300,
+      next_run_at: null,
+      expires_at: null,
+      max_runs: 0,
+      run_count: 12,
+      last_run_at: previewAgo(40 * 60000),
+      last_error:
+        "Automatic repair ended paused: The store API now needs a new access key, which only you can create.",
+      created_at: previewAgo(12 * 86400000),
+      updated_at: previewAgo(25 * 60000),
+    },
   ];
 
   const automations = [...baseAutomations];
@@ -611,13 +655,24 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
         method,
         init?.body ?? (input instanceof Request ? await input.clone().text() : undefined),
       )!;
-    const taskAction = url.pathname.match(/^\/api\/automations\/([^/]+)\/(pause|resume|cancel)$/);
+    const taskAction = url.pathname.match(
+      /^\/api\/automations\/([^/]+)\/(pause|resume|cancel|retry_now|skip_run)$/,
+    );
     if (method === "POST" && taskAction) {
       const item = automations.find((task) => task.id === decodeURIComponent(taskAction[1]!));
       if (!item) return json({ error: "NOT_FOUND" }, 404);
       item.status =
         taskAction[2] === "cancel" ? "cancelled" : taskAction[2] === "pause" ? "paused" : "waiting";
-      item.next_run_at = item.status === "waiting" ? previewNow() : null;
+      item.next_run_at =
+        taskAction[2] === "skip_run"
+          ? new Date(Date.now() + 86400000).toISOString()
+          : item.status === "waiting"
+            ? previewNow()
+            : null;
+      if (item.status !== "paused") {
+        item.state_json = JSON.stringify({ phase: "idle" });
+        item.last_error = null;
+      }
       item.updated_at = previewNow();
       return json({ automation: item });
     }

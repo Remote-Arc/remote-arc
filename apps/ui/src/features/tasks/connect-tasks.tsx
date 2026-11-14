@@ -5,7 +5,10 @@ import { ProductIcon } from "../../components/product-icon.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import { TaskResults, taskActivity, taskNeedsAttention } from "./dashboard-task-view.js";
 import { isVisibleInWorkspace } from "../../lib/dashboard-workspaces.js";
+import { taskDecision, useTaskDecision } from "../../hooks/tasks/use-task-decision.js";
+import { TaskDecisionCard } from "./task-decision-card.js";
 import "../../styles/tasks/connect-tasks.css";
+import "../../styles/tasks/task-decision.css";
 
 type Task = {
   id: string;
@@ -158,6 +161,20 @@ export function ConnectTasks({
       if (mounted.current) setBusy(null);
     }
   }
+  const decisions = useTaskDecision<Task>((automation) => {
+    if (!mounted.current) return;
+    setData((current) =>
+      current
+        ? {
+            ...current,
+            automations: current.automations.map((item) =>
+              item.id === automation.id ? automation : item,
+            ),
+          }
+        : current,
+    );
+    setRevision((n) => n + 1);
+  });
   function select(task: Task) {
     setSelected(task.id);
     setQuery("");
@@ -368,10 +385,25 @@ export function ConnectTasks({
               <span className={"connectTaskStatus " + task.status}>{status(task.status)}</span>
             </header>
             <p className="connectTaskActivity">{taskActivity(task, tr)}</p>
-            {task.status === "paused" && (
-              <p className="connectTaskActivity">
-                {tr("tasks.connectTasks.futureStepsArePausedACommand")}
-              </p>
+            {taskDecision(task) ? (
+              <TaskDecisionCard
+                decision={taskDecision(task)!}
+                busy={decisions.busy === task.id}
+                disabled={busy !== null || decisions.busy !== null}
+                error={decisions.errorFor(task.id)}
+                formatTime={time}
+                onDecide={(choice) => void decisions.decide(task, taskDecision(task)!, choice)}
+                onTurnOff={(trigger) => {
+                  cancelTrigger.current = trigger;
+                  setCancelTask(task);
+                }}
+              />
+            ) : (
+              task.status === "paused" && (
+                <p className="connectTaskActivity">
+                  {tr("tasks.connectTasks.futureStepsArePausedACommand")}
+                </p>
+              )
             )}
             <dl>
               <div>
@@ -387,7 +419,9 @@ export function ConnectTasks({
                 <dd>{time(task.next_run_at)}</dd>
               </div>
             </dl>
-            {task.last_error && <p className="automationLastError">{task.last_error}</p>}
+            {task.last_error && !taskDecision(task) && (
+              <p className="automationLastError">{task.last_error}</p>
+            )}
             <div className="connectTaskActions">
               <button type="button" className="ghostButton" onClick={() => select(task)}>
                 {tr("tasks.connectTasks.viewResults")}
@@ -400,18 +434,22 @@ export function ConnectTasks({
               <span className="connectTaskActionSpacer" />
               {!terminal(task.status) && (
                 <>
-                  <button
-                    type="button"
-                    className="ghostButton"
-                    disabled={busy !== null}
-                    onClick={() => void manage(task, task.status === "paused" ? "resume" : "pause")}
-                  >
-                    {busy === task.id
-                      ? tr("tasks.connectTasks.updating")
-                      : task.status === "paused"
-                        ? tr("tasks.connectTasks.resume")
-                        : tr("tasks.connectTasks.pause")}
-                  </button>
+                  {!taskDecision(task) && (
+                    <button
+                      type="button"
+                      className="ghostButton"
+                      disabled={busy !== null}
+                      onClick={() =>
+                        void manage(task, task.status === "paused" ? "resume" : "pause")
+                      }
+                    >
+                      {busy === task.id
+                        ? tr("tasks.connectTasks.updating")
+                        : task.status === "paused"
+                          ? tr("tasks.connectTasks.resume")
+                          : tr("tasks.connectTasks.pause")}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="ghostButton"

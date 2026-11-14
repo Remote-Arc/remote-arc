@@ -208,7 +208,7 @@
     },
     {
       "name": "manage_automation",
-      "title": "Pause, resume, or cancel an automation",
+      "title": "Pause, resume, cancel or decide on an automation",
       "group": "tasks",
       "scopes": [
         "automation:write"

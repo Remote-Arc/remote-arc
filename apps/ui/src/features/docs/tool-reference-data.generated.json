@@ -893,7 +893,7 @@
     {
       "name": "create_automation",
       "title": "Create a persistent Remote Arc automation",
-      "description": "Save user-requested ongoing or scheduled deterministic work as a durable task. Omit device_id to let the account-level Fleet Scheduler select an authorized, eligible, less-busy device automatically; specify device_id only for explicit device pinning. Use ordinary tools for immediate one-off operations. Supports long commands, webhook watches, interval schedules and fixed verification loops. This tool does not keep an AI reasoning loop alive after the creating chat ends.",
+      "description": "Save user-requested ongoing or scheduled deterministic work as a durable task. Omit device_id to let the account-level Fleet Scheduler select an authorized, eligible, less-busy device automatically; specify device_id only for explicit device pinning. Use ordinary tools for immediate one-off operations. Supports long commands, webhook watches, interval routines and fixed verification loops. A routine (schedule.every_seconds) repeats until max_runs or expires_at; goal is its acceptance check after the steps. When a step or the check fails and the account has an Arc plan or trial, an Arc agent first makes one bounded repair in the workspace (billed to Arc credits; auto_repair=false turns this off) and the routine re-runs its own steps. A failed run or failed check is retried. 3 failures in a row, an unfinished repair, exhausted credits or a device boundary hold the routine for the user's decision (retry_now, skip_run or turn_off through manage_automation); decision_timeout can skip an undecided run after some hours. When a multi-step task in this chat has just succeeded on a device and the user may want it repeated, offer to save it as a routine with the same steps, device_id and a goal that proves the result. This tool does not keep an AI reasoning loop alive after the creating chat ends.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -915,6 +915,29 @@
           "keep_awake": {
             "default": false,
             "type": "boolean"
+          },
+          "auto_repair": {
+            "type": "boolean"
+          },
+          "decision_timeout": {
+            "type": "object",
+            "properties": {
+              "hours": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 168
+              },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "skip_run",
+                  "hold"
+                ]
+              }
+            },
+            "required": [
+              "action"
+            ]
           },
           "device_id": {
             "type": "string"
@@ -1966,8 +1989,8 @@
     },
     {
       "name": "manage_automation",
-      "title": "Pause, resume, or cancel an automation",
-      "description": "Manage a durable Remote Arc automation. Unattended tasks recover automatically from reconnect/process-handle loss according to their recovery policy; a later device-policy change stops the task instead of waiting for approval. Cancel also attempts to stop the currently managed process.",
+      "title": "Pause, resume, cancel or decide on an automation",
+      "description": "Manage a durable Remote Arc automation. Unattended tasks recover automatically from reconnect/process-handle loss according to their recovery policy; a later device-policy change stops the task instead of waiting for approval. Cancel also attempts to stop the currently managed process. For a routine that needs a decision (needs_decision in list_automations, decision in get_automation), retry_now runs it again now, skip_run skips this run until the next slot, and cancel turns it off; pass the decision_id you read so a decision already settled elsewhere is not applied twice.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1980,8 +2003,14 @@
             "enum": [
               "pause",
               "resume",
-              "cancel"
+              "cancel",
+              "retry_now",
+              "skip_run"
             ]
+          },
+          "decision_id": {
+            "type": "string",
+            "maxLength": 80
           }
         },
         "required": [

@@ -1,0 +1,54 @@
+.taskDecision {
+  margin: 12px 0 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+}
+.taskDecisionTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.taskDecisionReason,
+.taskDecisionTimeout {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.taskDecisionEvidence {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+.taskDecisionEvidence summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.taskDecisionEvidence pre {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.taskDecisionActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 0;
+}
+.taskDecisionError {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--red);
+}

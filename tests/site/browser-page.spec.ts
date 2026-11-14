@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("The Browser page opens on its title and download, with the modes short and the full comparison folded", async ({
+test("The Browser page opens on its title and Chrome Web Store install, with the modes short and the full comparison folded", async ({
   page,
 }, info) => {
   const zh = info.project.metadata.language === "zh";
@@ -10,11 +10,20 @@ test("The Browser page opens on its title and download, with the modes short and
   const title = page.getByRole("heading", { level: 1 });
   await expect(title).toHaveText(zh ? "让 AI 在 Chrome 里办事" : "Let your AI work in your Chrome");
   await expect(title).toBeInViewport();
-  const download = page.locator(".chromeDownloadHero").getByRole("link", {
-    name: zh ? /下载 Chrome Companion/ : /Download Chrome Companion/,
+  const install = page.locator(".chromeDownloadHero").getByRole("link", {
+    name: zh ? /从 Chrome 应用商店安装/ : /Install from Chrome Web Store/,
   });
-  await expect(download).toHaveAttribute("href", /^\/downloads\/remote-arc-browser\.zip\?v=/);
-  await expect(download).toBeInViewport();
+  await expect(install).toHaveAttribute(
+    "href",
+    "https://chromewebstore.google.com/detail/remote-arc-browser/eldbdnmgaecbdgpinljemenkolfmmjie",
+  );
+  await expect(install).toHaveAttribute("target", "_blank");
+  await expect(install).toBeInViewport();
+  // The page no longer sends anyone to the unpacked ZIP or Developer mode.
+  await expect(page.locator('a[href*="remote-arc-browser.zip"]')).toHaveCount(0);
+  await expect(page.locator(".chromeStepsGrid")).not.toContainText(
+    zh ? "开发者模式" : "Developer mode",
+  );
   await page.getByRole("link", { name: zh ? "安装步骤 ↓" : "How to install ↓" }).click();
   await expect(page.locator("#chrome-steps-title")).toBeInViewport();
 

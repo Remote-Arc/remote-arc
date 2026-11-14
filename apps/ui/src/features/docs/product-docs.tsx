@@ -512,10 +512,10 @@ export function McpReference() {
             <h2>{tr("docs.productDocs.installTheScopedChromeCompanion")}</h2>
             <p>
               <a href={localizedWebsiteHref("/chrome-extension", locale)}>
-                {tr("docs.productDocs.openTheChromeCompanionDownloadAnd")} →
+                {tr("docs.productDocs.openTheChromeCompanionInstallationPage")} →
               </a>
             </p>
-            <p>{tr("docs.productDocs.downloadAndUnzipTheCompanionIn")}</p>
+            <p>{tr("docs.productDocs.installTheCompanionFromChromeWebStore")}</p>
             <p>{tr("docs.productDocs.useSharedTabListToSelect")}</p>
           </section>
           <footer className="articleEndLinks">

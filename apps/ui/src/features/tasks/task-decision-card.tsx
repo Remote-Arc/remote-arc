@@ -43,6 +43,11 @@ export function TaskDecisionCard({
         </p>
       )}
       <div className="taskDecisionActions">
+        {decision.kind === "budget_stop" && (
+          <a className="ghostButton" href="/settings?section=billing">
+            {tr("tasks.taskDecision.getCredits")}
+          </a>
+        )}
         {decision.options.includes("retry_now") && (
           <button
             type="button"

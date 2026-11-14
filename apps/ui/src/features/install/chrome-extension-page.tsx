@@ -2,26 +2,29 @@ import React from "react";
 import { useI18n } from "../../hooks/use-i18n.js";
 import { BrowserModes } from "../docs/browser-modes.js";
 import companionManifest from "../../../../browser-extension/manifest.json" with { type: "json" };
+import { CHROME_WEB_STORE_URL } from "../../config/app-config.js";
 import "../../styles/install/chrome-extension-page.css";
-
-const downloadUrl =
-  "/downloads/remote-arc-browser.zip?v=" + encodeURIComponent(companionManifest.version);
 
 export function ChromeExtensionPage() {
   const { tr } = useI18n();
 
   return (
     <main className="chromeExtensionPage">
-      {/* The download card is the FIRST content on this page, not a hash target. */}
+      {/* The install card is the FIRST content on this page, not a hash target. */}
       <section className="chromeDownloadHero" aria-labelledby="chrome-page-title">
         <div className="chromeDownloadCopy">
-          <span className="eyebrow">{tr("install.chromeExtensionPage.chromeExtensionBeta")}</span>
+          <span className="eyebrow">{tr("install.chromeExtensionPage.chromeExtension")}</span>
           <h1 id="chrome-page-title">{tr("install.chromeExtensionPage.browserPageTitle")}</h1>
           <p>{tr("install.chromeExtensionPage.browserPageLede")}</p>
           <div className="chromeDownloadCtas">
-            <a className="primaryButton chromeDownloadPrimary" href={downloadUrl} download>
-              {tr("install.chromeExtensionPage.downloadChromeCompanionZip")}{" "}
-              <span aria-hidden="true">↓</span>
+            <a
+              className="primaryButton chromeDownloadPrimary"
+              href={CHROME_WEB_STORE_URL}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {tr("install.chromeExtensionPage.installFromChromeWebStore")}{" "}
+              <span aria-hidden="true">↗</span>
             </a>
             <a className="chromeDownloadSteps" href="#chrome-steps-title">
               {tr("install.chromeExtensionPage.howToInstall")} ↓
@@ -29,10 +32,10 @@ export function ChromeExtensionPage() {
           </div>
           <p className="chromeDownloadVersion">
             {tr("install.chromeExtensionPage.version")} {companionManifest.version} ·{" "}
-            {tr("install.chromeExtensionPage.chromeChromiumUnpackedBeta")}
+            {tr("install.chromeExtensionPage.chromeWebStoreUpdatesAutomatically")}
           </p>
-          <p className="chromeDownloadWarning">
-            {tr("install.chromeExtensionPage.thisBetaIsNotInstalledFrom")}
+          <p className="chromeDownloadNote">
+            {tr("install.chromeExtensionPage.installedTheZipBefore")}
           </p>
         </div>
         <div
@@ -81,19 +84,18 @@ export function ChromeExtensionPage() {
         <ol className="chromeStepsGrid">
           <li>
             <span>01</span>
-            <h3>{tr("install.chromeExtensionPage.downloadAndUnzip")}</h3>
-            <p>{tr("install.chromeExtensionPage.useTheButtonAboveExtractThe")}</p>
+            <h3>{tr("install.chromeExtensionPage.openChromeWebStore")}</h3>
+            <p>{tr("install.chromeExtensionPage.useTheButtonAboveToOpen")}</p>
           </li>
           <li>
             <span>02</span>
-            <h3>{tr("install.chromeExtensionPage.openChromeExtensions")}</h3>
-            <p>{tr("install.chromeExtensionPage.openChromeExtensionsInChromeTurn")}</p>
-            <code>chrome://extensions</code>
+            <h3>{tr("install.chromeExtensionPage.addToChrome")}</h3>
+            <p>{tr("install.chromeExtensionPage.clickAddToChromeThenAdd")}</p>
           </li>
           <li>
             <span>03</span>
-            <h3>{tr("install.chromeExtensionPage.loadUnpacked")}</h3>
-            <p>{tr("install.chromeExtensionPage.clickLoadUnpackedThenSelectThe")}</p>
+            <h3>{tr("install.chromeExtensionPage.pinItToTheToolbar")}</h3>
+            <p>{tr("install.chromeExtensionPage.clickTheExtensionsIconAndPin")}</p>
           </li>
           <li>
             <span>04</span>
@@ -110,7 +112,7 @@ export function ChromeExtensionPage() {
         </div>
         <div>
           <h2>{tr("install.chromeExtensionPage.whatHappensWhenYouUpdate")}</h2>
-          <p>{tr("install.chromeExtensionPage.theWebsiteZipIsRebuiltFrom")}</p>
+          <p>{tr("install.chromeExtensionPage.chromeUpdatesWebStoreExtensions")}</p>
         </div>
       </section>
       <nav

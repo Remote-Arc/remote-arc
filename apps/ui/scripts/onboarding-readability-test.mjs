@@ -76,8 +76,8 @@ assert.match(
 );
 assert.match(
   chromePage,
-  /remote-arc-browser.zip\?v=/,
-  "versioned download belongs in top hero card",
+  /href=\{CHROME_WEB_STORE_URL\}/,
+  "Chrome Web Store install belongs in top hero card",
 );
 assert.ok(
   chromePage.indexOf("chromeDownloadHero") < chromePage.indexOf("chromeGuideSteps"),

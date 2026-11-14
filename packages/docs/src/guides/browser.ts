@@ -167,8 +167,8 @@ export const browserSections: DocSection[] = [
       },
     ],
     note: {
-      en: "The extension is an unpacked beta, not a Chrome Web Store extension, and does not update itself. The Dashboard’s Devices page shows when a newer version is available.",
-      zh: "扩展目前是需解压加载的 Beta 版，不在 Chrome 网上应用店上架，也不会自动更新。Dashboard 的设备页面会提示新版本。",
+      en: "Install the extension from Chrome Web Store; Chrome keeps it up to date. A copy loaded unpacked from the old ZIP does not update, so remove it and install from Chrome Web Store. The Dashboard’s Devices page shows when a paired extension is behind.",
+      zh: "从 Chrome 应用商店安装扩展，之后由 Chrome 自动更新。以前用旧 ZIP 解压加载的副本不会更新，请移除后改从 Chrome 应用商店安装。Dashboard 的设备页面会提示版本落后的扩展。",
     },
   },
 ];

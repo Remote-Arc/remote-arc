@@ -1,0 +1,118 @@
+.notificationUnavailable {
+  margin-top: 6px !important;
+  color: var(--rs-secondary);
+  font-size: 13px !important;
+}
+.notificationWebhook {
+  display: grid;
+  gap: 8px;
+  padding: 0 24px 20px;
+}
+.notificationWebhook label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--rs-text);
+}
+.notificationWebhook > div {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+.notificationWebhook input {
+  flex: 1;
+  min-width: 0;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid var(--rs-border);
+  border-radius: 6px;
+  background: var(--rs-surface);
+  color: var(--rs-text);
+  font: inherit;
+  font-size: 14px;
+}
+.notificationSecret {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--rs-border);
+  border-radius: 7px;
+  background: var(--rs-subtle);
+}
+.notificationSecret p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--rs-secondary);
+}
+.notificationSecret code {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  color: var(--rs-text);
+}
+.notificationSecret button {
+  justify-self: start;
+}
+.notificationEvents {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 16px 24px;
+  border: 0;
+  border-top: 1px solid var(--rs-border);
+}
+.notificationEvents legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--rs-text);
+}
+.notificationEvents label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--rs-secondary);
+  line-height: 1.5;
+}
+.notificationEvents input {
+  margin-top: 3px;
+}
+.notificationFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px 20px;
+  font-size: 13px;
+  color: var(--rs-secondary);
+}
+@media (max-width: 640px) {
+  .notificationChannel .raSettingsRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .notificationWebhook > div {
+    flex-direction: column;
+  }
+}
+:root[data-theme] .appFrame .raSettings .notificationChannel .raSettingsButton {
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--rs-surface);
+  color: var(--rs-text);
+  font-size: 13px;
+  font-weight: 500;
+  /* Global button rules remove borders with !important; an inset shadow draws it. */
+  box-shadow: inset 0 0 0 1px var(--rs-border);
+}
+:root[data-theme] .appFrame .raSettings .notificationChannel .raSettingsButtonPrimary {
+  background: var(--rs-accent);
+  box-shadow: none;
+  color: var(--dash-inverse);
+}
+:root[data-theme] .appFrame .raSettings .notificationChannel .raSettingsButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

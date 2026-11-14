@@ -88,6 +88,12 @@ browser.
 
 ## Load locally
 
+Users install the published extension from
+[Chrome Web Store](https://chromewebstore.google.com/detail/remote-arc-browser/eldbdnmgaecbdgpinljemenkolfmmjie).
+Load it unpacked only to develop or test local changes. To release a new
+version, see the Chrome Web Store release guide in the cloud repository
+(`docs/chrome-web-store.md`).
+
 1. Open `chrome://extensions`.
 2. Enable Developer mode.
 3. Choose **Load unpacked**.

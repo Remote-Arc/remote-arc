@@ -29,39 +29,37 @@ assert.deepEqual(toggledDeviceTools(on, advertised, "read_file", false), [
 ]);
 console.log("PASS: Browser Runner device switch");
 
-// A paired browser extension older than the one on the download page shows
-// that an update is needed, like an outdated computer Agent.
+// A paired browser extension older than the version live on Chrome Web Store
+// shows that an update is needed, like an outdated computer Agent.
 {
-  const { LATEST_BROWSER_EXTENSION_VERSION, browserExtensionUpdate } =
+  const { browserExtensionUpdate } =
     await import("../src/features/dashboard/devices/browser-extension-update.js");
-  const manifest = (
-    await import("../../browser-extension/manifest.json", { with: { type: "json" } })
-  ).default as { version: string };
-  assert.equal(
-    LATEST_BROWSER_EXTENSION_VERSION,
-    manifest.version,
-    "the latest version is the one the download page serves",
-  );
+  const store = "0.4.4";
   assert.deepEqual(
-    browserExtensionUpdate({ platform: "browser", agent_version: "browser-0.3.0" }),
-    { current: "0.3.0", latest: manifest.version },
+    browserExtensionUpdate({ platform: "browser", agent_version: "browser-0.3.0" }, store),
+    { current: "0.3.0", latest: store },
   );
   assert.equal(
-    browserExtensionUpdate({ platform: "browser", agent_version: "browser-" + manifest.version }),
+    browserExtensionUpdate({ platform: "browser", agent_version: "browser-0.4.4" }, store),
     null,
   );
   assert.equal(
-    browserExtensionUpdate({ platform: "browser", agent_version: "browser-99.0.0" }),
+    browserExtensionUpdate({ platform: "browser", agent_version: "browser-0.4.5" }, store),
     null,
-    "a newer local build is not told to downgrade",
+    "a build newer than the store, still in review, is not told to downgrade",
   );
   assert.equal(
-    browserExtensionUpdate({ platform: "browser", agent_version: null }),
+    browserExtensionUpdate({ platform: "browser", agent_version: "browser-0.3.0" }, null),
+    null,
+    "no notice while the store version is unknown",
+  );
+  assert.equal(
+    browserExtensionUpdate({ platform: "browser", agent_version: null }, store),
     null,
     "an unknown version is not guessed",
   );
   assert.equal(
-    browserExtensionUpdate({ platform: "darwin", agent_version: "0.3.0" }),
+    browserExtensionUpdate({ platform: "darwin", agent_version: "0.3.0" }, store),
     null,
     "computers keep their own update notice",
   );

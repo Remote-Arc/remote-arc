@@ -87,7 +87,26 @@ await loadLocale("zh", "dashboard");
   );
   assert.doesNotMatch(single, /Step 1|taskSavedOnFailure/, "a single plain step stays unnumbered");
   assert.match(single, /<p class="taskSavedStepHead">Shell command · executed verbatim<\/p>/);
+  const notify = renderToStaticMarkup(
+    <I18nProvider initialLanguage="zh">
+      <TaskSavedSteps
+        steps={[
+          { command: "./price-watch.sh" },
+          {
+            type: "notify",
+            message: "V8 降价了",
+            include_output_of: 1,
+            run_if: { step: 1, exit_code: 0 },
+          },
+        ]}
+      />
+    </I18nProvider>,
+  );
+  assert.match(notify, /<strong>第 2 步<\/strong> · 发送通知到你的渠道/);
+  assert.match(notify, /仅当第 1 步退出码为 0 时运行。/);
+  assert.match(notify, /附上第 1 步输出的结尾。/);
+  assert.match(notify, /<blockquote class="taskSavedNotify">V8 降价了<\/blockquote>/);
   console.log(
-    "PASS: saved steps show their numbers, run conditions, success codes and cleanup steps",
+    "PASS: saved steps show their numbers, run conditions, success codes, cleanup and notify steps",
   );
 }

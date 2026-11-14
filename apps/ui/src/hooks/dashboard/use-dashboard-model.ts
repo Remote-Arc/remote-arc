@@ -26,6 +26,7 @@ import { useDashboardDialogs } from "./use-dashboard-dialogs.js";
 import { useDashboardSecurity } from "./use-dashboard-security.js";
 import { useDeviceActions } from "./use-device-actions.js";
 import { usePowerCommands } from "./use-power-commands.js";
+import { useBrowserExtensionVersion } from "./use-browser-extension-version.js";
 
 export type DashboardProps = {
   user: User;
@@ -92,6 +93,9 @@ export function useDashboardModel({
     askPrompt,
   });
   const powerCommands = usePowerCommands({ tr, refreshAll, showNotice, askConfirm });
+  const storeExtensionVersion = useBrowserExtensionVersion(
+    devices.some((device) => device.platform === "browser"),
+  );
 
   useEffect(() => {
     const syncRoute = () => {
@@ -266,6 +270,7 @@ export function useDashboardModel({
     ...security,
     ...deviceActions,
     ...powerCommands,
+    storeExtensionVersion,
     tr,
     locale,
     setLocale,

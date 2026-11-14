@@ -6,6 +6,7 @@ import type { Device } from "../../../types/app-types.js";
 import type { DashboardModel } from "../../../hooks/dashboard/use-dashboard-model.js";
 import type { DeviceFacts } from "./device-card.js";
 import { AgentUpdateCard } from "./agent-update-card.js";
+import { CHROME_WEB_STORE_URL } from "../../../config/app-config.js";
 
 // Device panel: background mode, runtime and task permissions.
 export function DeviceTasksPanel({
@@ -52,21 +53,21 @@ export function DeviceTasksPanel({
               {tr("dashboard.devices.deviceTasksPanel.latest")}v{extensionUpdate.latest}
             </span>
             <span>
-              {tr("dashboard.devices.deviceTasksPanel.chromeDoesNotAutomaticallyUpdateUnpacked")}
+              {tr("dashboard.devices.deviceTasksPanel.chromeUpdatesWebStoreInstallsAutomatically")}
             </span>
             <ol className="deviceUpdateSteps">
-              <li>{tr("dashboard.devices.deviceTasksPanel.unzipIntoTheSameFolderReplacing")}</li>
-              <li>{tr("dashboard.devices.deviceTasksPanel.openChromeExtensionsAndClickReload")}</li>
+              <li>{tr("dashboard.devices.deviceTasksPanel.toUpdateNowOpenChromeExtensions")}</li>
+              <li>{tr("dashboard.devices.deviceTasksPanel.loadedTheZipManuallyRemoveIt")}</li>
               <li>{tr("dashboard.devices.deviceTasksPanel.shareYourTabsAgainReloadingEnds")}</li>
             </ol>
           </div>
           <a
             className="ghostButton small"
-            href="/chrome-extension"
+            href={CHROME_WEB_STORE_URL}
             target="_blank"
             rel="noreferrer"
           >
-            {tr("dashboard.devices.deviceTasksPanel.downloadTheNewZip")}
+            {tr("dashboard.devices.deviceTasksPanel.openChromeWebStore")}
           </a>
         </div>
       )}

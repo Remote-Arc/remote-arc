@@ -66,7 +66,7 @@ export function BrowserModes({ compact = false }: { compact?: boolean }) {
         tr("docs.browserModes.companionHighlightShareOneTab"),
       ],
       steps: [
-        tr("docs.browserModes.downloadTheExtensionZipAndLoad"),
+        tr("docs.browserModes.installTheExtensionFromChromeWebStore"),
         tr("docs.browserModes.pairItThenAllowASite"),
       ],
       can: [
@@ -77,7 +77,7 @@ export function BrowserModes({ compact = false }: { compact?: boolean }) {
         tr("docs.browserModes.sendsOrdersAndPostsOnce"),
       ],
       limits: [
-        tr("docs.browserModes.mustBeInstalledItIsAn"),
+        tr("docs.browserModes.mustBeInstalledFromChromeWebStore"),
         tr("docs.browserModes.neverFillsPasswordCardNumberCaptcha"),
         tr("docs.browserModes.clicksAndKeysArePageEvents"),
         tr("docs.browserModes.aPageSnapshotListsUpTo"),

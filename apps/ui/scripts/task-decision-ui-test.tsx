@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { act, create } from "react-test-renderer";
 import { I18nProvider } from "../src/app/i18n.js";
 import { TaskDecisionCard } from "../src/features/tasks/task-decision-card.js";
+import { taskRepairNeedsArc } from "../src/hooks/tasks/task-state.js";
 import { taskActivity, taskNeedsAttention } from "../src/features/tasks/dashboard-task-view.js";
 import { createTranslator } from "../src/locales/locale-catalog.js";
 import {
@@ -100,6 +101,55 @@ const heldTask = {
   for (const label of ["现在重试", "跳过这次", "关闭"]) assert.match(zh, new RegExp(label));
   console.log(
     "PASS: the decision card shows the reason, evidence, timeout and choices in English and Chinese",
+  );
+}
+
+// A budget stop links to more credits; a routine Arc could have repaired is recognised.
+{
+  const html = renderToStaticMarkup(
+    <I18nProvider initialLanguage="en">
+      <TaskDecisionCard
+        decision={{ ...decision, kind: "budget_stop", reason: "Arc credits ran out." }}
+        busy={false}
+        disabled={false}
+        error={null}
+        formatTime={() => ""}
+        onDecide={() => {}}
+        onTurnOff={() => {}}
+      />
+    </I18nProvider>,
+  );
+  assert.match(
+    html,
+    /<a class="ghostButton" href="\/settings\?section=billing">Get more credits<\/a>/,
+  );
+  assert.doesNotMatch(
+    renderToStaticMarkup(
+      <I18nProvider initialLanguage="en">
+        <TaskDecisionCard
+          decision={decision}
+          busy={false}
+          disabled={false}
+          error={null}
+          formatTime={() => ""}
+          onDecide={() => {}}
+          onTurnOff={() => {}}
+        />
+      </I18nProvider>,
+    ),
+    /Get more credits/,
+    "only a budget stop offers credits",
+  );
+  assert.equal(
+    taskRepairNeedsArc({
+      state_json: JSON.stringify({ repair_needs_arc: "2026-11-14T03:00:00Z" }),
+    }),
+    "2026-11-14T03:00:00Z",
+  );
+  assert.equal(taskRepairNeedsArc({ state_json: "{" }), null);
+  assert.equal(taskRepairNeedsArc({ state_json: JSON.stringify({ repair_needs_arc: 1 }) }), null);
+  console.log(
+    "PASS: a budget stop links to credits and a repair Arc could have made is read safely",
   );
 }
 

@@ -31,15 +31,21 @@ test("Browser and Go updates share the device management update area", async ({ 
   ).toBeVisible();
   await expect(update).toContainText("v0.3.0");
   await expect(update).toContainText("v" + companionManifest.version);
-  const download = update.getByRole("link", {
-    name: zh ? "下载新版 ZIP" : "Download the new ZIP",
+  const store = update.getByRole("link", {
+    name: zh ? "打开 Chrome 应用商店" : "Open Chrome Web Store",
     exact: true,
   });
-  await expect(download).toHaveAttribute("href", "/chrome-extension");
-  await expect(download).toBeVisible();
-  await download.click({ trial: true });
-  await expect(update).toContainText(zh ? "同一个文件夹" : "same folder");
+  await expect(store).toHaveAttribute(
+    "href",
+    "https://chromewebstore.google.com/detail/remote-arc-browser/eldbdnmgaecbdgpinljemenkolfmmjie",
+  );
+  await expect(store).toBeVisible();
+  await store.click({ trial: true });
+  await expect(update).toContainText(
+    zh ? "自动更新" : "updates a Chrome Web Store install by itself",
+  );
   await expect(update).toContainText("chrome://extensions");
+  await expect(update).toContainText(zh ? "手动加载过 ZIP" : "Loaded the ZIP manually");
   await expect(update).toContainText(zh ? "重新共享标签页" : "Share your tabs again");
   await expect(
     update.getByRole("button", { name: zh ? "复制升级命令" : "Copy upgrade command", exact: true }),

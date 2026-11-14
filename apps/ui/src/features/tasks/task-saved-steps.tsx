@@ -15,6 +15,8 @@ export type SavedStep = {
   cwd?: string;
   run_if?: StepCondition;
   accept_exit_codes?: number[];
+  message?: string;
+  include_output_of?: number;
 };
 
 const RUN_IF = {
@@ -44,6 +46,28 @@ export function describeStepCondition(condition: StepCondition, tr: Translate) {
 
 function StepCommand({ step, label }: { step: SavedStep; label: string }) {
   const { tr } = useI18n();
+  if (step.type === "notify")
+    return (
+      <div className="taskSavedStep">
+        <p className="taskSavedStepHead">
+          {label && (
+            <>
+              <strong>{label}</strong> ·{" "}
+            </>
+          )}
+          {tr("tasks.taskSavedSteps.notify")}
+        </p>
+        {step.run_if && (
+          <p className="taskSavedStepRule">{describeStepCondition(step.run_if, tr)}</p>
+        )}
+        {step.include_output_of && (
+          <p className="taskSavedStepRule">
+            {tr("tasks.taskSavedSteps.includesOutput", { step: step.include_output_of })}
+          </p>
+        )}
+        <blockquote className="taskSavedNotify">{step.message}</blockquote>
+      </div>
+    );
   if (!step.command) return <p>{step.type}</p>;
   return (
     <div className="taskSavedStep">

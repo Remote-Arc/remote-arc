@@ -4,6 +4,7 @@ import { Fragment, lazy, Suspense, useEffect, useState, type ReactNode } from "r
 import { useTheme } from "../../hooks/use-theme.js";
 import { useI18n } from "../../hooks/use-i18n.js";
 import { OrganizationSettings } from "./organization-settings.js";
+import { NotificationSettings } from "./notification-settings.js";
 import { ProductInstall } from "../../app/product-pwa.js";
 import "../../styles/settings/dashboard-settings.css";
 const TeammateSettings = lazy(() =>
@@ -11,7 +12,14 @@ const TeammateSettings = lazy(() =>
 );
 
 type Section =
-  "account" | "appearance" | "workspaces" | "connections" | "billing" | "memory" | "teammates";
+  | "account"
+  | "appearance"
+  | "workspaces"
+  | "connections"
+  | "billing"
+  | "memory"
+  | "notifications"
+  | "teammates";
 type Destination = "devices" | "connect" | "security" | "apps";
 type Props = {
   accountId?: string;
@@ -43,10 +51,17 @@ function Icon({
     | "apps"
     | "copy"
     | "check"
-    | "arrow";
+    | "arrow"
+    | "bell";
   size?: number;
 }) {
   const paths: Record<typeof name, ReactNode> = {
+    bell: (
+      <>
+        <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15L6 16Z" />
+        <path d="M10 20.5a2.2 2.2 0 0 0 4 0" />
+      </>
+    ),
     appearance: (
       <>
         <rect x="3" y="4" width="18" height="13" rx="2" />
@@ -142,6 +157,7 @@ export function DashboardSettings({
       "connections",
       "billing",
       "memory",
+      "notifications",
       "teammates",
     ].includes(value || "")
       ? (value as Section)
@@ -166,12 +182,17 @@ export function DashboardSettings({
     currentName?.trim() || currentEmail.split("@")[0] || tr("settings.dashboardSettings.account");
   const nav: {
     id: Section;
-    icon: "user" | "appearance" | "team" | "link" | "billing";
+    icon: "user" | "appearance" | "team" | "link" | "billing" | "bell";
     title: string;
   }[] = [
     { id: "account", icon: "user", title: tr("settings.dashboardSettings.profile") },
     { id: "appearance", icon: "appearance", title: tr("settings.dashboardSettings.appearance") },
     { id: "memory", icon: "user", title: tr("settings.dashboardSettings.memory") },
+    {
+      id: "notifications",
+      icon: "bell",
+      title: tr("settings.dashboardSettings.notifications"),
+    },
     ...(accountId
       ? [
           {
@@ -204,6 +225,11 @@ export function DashboardSettings({
       eyebrow: tr("settings.dashboardSettings.personalSettings"),
       title: tr("settings.dashboardSettings.makeItYours"),
       detail: tr("settings.dashboardSettings.chooseHowYourWorkspaceLooksAnd"),
+    },
+    notifications: {
+      eyebrow: tr("settings.dashboardSettings.notificationsEyebrow"),
+      title: tr("settings.dashboardSettings.notificationsTitle"),
+      detail: tr("settings.dashboardSettings.notificationsDetail"),
     },
     memory: {
       eyebrow: tr("settings.dashboardSettings.personalContext"),
@@ -498,6 +524,7 @@ export function DashboardSettings({
 
         {section === "billing" && <ArcBillingPanel />}
         {section === "memory" && <ArcMemoryPanel />}
+        {section === "notifications" && <NotificationSettings />}
       </div>
     </div>
   );

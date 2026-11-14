@@ -3,9 +3,11 @@ import { createArcInputPreview } from "./arc-input-preview.js";
 import type { SecurityState } from "@remotearc/protocol";
 import { ARC_TOPUPS, ARC_PREMIUM_MODELS, CONNECT_FREE_OVERFLOW } from "@remotearc/protocol";
 import appDirectory from "../data/app-directory.json" with { type: "json" };
+import companionManifest from "../../../browser-extension/manifest.json" with { type: "json" };
 import { createArcPreview } from "./arc-preview.js";
 import { createBillingPreview, previewBillingPlans } from "./billing-preview.js";
 import { createSupportPreview } from "./support-preview.js";
+import { createNotificationPreview } from "./notification-preview.js";
 import { createFollowupPreview } from "./followup-preview.js";
 import { createOnboardingPreview } from "./onboarding-preview.js";
 import { previewActivationUsers } from "./activation-preview.js";
@@ -68,6 +70,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
   const onboardingPreview = createOnboardingPreview(new URL(location.href));
   const followupPreview = createFollowupPreview(window.sessionStorage);
   const supportPreview = createSupportPreview(window.sessionStorage);
+  const notificationPreview = createNotificationPreview();
   const previewEmployees = [
     { id: "preview-developer", name: "开发智能体", responsibility: "技术架构与产品实现" },
     { id: "preview-designer", name: "设计智能体", responsibility: "产品体验与交互设计" },
@@ -451,7 +454,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       trigger_json: JSON.stringify({ type: "interval", every_seconds: 86400 }),
       action_json: JSON.stringify({ steps: [{ type: "device_command", command: "pnpm build" }] }),
       goal_json: null,
-      state_json: JSON.stringify({ phase: "idle" }),
+      state_json: JSON.stringify({ phase: "idle", repair_needs_arc: previewAgo(22 * 3600000) }),
       interval_seconds: 300,
       next_run_at: null,
       expires_at: null,
@@ -669,6 +672,14 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
         method,
         init?.body ?? (input instanceof Request ? await input.clone().text() : undefined),
       )!;
+    if (url.pathname.startsWith("/api/notifications")) {
+      const result = notificationPreview.handle(
+        url,
+        method,
+        init?.body ?? (input instanceof Request ? await input.clone().text() : undefined),
+      );
+      if (result) return result;
+    }
     const taskAction = url.pathname.match(
       /^\/api\/automations\/([^/]+)\/(pause|resume|cancel|retry_now|skip_run)$/,
     );
@@ -707,6 +718,9 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     }
 
     if (url.pathname === "/api/runtime-config") return nativeFetch(input, init);
+    // Preview stands in for Chrome Web Store with the version in this repository.
+    if (url.pathname === "/api/browser-extension/version")
+      return json({ version: companionManifest.version });
     if (url.pathname === "/api/billing/catalog") {
       const plans =
         new URLSearchParams(location.search).get("pricing") === "bundled"

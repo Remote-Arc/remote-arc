@@ -211,9 +211,9 @@ export function ArcNativeChat({
     },
     {
       icon: "routine",
-      title: tr("arc.chat.arcNativeChat.startAMorningRoutine"),
-      detail: tr("arc.chat.arcNativeChat.aDailyHeadStart"),
-      text: tr("arc.chat.arcNativeChat.everyMorningAtSummarizeMyEmail"),
+      title: tr("arc.chat.arcNativeChat.watchAPriceForMe"),
+      detail: tr("arc.chat.arcNativeChat.checksOnScheduleTellsYouOnChange"),
+      text: tr("arc.chat.arcNativeChat.watchAPricePrompt"),
     },
     {
       icon: "apps",

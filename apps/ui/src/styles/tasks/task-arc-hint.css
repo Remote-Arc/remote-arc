@@ -1,0 +1,22 @@
+.taskArcHint {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+}
+.taskArcHint p {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.taskArcHint .taskArcHintTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.taskArcHint a {
+  display: inline-flex;
+}

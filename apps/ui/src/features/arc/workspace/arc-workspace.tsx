@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { arcRequest } from "../../../hooks/arc/use-arc-chat.js";
 import { ArcExecutionLog } from "./arc-execution-log.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
+import { ConnectTasks, isSavedRoutine } from "../../tasks/connect-tasks.js";
 type Work = ArcWork;
 type Run = {
   id: string;
@@ -22,12 +23,19 @@ export function ArcWorkWorkspace({
   view,
   tr,
   onChat,
+  devices = [],
+  onConnectAI,
 }: {
   view: "tasks" | "routines" | "activity";
   tr: Translate;
   onChat: (prompt?: string, sessionId?: string) => void;
   onOpenTeams?: () => void;
+  /** Computers, to name where a routine saved from an AI runs. */
+  devices?: { id: string; name: string }[];
+  onConnectAI?: () => void;
 }) {
+  // Routines saved from a connected AI are listed here too, after Arc's own work.
+  const [saved, setSaved] = useState<{ status: string; trigger_json: string | null }[]>([]);
   const [data, setData] = useState<{ work: Work[]; runs: Run[] } | null>(null),
     [error, setError] = useState(false),
     [query, setQuery] = useState(""),
@@ -71,9 +79,9 @@ export function ArcWorkWorkspace({
   const starters = [
     {
       icon: "routine" as const,
-      name: tr("arc.workspace.arcWorkspace.morningBrief"),
-      detail: tr("arc.workspace.arcWorkspace.everyWeekdayEmailCalendar"),
-      prompt: tr("arc.workspace.arcWorkspace.everyWeekdayAtPrepareMyMorning"),
+      name: tr("arc.workspace.arcWorkspace.priceWatch"),
+      detail: tr("arc.workspace.arcWorkspace.everyFewHoursNotifyOnChange"),
+      prompt: tr("arc.workspace.arcWorkspace.priceWatchPrompt"),
     },
     {
       icon: "tasks" as const,
@@ -83,9 +91,9 @@ export function ArcWorkWorkspace({
     },
     {
       icon: "activity" as const,
-      name: tr("arc.workspace.arcWorkspace.weeklyProjectReview"),
-      detail: tr("arc.workspace.arcWorkspace.weeklyProgressNextSteps"),
-      prompt: tr("arc.workspace.arcWorkspace.everyFridaySummarizeProgressAndOpen"),
+      name: tr("arc.workspace.arcWorkspace.nightlyTests"),
+      detail: tr("arc.workspace.arcWorkspace.everyNightTellMeIfRed"),
+      prompt: tr("arc.workspace.arcWorkspace.nightlyTestsPrompt"),
     },
     {
       icon: "device" as const,
@@ -163,7 +171,7 @@ export function ArcWorkWorkspace({
               maxLength={4000}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder={tr("arc.workspace.arcWorkspace.everyWeekdayAtPrepareMyMorning2")}
+              placeholder={tr("arc.workspace.arcWorkspace.composerExample")}
             />
             <footer>
               <span>{tr("arc.workspace.arcWorkspace.describeItArcSetsItUp")}</span>
@@ -210,7 +218,10 @@ export function ArcWorkWorkspace({
               >
                 {label}
                 <span>
-                  {(data?.work || []).filter((w) => value === "all" || w.kind === value).length}
+                  {(data?.work || []).filter((w) => value === "all" || w.kind === value).length +
+                    saved.filter(
+                      (task) => value === "all" || (value === "routine") === isSavedRoutine(task),
+                    ).length}
                 </span>
               </button>
             ))}
@@ -335,7 +346,16 @@ export function ArcWorkWorkspace({
               })}
             </div>
           )}
-          {(view === "activity" ? !runs.length : !work.length) && (
+          {view !== "activity" && (
+            <ConnectTasks
+              variant="arc"
+              devices={devices}
+              onConnectAI={onConnectAI || (() => undefined)}
+              arcFilter={{ query, filter, kind: kind as "all" | "task" | "routine" }}
+              onLoaded={setSaved}
+            />
+          )}
+          {(view === "activity" ? !runs.length : !work.length && !saved.length) && (
             <div className="arcWorkEmpty">
               <span className="arcWorkEmptyIcon">
                 <Icon
@@ -358,7 +378,7 @@ export function ArcWorkWorkspace({
                 {query || filter !== "all"
                   ? tr("arc.workspace.arcWorkspace.tryADifferentSearchOrFilter")
                   : view === "routines"
-                    ? tr("arc.workspace.arcWorkspace.everyWeekdayAtSummarizeMyInbox")
+                    ? tr("arc.workspace.arcWorkspace.routineEmptyExample")
                     : view === "activity"
                       ? tr("arc.workspace.arcWorkspace.completedAndOngoingChatTaskAnd")
                       : tr("arc.workspace.arcWorkspace.describeATaskAboveOrChoose")}

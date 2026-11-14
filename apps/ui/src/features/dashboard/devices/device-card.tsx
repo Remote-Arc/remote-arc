@@ -51,7 +51,7 @@ export function deviceFacts(device: Device, m: DashboardModel) {
     device.background_enabled === true
       ? goUpdateCommands(LATEST_AGENT_VERSION, true).join("\n")
       : goUpdateCommands(LATEST_AGENT_VERSION, false).join("\n");
-  const extensionUpdate = browserExtensionUpdate(device);
+  const extensionUpdate = browserExtensionUpdate(device, m.storeExtensionVersion);
   return {
     advertisedTools,
     enabledTools,

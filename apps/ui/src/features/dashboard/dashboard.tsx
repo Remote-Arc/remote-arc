@@ -259,7 +259,11 @@ export function Dashboard(props: DashboardProps) {
 
         {active === "automations" && (
           <ConnectTasksErrorBoundary tr={tr}>
-            <ConnectTasks devices={devices} onConnectAI={() => navigateTab("connect")} />
+            <ConnectTasks
+              devices={devices}
+              onConnectAI={() => navigateTab("connect")}
+              onOpenArc={arcAvailable ? () => navigateTab("agent-goals") : undefined}
+            />
           </ConnectTasksErrorBoundary>
         )}
 
@@ -274,6 +278,8 @@ export function Dashboard(props: DashboardProps) {
             }
             tr={tr}
             onChat={openArcChat}
+            devices={devices}
+            onConnectAI={() => navigateTab("connect")}
           />
         )}
 

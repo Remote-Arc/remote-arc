@@ -7,9 +7,12 @@ import { TaskResults, taskActivity, taskNeedsAttention } from "./dashboard-task-
 import { isVisibleInWorkspace } from "../../lib/dashboard-workspaces.js";
 import { taskDecision, useTaskDecision } from "../../hooks/tasks/use-task-decision.js";
 import { TaskDecisionCard } from "./task-decision-card.js";
+import { TaskArcHint } from "./task-arc-hint.js";
+import { taskRepairNeedsArc } from "../../hooks/tasks/task-state.js";
 import "../../styles/tasks/connect-tasks.css";
 import "../../styles/tasks/task-decision.css";
 import "../../styles/tasks/task-saved-steps.css";
+import "../../styles/tasks/task-arc-hint.css";
 
 type Task = {
   id: string;
@@ -34,15 +37,45 @@ type Task = {
 type Collection = { automations: Task[]; scheduler?: { state: string; overdue_count: number } };
 const terminal = (status: string) =>
   ["completed", "failed", "cancelled", "expired"].includes(status);
+/** A saved Task that repeats: on an interval or on every matching event. */
+export const isSavedRoutine = (task: { trigger_json: string | null }) => {
+  try {
+    return ["interval", "webhook"].includes(JSON.parse(task.trigger_json || "null")?.type);
+  } catch {
+    return false;
+  }
+};
+export type SavedTaskFilter = {
+  query: string;
+  filter: string;
+  kind: "all" | "task" | "routine";
+};
 
+/**
+ * Tasks saved from a connected AI. On the Connect page it is the whole page;
+ * inside Arc → Tasks (variant "arc") it is one section that follows Arc's
+ * own search, status and kind filters.
+ */
 export function ConnectTasks({
   devices,
   onConnectAI,
+  variant = "page",
+  arcFilter,
+  onOpenArc,
+  onLoaded,
 }: {
   devices: { id: string; name: string }[];
   onConnectAI: () => void;
+  variant?: "page" | "arc";
+  /** Arc's search and filters, used by the "arc" variant. */
+  arcFilter?: SavedTaskFilter;
+  /** Opens Arc → Tasks, where these Tasks are listed with Arc's own. */
+  onOpenArc?: () => void;
+  /** Reports the loaded saved Tasks, so Arc can count them. */
+  onLoaded?: (tasks: { status: string; trigger_json: string | null }[]) => void;
 }) {
   const { tr, locale } = useI18n();
+  const embedded = variant === "arc";
   const [data, setData] = useState<Collection | null>(null),
     [error, setError] = useState(false),
     [revision, setRevision] = useState(0);
@@ -206,16 +239,24 @@ export function ConnectTasks({
   const tasks = (data?.automations || []).filter((task) =>
     isVisibleInWorkspace(task, "automations"),
   );
+  useEffect(() => {
+    if (data) onLoaded?.(tasks);
+    // Report each loaded list once; `tasks` is derived from `data`.
+  }, [data]);
   const selectedTask = selected ? tasks.find((task) => task.id === selected) : undefined;
+  const activeQuery = embedded ? arcFilter?.query || "" : query;
+  const activeFilter = embedded ? arcFilter?.filter || "all" : filter;
+  const activeKind = embedded ? arcFilter?.kind || "all" : "all";
   const shown = tasks.filter(
     (task) =>
       (!selected || task.id === selected) &&
-      (filter === "all" ||
-        (filter === "active" && !terminal(task.status) && task.status !== "paused") ||
-        (filter === "attention" && taskNeedsAttention(task)) ||
-        (filter === "finished" && terminal(task.status))) &&
+      (activeKind === "all" || (activeKind === "routine") === isSavedRoutine(task)) &&
+      (activeFilter === "all" ||
+        (activeFilter === "active" && !terminal(task.status) && task.status !== "paused") ||
+        (activeFilter === "attention" && taskNeedsAttention(task)) ||
+        (activeFilter === "finished" && terminal(task.status))) &&
       [task.name, task.id, devices.find((device) => device.id === task.device_id)?.name].some(
-        (value) => value?.toLowerCase().includes(query.trim().toLowerCase()),
+        (value) => value?.toLowerCase().includes(activeQuery.trim().toLowerCase()),
       ),
   );
   const time = (value: string | null) =>
@@ -255,28 +296,51 @@ export function ConnectTasks({
       }) as Record<string, string>
     )[value] || value;
   return (
-    <section className="connectTasks" aria-label={tr("tasks.connectTasks.connectTasks")}>
-      <header className="overviewTopbar">
-        <div>
-          <span className="eyebrow">CONNECT</span>
-          <h1>{tr("tasks.connectTasks.tasks")}</h1>
-          <p>{tr("tasks.connectTasks.backgroundCommandsSchedulesAndSavedGoals")}</p>
+    <section
+      className={"connectTasks" + (embedded ? " connectTasksInArc" : "")}
+      aria-label={
+        embedded ? tr("tasks.connectTasks.savedFromYourAi") : tr("tasks.connectTasks.connectTasks")
+      }
+    >
+      {embedded ? (
+        <div className="arcWorkSectionHeader">
+          <h2>{tr("tasks.connectTasks.savedFromYourAi")}</h2>
+          <span>{tr("tasks.connectTasks.savedFromYourAiDetail")}</span>
         </div>
-        <button type="button" className="ghostButton" onClick={() => setRevision((n) => n + 1)}>
-          {tr("tasks.connectTasks.refreshTasks")}
-        </button>
-      </header>
-      <aside className="connectTasksIntro">
-        <ProductIcon name="tasks" />
-        <div>
-          <strong>{tr("tasks.connectTasks.createInYourConnectedAiChat")}</strong>
-          <p>{tr("tasks.connectTasks.askYourAiToSaveA")}</p>
+      ) : (
+        <header className="overviewTopbar">
+          <div>
+            <span className="eyebrow">CONNECT</span>
+            <h1>{tr("tasks.connectTasks.savedFromYourAi")}</h1>
+            <p>{tr("tasks.connectTasks.backgroundCommandsSchedulesAndSavedGoals")}</p>
+          </div>
+          <button type="button" className="ghostButton" onClick={() => setRevision((n) => n + 1)}>
+            {tr("tasks.connectTasks.refreshTasks")}
+          </button>
+        </header>
+      )}
+      {!embedded && onOpenArc && (
+        <div className="connectTasksNotice connectTasksArcLink" role="note">
+          <p>{tr("tasks.connectTasks.alsoInArc")}</p>
+          <button type="button" className="ghostButton" onClick={onOpenArc}>
+            {tr("tasks.connectTasks.openArcTasks")}
+            <ProductIcon name="arrowUpRight" size={14} />
+          </button>
         </div>
-        <button type="button" className="ghostButton" onClick={onConnectAI}>
-          {tr("tasks.connectTasks.aiClients")}
-          <ProductIcon name="arrowUpRight" size={14} />
-        </button>
-      </aside>
+      )}
+      {!embedded && (
+        <aside className="connectTasksIntro">
+          <ProductIcon name="tasks" />
+          <div>
+            <strong>{tr("tasks.connectTasks.createInYourConnectedAiChat")}</strong>
+            <p>{tr("tasks.connectTasks.askYourAiToSaveA")}</p>
+          </div>
+          <button type="button" className="ghostButton" onClick={onConnectAI}>
+            {tr("tasks.connectTasks.aiClients")}
+            <ProductIcon name="arrowUpRight" size={14} />
+          </button>
+        </aside>
+      )}
       {data?.scheduler && data.scheduler.state !== "healthy" && (
         <p className="connectTasksNotice" role="status">
           {tr("tasks.connectTasks.schedulingNeedsAttentionRefreshToCheck")}
@@ -310,45 +374,47 @@ export function ConnectTasks({
           </button>
         </div>
       )}
-      <div className="connectTasksToolbar">
-        <label>
-          <ProductIcon name="search" size={16} />
-          <input
-            type="search"
-            aria-label={tr("tasks.connectTasks.searchConnectTasks")}
-            placeholder={tr("tasks.connectTasks.searchByNameComputerOrTask")}
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              if (selected) clearSelection();
-            }}
-          />
-        </label>
-        <div role="group" aria-label={tr("tasks.connectTasks.filterTasks")}>
-          {[
-            ["all", tr("tasks.connectTasks.all")],
-            ["active", tr("tasks.connectTasks.active")],
-            ["attention", tr("tasks.connectTasks.attention")],
-            ["finished", tr("tasks.connectTasks.finished")],
-          ].map(([id, label]) => (
-            <button
-              type="button"
-              key={id}
-              aria-pressed={filter === id}
-              onClick={() => {
-                setFilter(id!);
+      {!embedded && (
+        <div className="connectTasksToolbar">
+          <label>
+            <ProductIcon name="search" size={16} />
+            <input
+              type="search"
+              aria-label={tr("tasks.connectTasks.searchConnectTasks")}
+              placeholder={tr("tasks.connectTasks.searchByNameComputerOrTask")}
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
                 if (selected) clearSelection();
               }}
-            >
-              {label}
-            </button>
-          ))}
+            />
+          </label>
+          <div role="group" aria-label={tr("tasks.connectTasks.filterTasks")}>
+            {[
+              ["all", tr("tasks.connectTasks.all")],
+              ["active", tr("tasks.connectTasks.active")],
+              ["attention", tr("tasks.connectTasks.attention")],
+              ["finished", tr("tasks.connectTasks.finished")],
+            ].map(([id, label]) => (
+              <button
+                type="button"
+                key={id}
+                aria-pressed={filter === id}
+                onClick={() => {
+                  setFilter(id!);
+                  if (selected) clearSelection();
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
       {!data && !error && (
         <WorkspaceLoading label={tr("tasks.connectTasks.loadingConnectTasks")} variant="rows" />
       )}
-      {data && shown.length === 0 && (
+      {data && shown.length === 0 && !(embedded && tasks.length === 0) && (
         <div className="connectTasksEmpty" role="status">
           <ProductIcon name="tasks" size={25} />
           <h2>
@@ -406,6 +472,7 @@ export function ConnectTasks({
                 </p>
               )
             )}
+            {taskRepairNeedsArc(task) && <TaskArcHint />}
             <dl>
               <div>
                 <dt>{tr("tasks.connectTasks.runsStarted")}</dt>

@@ -4,11 +4,16 @@
 
 # Remote Arc
 
-**Controlled access to your computers for the AI you already use.**
+<!-- product-intro:start -->
 
-This repository holds the parts of Remote Arc that run on your computer and in your browser: the native device Agent, its Execution Core, the `remotelink` installer, the Chrome Companion, the website and Dashboard front end, the first-party Skills, and the plugin manifests for AI clients.
+**Agent infrastructure for real work across your apps and computers.**
+
+Arc is your hosted AI agent. Connect brings the same authorized Apps and device execution to the AI client you already use. Remote Arc manages the context, permissions, persistent work, device placement and usage around model decisions so work can proceed from a request to an inspectable result.
+<!-- product-intro:end -->
 
 [Website](https://remotearc.app) · [Connect your AI](https://remotearc.app/connect-ai) · [Downloads](https://remotearc.app/downloads) · [User guide](https://remotearc.app/docs/start-here) · [Security](./SECURITY.md)
+
+This repository holds the parts of Remote Arc that run on your computer and in your browser: the native device Agent, its Execution Core, the `remotelink` installer, the Chrome Companion, the website and Dashboard front end, the first-party Skills, and the plugin manifests for AI clients.
 
 <sub>Source available for transparency and security review under a [proprietary license](./LICENSE). Not open-source licensed.</sub>
 
@@ -18,12 +23,21 @@ This repository holds the parts of Remote Arc that run on your computer and in y
 
 ## What Remote Arc does
 
-Remote Arc lets ChatGPT, Claude, Codex, Cursor and other MCP clients work on Windows, macOS and Linux computers you pair, under permissions you set per computer. Each computer connects outward to Remote Arc, so it needs no open inbound port or VPN.
+Remote Arc lets ChatGPT, Claude, Codex, Cursor and other MCP clients work on Windows, macOS and Linux computers you pair, under permissions you set per computer. Each computer connects outward to Remote Arc, so it needs no open inbound port or VPN. The MCP endpoint is `https://mcp.remotearc.app/mcp`.
 
-- **Connect** brings your paired computers, shared browser tabs and authorized cloud Apps to the AI client you already use, through one MCP endpoint: `https://mcp.remotearc.app/mcp`.
-- **Arc** is the hosted agent at [agent.remotearc.app](https://agent.remotearc.app), with the same Apps and computers.
+<!-- product-overview:start -->
 
-Plans and current allowances are on the [pricing page](https://remotearc.app/pricing).
+## Two ways to work
+
+| Product     | Start here                                                           | What it does                                                                                                                        |
+| ----------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Arc**     | [Hosted workspace](https://agent.remotearc.app/dashboard/agent/chat) | Chat with a personal agent, use connected Apps/computers, reuse Skills, and create one-off Tasks or recurring routines.             |
+| **Connect** | [Connect your AI](https://remotearc.app/connect-ai)                  | Use authorized cloud accounts, paired devices and your browser from compatible ChatGPT, Claude, Codex, Cursor or other MCP clients. |
+
+Arc keeps a delegated responsibility together: its sources, instructions, conversation and run history, with fresh bounded judgment when scheduled and checks against actual results. Start with a daily work brief, project check-in, delivery verification or change follow-up. The [use-case catalog](https://remotearc.app/use-cases) also keeps Arc and Connect paths for all 15 concrete workflows.
+
+Every plan includes every Connect tool. **Free** has monthly Connect call and file-transfer allowances and up to 2 computers. **Pro**, formerly Connect Unlimited, removes the monthly Connect call cap. **Pro** and **Max** include the computers, Arc-hosted AI and monthly Credits shown at checkout and in billing settings. Existing subscriptions retain their purchased terms until explicitly changed. Every account can activate a one-time 14-day Arc trial. Users never supply a model API key. Current prices and allowances are on the [pricing page](https://remotearc.app/pricing); third-party App charges are separate. Preview environments use simulated data.
+<!-- product-overview:end -->
 
 ## Add Remote Arc to your AI client
 
@@ -39,25 +53,49 @@ The [setup guide](https://remotearc.app/connect-ai) has the current steps for ea
 
 ## Install the Agent
 
-Install the Agent only on computers the AI should work on. On macOS or Linux (including WSL), without Node.js:
+Install the Agent only on computers the AI should work on. With npm (Node.js 20+), which also upgrades an existing install:
+
+```bash
+npx remotelink@latest
+```
+
+<!-- prettier-ignore-start -->
+
+<!-- native-install:start -->
+### Native downloads and Homebrew
+
+Standalone 0.7.1 needs no Node.js or Go compiler. [Installation and upgrade guide](https://remotearc.app/downloads).
+
+On macOS or Linux (including WSL), install without Node.js:
 
 ```sh
 curl -fsSL https://remotearc.app/install.sh | sh
 ```
 
-With Homebrew:
+The script verifies SHA256 and installs to ~/.local/bin without sudo. On a first install from a terminal it then starts the Agent, so you can pair the computer and choose its permissions. Upgrades, runs without a terminal and `REMOTEARC_NO_START=1` only install; start the Agent with `remotelink`. Set REMOTEARC_INSTALL_DIR to an absolute path to choose another directory. Rerun the installer to upgrade after stopping the Agent.
+
+| Platform | Download |
+| --- | --- |
+| macOS Apple Silicon | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-darwin-arm64) |
+| macOS Intel | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-darwin-amd64) |
+| Windows x64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-windows-amd64.exe) |
+| Windows ARM64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-windows-arm64.exe) |
+| Linux x64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-linux-amd64) |
+| Linux ARM64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-linux-arm64) |
+
+[SHA256SUMS](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/SHA256SUMS) · [Release notes](https://github.com/Remote-Arc/remote-arc/releases/tag/remotelink-v0.7.1)
 
 ```bash
 brew tap remote-arc/remote-arc https://github.com/Remote-Arc/remote-arc
+if brew command trust >/dev/null 2>&1; then brew trust --formula remote-arc/remote-arc/remotelink remote-arc/remote-arc/remotelink-go; fi
 brew install remote-arc/remote-arc/remotelink
 remotelink
 ```
 
-With npm (Node.js 20+), which also upgrades an existing install:
+The existing `remotelink-go` formula remains available for upgrades; install one formula at a time.
+<!-- native-install:end -->
 
-```bash
-npx remotelink@latest
-```
+<!-- prettier-ignore-end -->
 
 Every installer checks SHA256 before it runs anything. Standalone binaries for each platform, `SHA256SUMS` and release notes are on the [latest release](https://github.com/Remote-Arc/remote-arc/releases/latest). Starting the Agent opens browser pairing; approve it with the same Remote Arc account, then choose the computer's permissions in the [Dashboard](https://agent.remotearc.app/devices).
 

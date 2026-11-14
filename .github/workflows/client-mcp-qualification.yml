@@ -20,7 +20,9 @@ on:
       public_version:
         description: Published remotelink candidate to qualify
         type: string
-        default: "0.6.2-rc.4"
+        # 0.7.1 or later: earlier npm launchers download from the pre-split
+        # repository address, which no longer serves releases.
+        default: "0.7.1"
 
 permissions:
   contents: read
@@ -58,7 +60,7 @@ jobs:
       - name: Install the public Remote Link candidate
         shell: bash
         env:
-          REMOTEARC_QUALIFICATION_VERSION: ${{ inputs.public_version || '0.6.2-rc.4' }}
+          REMOTEARC_QUALIFICATION_VERSION: ${{ inputs.public_version || '0.7.1' }}
         run: npm install --prefix work/public-cli --ignore-scripts --no-audit --no-fund --package-lock=false "remotelink@$REMOTEARC_QUALIFICATION_VERSION"
       - name: Build source under qualification
         run: go -C apps/agent build -ldflags "-X main.version=0.6.2-rc.4-dev.npm-254" -o ../../work/remotelink-source${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/remotelink

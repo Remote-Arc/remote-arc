@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { parseChangelog, releaseNotesMarkdown } from "./release-content.mjs";
 
 const root = new URL("../", import.meta.url);
@@ -91,10 +91,14 @@ const rootReadme = readFileSync(rootReadmePath, "utf8").replaceAll("\r\n", "\n")
 // remains specific to the npm/npx package rather than other installers.
 const overviewStart = "<!-- github-overview:start -->";
 const overviewEnd = "<!-- github-overview:end -->";
-const introduction = rootReadme.match(/^# Remote Arc\n\n([\s\S]*?)\n\n\[Website\]/m)?.[1];
-const productSection = rootReadme.match(
-  /## Two ways to work\n[\s\S]*?(?=\n## From a goal to a result)/,
-)?.[0];
+// The overview comes from marked blocks, so the public README (export/overlay)
+// can carry the same blocks around different surrounding text.
+const markedBlock = (text, name) =>
+  text
+    .match(new RegExp("<!-- " + name + ":start -->([\\s\\S]*?)<!-- " + name + ":end -->"))?.[1]
+    ?.trim();
+const introduction = markedBlock(rootReadme, "product-intro");
+const productSection = markedBlock(rootReadme, "product-overview");
 if (
   !introduction ||
   !productSection ||
@@ -185,16 +189,33 @@ const nativeBlock = [
   "The existing `remotelink-go` formula remains available for upgrades; install one formula at a time.",
   installEnd,
 ].join("\n");
+const withNativeBlock = (text) => {
+  const start = text.indexOf(installStart);
+  return (
+    text.slice(0, start) +
+    nativeBlock +
+    text.slice(text.indexOf(installEnd, start) + installEnd.length)
+  );
+};
 if (!rootReadme.includes(installStart) || !rootReadme.includes(installEnd))
   throw new Error("Root README native install markers are missing");
-const rootStart = rootReadme.indexOf(installStart);
-const expectedRootReadme =
-  rootReadme.slice(0, rootStart) +
-  nativeBlock +
-  rootReadme.slice(rootReadme.indexOf(installEnd, rootStart) + installEnd.length);
+const expectedRootReadme = withNativeBlock(rootReadme);
+// The public README (private repository only) carries the same download block.
+const publicReadmePath = new URL("export/overlay/README.md", root);
+const publicReadme = existsSync(publicReadmePath)
+  ? readFileSync(publicReadmePath, "utf8").replaceAll("\r\n", "\n")
+  : undefined;
+if (publicReadme !== undefined && !publicReadme.includes(installStart))
+  throw new Error("Public README native install markers are missing");
+const expectedPublicReadme = publicReadme === undefined ? undefined : withNativeBlock(publicReadme);
 
 if (mode === "--check") {
-  if (expected !== readme || expectedRootReadme !== rootReadme || cliLicense !== rootLicense) {
+  if (
+    expected !== readme ||
+    expectedRootReadme !== rootReadme ||
+    expectedPublicReadme !== publicReadme ||
+    cliLicense !== rootLicense
+  ) {
     console.error("Release or native download documentation is out of sync with CHANGELOG.md");
     process.exit(1);
   }
@@ -205,5 +226,6 @@ if (mode === "--check") {
 if (mode !== "--write") throw new Error("Unknown mode: " + mode);
 if (expected !== readme) writeFileSync(cliReadmePath, expected);
 if (expectedRootReadme !== rootReadme) writeFileSync(rootReadmePath, expectedRootReadme);
+if (expectedPublicReadme !== publicReadme) writeFileSync(publicReadmePath, expectedPublicReadme);
 if (cliLicense !== rootLicense) writeFileSync(cliLicensePath, rootLicense);
 console.log("synced release docs for remotelink " + latest.version);

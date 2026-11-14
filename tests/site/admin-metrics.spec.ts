@@ -713,7 +713,7 @@ test("Fleet filters narrow users by computers, platform and limit refusals", asy
     .click();
   const rows = panel.locator(".opsTable tbody tr");
   await expect(rows.nth(0).locator(".opsPairingRefusals")).toHaveText(
-    zh ? "被拒 3 台（30 天）" : "3 refused (30 days)",
+    zh ? "被拒 3 次（30 天）" : "3 refused pairings (30 days)",
   );
   await expect(rows.nth(1).locator(".opsPairingRefusals")).toHaveCount(0);
   const latest = () => new URL(calls.operations.at(-1)!).searchParams;

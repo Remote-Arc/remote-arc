@@ -28,7 +28,9 @@ test("notification settings explain Slack linking, set up a signed webhook once 
     name: /Any routine run fails|任何一次运行失败/,
   });
   await expect(runFailed).toBeChecked();
-  await runFailed.uncheck();
+  // The checkbox shows the saved events, so it changes only when the PUT returns.
+  // uncheck() reads the state right after its click and fails when the save is slow.
+  await runFailed.click();
   await expect(runFailed).not.toBeChecked();
   await webhook.getByRole("button", { name: /Send a test|发送测试/ }).click();
   await expect(webhook).toContainText(/Test queued|测试已排队/);

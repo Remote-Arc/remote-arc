@@ -81,7 +81,8 @@ export function FleetFilterControls({
   );
 }
 
-/** Computers refused at the plan limit in the last 30 days; nothing when none. */
+/** Pairing attempts refused at the plan limit in the last 30 days (a retry
+ * counts again); nothing when none. */
 export function PairingRefusalBadge({ count }: { count: number | null | undefined }) {
   const { tr } = useI18n();
   if (!count) return null;

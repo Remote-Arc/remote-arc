@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestRedactCommandLine(t *testing.T) {
@@ -99,5 +100,17 @@ func TestWindowsProcessDetailsRedactsDecodedCommands(t *testing.T) {
 	}
 	if _, err := windowsProcessDetails("malformed details"); err == nil {
 		t.Fatal("invalid process output accepted")
+	}
+}
+
+// A listing that runs past its limit says so with a fixed code instead of an
+// empty "Could not list processes: " that the Relay cannot recognise.
+func TestListProcessesTimeoutHasFixedCode(t *testing.T) {
+	previous := processListTimeout
+	processListTimeout = time.Nanosecond
+	defer func() { processListTimeout = previous }()
+	_, err := listProcesses("", 10, false)
+	if err == nil || !strings.HasPrefix(err.Error(), "PROCESS_LIST_TIMEOUT: ") {
+		t.Fatalf("got %v, want a PROCESS_LIST_TIMEOUT error", err)
 	}
 }

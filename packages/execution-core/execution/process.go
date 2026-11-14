@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
+	"os"
 	"os/exec"
 	"regexp"
 	"runtime"
@@ -160,6 +162,21 @@ func (p *Processes) start(command, cwd string, deadline time.Duration, secret st
 	p.cleanup()
 	if active, limit := p.activeCountLocked(), activeProcessLimit(); active >= limit {
 		return nil, fmt.Errorf("Remote Arc already has the maximum number of managed background processes on this device. Running: %d; limit: %d. Finished tasks do not count. Set REMOTEARC_MAX_ACTIVE_PROCESSES to 1-256 to change the limit.", active, limit)
+	}
+	// os.StartProcess checks the working directory only when SysProcAttr is
+	// unset, and Windows always sets it. Check it here so a missing or wrong
+	// cwd is reported the same way on every platform.
+	if cwd != "" {
+		info, e := os.Stat(cwd)
+		if e != nil {
+			if pathErr, ok := e.(*fs.PathError); ok {
+				pathErr.Op = "chdir"
+			}
+			return nil, e
+		}
+		if !info.IsDir() {
+			return nil, &fs.PathError{Op: "chdir", Path: cwd, Err: errNotADirectory}
+		}
 	}
 	cmd := shellCommand(command)
 	cmd.Dir = cwd
@@ -478,11 +495,13 @@ func windowsProcessDetails(output string) (string, error) {
 	return strings.Join(lines, "\n"), nil
 }
 
+var processListTimeout = 15 * time.Second
+
 // listProcesses returns a header plus one line per process. filter keeps rows
 // whose text contains it (case-insensitive); limit caps rows; details adds
 // command lines on Windows (ps already includes them elsewhere).
 func listProcesses(filter string, limit int, details bool) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), processListTimeout)
 	defer cancel()
 	if limit < 1 || limit > 1000 {
 		limit = 200
@@ -490,11 +509,21 @@ func listProcesses(filter string, limit int, details bool) (string, error) {
 	name, args, header := processCommand(runtime.GOOS, details)
 	cmd := exec.CommandContext(ctx, name, args...)
 	hideCommand(cmd)
+	// A helper the listing started can keep its output open after the listing
+	// is stopped; do not wait for it past the time limit.
+	cmd.WaitDelay = 2 * time.Second
 	var out, err cappedBuffer
 	cmd.Stdout = &out
 	cmd.Stderr = &err
 	if e := cmd.Run(); e != nil {
-		return "", fmt.Errorf("Could not list processes: %s", err.Text())
+		if ctx.Err() != nil {
+			hint := "Try again in a moment."
+			if details && runtime.GOOS == "windows" {
+				hint = "Try again with details=false, which is faster on Windows."
+			}
+			return "", fmt.Errorf("PROCESS_LIST_TIMEOUT: Listing processes took longer than %s on this computer, so it was stopped. %s", processListTimeout, hint)
+		}
+		return "", fmt.Errorf("Could not list processes (%v): %s", e, strings.TrimSpace(err.Text()))
 	}
 	platform := runtime.GOOS
 	if platform == "windows" {

@@ -130,7 +130,14 @@ func (c *Core) ListTools() []Definition {
 	return result
 }
 func (c *Core) Close() { c.Processes.Close() }
+
+// Call runs one tool. An os file error leaves with a fixed code in front of
+// its message, so the Relay does not have to read platform-specific text.
 func (c *Core) Call(ctx context.Context, name string, args map[string]any, p protocol.Policy) (protocol.Result, error) {
+	result, err := c.call(ctx, name, args, p)
+	return result, fileErrorCode(err)
+}
+func (c *Core) call(ctx context.Context, name string, args map[string]any, p protocol.Policy) (protocol.Result, error) {
 	p = protocol.Normalize(p)
 	allowed := false
 	for _, d := range c.ListTools() {

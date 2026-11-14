@@ -2,6 +2,21 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.7.3 - Unreleased
+
+### Agent
+
+- A file tool that fails because the path does not exist, access is denied or the path is the wrong kind now starts its error with `PATH_NOT_FOUND`, `FILE_PERMISSION_DENIED` or `PATH_TYPE_MISMATCH`, the same on macOS, Linux and Windows. The system's own message, path included, follows the code.
+- `start_process` with a working folder that does not exist, or that is a file, fails with `PATH_NOT_FOUND` or `PATH_TYPE_MISMATCH` naming that folder. Before, Windows reported "The directory name is invalid." and macOS and Linux reported the shell itself as missing.
+- `list_processes` that runs past its 15-second limit fails with `PROCESS_LIST_TIMEOUT` and returns promptly, instead of an empty "Could not list processes" after waiting longer. On Windows it suggests `details=false`, which is faster.
+
+### Cloud service
+
+- Missing, denied or wrong-kind paths from the Agent are reported to the AI client with those fixed codes, including from Agents before 0.7.3, instead of an unrecognised tool error.
+- In admin service health, those path errors are no longer listed as problems to investigate, and a failed device tool call is counted once instead of once for the device and again for MCP.
+- Fixed messages from Browser Runner and the Remote Arc Browser extension, such as a page that changed since it was read, a tab that is no longer shared or a browser that did not start, are reported with their codes instead of an unrecognised tool error, including from released Agents and extensions.
+- In admin service health, a computer that went to sleep with no call waiting no longer counts as a computer that failed calls; a call that reaches a sleeping computer is still reported as offline or timed out. Stale page references, closed browser sessions and wrong browser tools are no longer listed as problems to investigate.
+
 ## 0.7.2 - 2026-11-14
 
 ### Source and releases

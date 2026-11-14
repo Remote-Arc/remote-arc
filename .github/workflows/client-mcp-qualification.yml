@@ -72,3 +72,37 @@ jobs:
           name: real-client-mcp-${{ matrix.os }}
           path: work/client-mcp/*.json
           retention-days: 14
+
+  # A sync/pr-<number> branch mirrors a private pull request. ci.yml's `public-ci`
+  # does not wait for this workflow, so report its result to the private commit
+  # as its own `public-client-mcp` status. It is not a required check: path
+  # filters mean most pull requests never run it. Needs the export App, like
+  # ci.yml's report job; a cancelled run reports nothing.
+  report:
+    needs: real-clients
+    if: ${{ !cancelled() && !github.event.repository.private && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/report-public-status.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - id: app
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ vars.PRIVATE_REPOSITORY }}
+      - env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          MESSAGE: ${{ github.event.head_commit.message }}
+          PRIVATE_REPOSITORY: ${{ vars.PRIVATE_REPOSITORY }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: >-
+          node scripts/report-public-status.mjs --context public-client-mcp
+          --passed "Real MCP clients qualified in the public repository"
+          --failed "Real MCP client qualification failed in the public repository"

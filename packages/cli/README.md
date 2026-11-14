@@ -4,6 +4,10 @@
 
 [Website](https://remotearc.app) · [GitHub](https://github.com/Remote-Arc/remote-arc) · [User guide](https://remotearc.app/docs/start-here)
 
+The source of this package and of the native Agent it installs is public at
+[Remote-Arc/remote-arc](https://github.com/Remote-Arc/remote-arc). Every release
+is built there, and its npm provenance names the commit it was built from.
+
 <!-- prettier-ignore-start -->
 
 <!-- github-overview:start -->
@@ -31,9 +35,9 @@ Every plan includes every Connect tool. **Free** has monthly Connect call and fi
 npx remotelink@latest
 ```
 
-From 0.6.0, this npm command starts the complete **native Go Agent** by default.
-The Node launcher verifies the matching platform binary against the SHA256
-manifest pinned to this npm release. `--go` remains an alias.
+This command starts the **native Go Agent**. The launcher downloads the binary
+for your platform and checks it against the SHA256 manifest pinned to this npm
+release before it runs. `--go` remains an alias.
 
 Or install the CLI globally:
 
@@ -46,13 +50,11 @@ Requires Node.js 20 or later. The npm launcher downloads and verifies the
 matching native Agent. For installation without Node.js, see the
 [download guide](https://remotearc.app/downloads).
 
-**Updating:** run `npx remotelink@latest`. A known older, idle Go Agent is
-replaced while preserving pairing, permissions and pause state. Active work
-requires confirmation in the terminal.
-
-The primary runtime is `apps/agent` and its independent Go module is
-`packages/execution-core`. The Cloudflare Relay and React Dashboard remain
-TypeScript; native device execution requires neither Node nor a local Go compiler.
+**Updating:** a background Agent from 0.7.1 on can be updated from Dashboard →
+Devices with **Update now**; it refuses while work is running. Otherwise run
+`npx remotelink@latest`: an older, idle Agent is replaced while preserving
+pairing, permissions and pause state, and active work asks for confirmation in
+the terminal.
 
 On first run, `remotelink`:
 
@@ -108,7 +110,7 @@ Clients that still show the older shared-tab names (`browser_read_page`, `browse
 
 ## Commands
 
-In **0.6.3**, Browser Runner (beta) keeps task windows out of sight by default
+Browser Runner (beta) keeps task windows out of sight by default
 and uses task-scoped Chrome, Edge or Chromium,
 with optional connection to your running Chrome, batched form entry, durable final
 submissions, profile reuse and restart recovery. Enable **Browser Runner** for the
@@ -122,11 +124,6 @@ never blocks the Agent. Project-scoped [local setup](https://github.com/Remote-A
 [read-only MCP](https://github.com/Remote-Arc/remote-arc/blob/master/docs/workspace-local-mcp.md), [setup inspection](https://github.com/Remote-Arc/remote-arc/blob/master/docs/local-setup-inspection.md)
 and [coding-session discovery](https://github.com/Remote-Arc/remote-arc/blob/master/docs/local-session-discovery.md) are included.
 Discovery lists metadata for review; it does not resume an agent or reconstruct its history.
-
-A newer release replaces an older idle Agent automatically. Active work, an Agent too
-old to report its work, or a same/newer version requires terminal confirmation or explicit
-`--force-update`. Install the stable release with `npx remotelink@latest` or a matching
-native download. Refresh the Remote Arc connector in your AI client after upgrading.
 
 ```text
 npx remotelink                 Pair/reconnect and keep the terminal and logs open
@@ -157,13 +154,14 @@ Sleep/power loss still makes the device unavailable. On Linux, the user service
 keeps running after you log out and starts at boot only while systemd linger is
 on. Background mode turns it on when it is allowed to; otherwise it warns you and
 you can run `sudo loginctl enable-linger <user>` yourself. All concurrent instances
-must be updated; pre-0.4.4 Agents do not participate in the execution lease. When the installed version is identified as an older release, the current CLI performs a controlled handoff even when that older Agent still owns the execution lease: it stops the known Remote Arc worker and supervisor, waits for the lease to release, preserves pairing and policy, installs the replacement bundle, and verifies that the replacement worker owns execution. If a saved device pairing has been revoked from Dashboard, interactive startup now validates it before viewer/background attach, stops the known local background owner, clears the revoked credential and begins fresh pairing. Unknown processes still fail closed instead of being killed automatically.
+must be updated. When the installed version is identified as an older release, the current CLI performs a controlled handoff even when that older Agent still owns the execution lease: it stops the known Remote Arc worker and supervisor, waits for the lease to release, preserves pairing and policy, installs the replacement bundle, and verifies that the replacement worker owns execution. If a saved device pairing has been revoked from Dashboard, interactive startup validates it before viewer/background attach, stops the known local background owner, clears the revoked credential and begins fresh pairing. Unknown processes still fail closed instead of being killed automatically.
 
 ## Native execution core
 
-Remote Arc no longer shells out to a third-party computer-control MCP server.
-The CLI bundles Remote Arc's own cross-platform execution core for filesystem,
-process, terminal, Local Undo, and Safety Guard behavior.
+Remote Arc does not depend on a third-party computer-control MCP server. The
+native Agent includes Remote Arc's own cross-platform execution core
+([`packages/execution-core`](https://github.com/Remote-Arc/remote-arc/tree/master/packages/execution-core))
+for filesystem, process, terminal, Local Undo, and Safety Guard behavior.
 
 MCP remains the interoperability protocol between AI clients and Remote Arc;
 local OS execution is implemented and versioned by Remote Arc itself.

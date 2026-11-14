@@ -68,6 +68,8 @@ Install the Agent only on computers the AI should work on. With npm (Node.js 20+
 npx remotelink@latest
 ```
 
+A background Agent from 0.7.1 on can also be updated from Dashboard → Devices with **Update now**; it refuses while work is running.
+
 <!-- prettier-ignore-start -->
 
 <!-- native-install:start -->
@@ -148,6 +150,10 @@ Formula/              Homebrew formulas (this repository is the tap)
 The Agent and Execution Core compile into one executable. The cloud service that handles sign-in, routing and billing is not in this repository.
 
 More detail: [agent compatibility](./docs/agent-compatibility.md), [execution isolation](./docs/execution-isolation.en.md), [background recovery](./docs/background-recovery.md), [persistence validation](./docs/go-persistence-validation.md) and the [feature map](./docs/feature-map/README.md).
+
+## Releases
+
+Every `remotelink` release is built and published from this repository by the Publish remotelink workflow: the native binaries, `SHA256SUMS` and Homebrew formulas on [GitHub Releases](https://github.com/Remote-Arc/remote-arc/releases), and the [npm package](https://www.npmjs.com/package/remotelink). From 0.7.2, each npm version's provenance names the commit here that it was built from. Release notes are in [CHANGELOG.md](./CHANGELOG.md).
 
 ## Build and test
 

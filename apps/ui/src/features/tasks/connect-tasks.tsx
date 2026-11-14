@@ -9,6 +9,7 @@ import { taskDecision, useTaskDecision } from "../../hooks/tasks/use-task-decisi
 import { TaskDecisionCard } from "./task-decision-card.js";
 import "../../styles/tasks/connect-tasks.css";
 import "../../styles/tasks/task-decision.css";
+import "../../styles/tasks/task-saved-steps.css";
 
 type Task = {
   id: string;

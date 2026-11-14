@@ -17,6 +17,7 @@
     "test:workspaces": [
       ["node", "--import", "tsx", "scripts/connect-tasks-resilience-test.tsx"],
       ["node", "--import", "tsx", "scripts/task-decision-ui-test.tsx"],
+      ["node", "--import", "tsx", "scripts/task-saved-steps-ui-test.tsx"],
       ["node", "--import", "tsx", "scripts/stale-build-recovery-test.tsx"],
       ["node", "scripts/app-entry-test.mjs"],
       [

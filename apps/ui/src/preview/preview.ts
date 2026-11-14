@@ -476,6 +476,20 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
             type: "device_command",
             command: "node export-orders.mjs",
             cwd: "/Users/sam/work/store",
+            accept_exit_codes: [0, 3],
+          },
+          {
+            type: "device_command",
+            command: "node upload-orders.mjs",
+            cwd: "/Users/sam/work/store",
+            run_if: { step: 1, exit_code: 0 },
+          },
+        ],
+        on_failure: [
+          {
+            type: "device_command",
+            command: "git checkout -- exports/",
+            cwd: "/Users/sam/work/store",
           },
         ],
       }),

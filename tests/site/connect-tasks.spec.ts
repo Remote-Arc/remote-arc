@@ -68,6 +68,13 @@ test("a routine waiting for a decision shows why and settles from its card", asy
   await expect(task.getByRole("button", { name: /^(Pause|Resume|暂停|恢复)$/ })).toHaveCount(0);
   await decision.locator("summary").click();
   await expect(decision.locator("pre")).toContainText("HTTP 401");
+  await task.getByText(/^(Progress & results|进度与结果)/).click();
+  await task.locator(".taskTechnicalDetails > summary").click();
+  await expect(task).toContainText(
+    /Runs only if step 1 exits with code 0|仅当第 1 步退出码为 0 时运行/,
+  );
+  await expect(task).toContainText(/Exit codes that count as success: 0, 3|算作成功的退出码：0, 3/);
+  await expect(task.locator(".taskSavedOnFailure pre")).toContainText("git checkout -- exports/");
   const turnOff = decision.getByRole("button", { name: /^(Turn off|关闭)$/ });
   await turnOff.click();
   await expect(page.getByRole("dialog")).toBeVisible();

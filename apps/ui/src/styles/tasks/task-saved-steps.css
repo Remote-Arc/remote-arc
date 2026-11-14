@@ -1,0 +1,14 @@
+.taskSavedStep + .taskSavedStep {
+  margin-top: 10px;
+}
+.taskSavedStepRule {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.taskSavedOnFailure {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}

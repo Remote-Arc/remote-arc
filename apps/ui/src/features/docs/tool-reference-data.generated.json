@@ -893,7 +893,7 @@
     {
       "name": "create_automation",
       "title": "Create a persistent Remote Arc automation",
-      "description": "Save user-requested ongoing or scheduled deterministic work as a durable task. Omit device_id to let the account-level Fleet Scheduler select an authorized, eligible, less-busy device automatically; specify device_id only for explicit device pinning. Use ordinary tools for immediate one-off operations. Supports long commands, webhook watches, interval routines and fixed verification loops. A routine (schedule.every_seconds) repeats until max_runs or expires_at; goal is its acceptance check after the steps. When a step or the check fails and the account has an Arc plan or trial, an Arc agent first makes one bounded repair in the workspace (billed to Arc credits; auto_repair=false turns this off) and the routine re-runs its own steps. A failed run or failed check is retried. 3 failures in a row, an unfinished repair, exhausted credits or a device boundary hold the routine for the user's decision (retry_now, skip_run or turn_off through manage_automation); decision_timeout can skip an undecided run after some hours. When a multi-step task in this chat has just succeeded on a device and the user may want it repeated, offer to save it as a routine with the same steps, device_id and a goal that proves the result. This tool does not keep an AI reasoning loop alive after the creating chat ends.",
+      "description": "Save user-requested ongoing or scheduled deterministic work as a durable task. Omit device_id to let the account-level Fleet Scheduler select an authorized, eligible, less-busy device automatically; specify device_id only for explicit device pinning. Use ordinary tools for immediate one-off operations. Supports long commands, webhook watches, interval routines and fixed verification loops. A routine (schedule.every_seconds) repeats until max_runs or expires_at; goal is its acceptance check after the steps. When a step or the check fails and the account has an Arc plan or trial, an Arc agent first makes one bounded repair in the workspace (billed to Arc credits; auto_repair=false turns this off) and the routine re-runs its own steps. A failed run or failed check is retried. 3 failures in a row, an unfinished repair, exhausted credits or a device boundary hold the routine for the user's decision (retry_now, skip_run or turn_off through manage_automation); decision_timeout can skip an undecided run after some hours. A step can carry run_if (one test on an earlier step's exit_code, output_contains or output_matches, optionally negated) and is skipped with the reason recorded when it is not met; accept_exit_codes lets a step count other exit codes as success. on_failure steps run once after a failed step or failed check, before the retry or repair. Steps plus on_failure are limited to 8 and never loop. condition.match compares payload field paths by equality or with one of exists, contains, gt or lt. A GitHub condition returns webhook.github_secret for the GitHub webhook Secret field; deliveries without a matching X-Hub-Signature-256 are refused. When a multi-step task in this chat has just succeeded on a device and the user may want it repeated, offer to save it as a routine with the same steps, device_id and a goal that proves the result. This tool does not keep an AI reasoning loop alive after the creating chat ends.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -973,11 +973,76 @@
                 "cwd": {
                   "type": "string",
                   "maxLength": 500
+                },
+                "run_if": {
+                  "type": "object",
+                  "properties": {
+                    "step": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 7
+                    },
+                    "exit_code": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "output_contains": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500
+                    },
+                    "output_matches": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "not": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "step"
+                  ],
+                  "additionalProperties": false
+                },
+                "accept_exit_codes": {
+                  "minItems": 1,
+                  "maxItems": 10,
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
                 }
               },
               "required": [
                 "command"
               ]
+            }
+          },
+          "on_failure": {
+            "minItems": 1,
+            "maxItems": 7,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4000
+                },
+                "cwd": {
+                  "type": "string",
+                  "maxLength": 500
+                }
+              },
+              "required": [
+                "command"
+              ],
+              "additionalProperties": false
             }
           },
           "goal": {
@@ -1066,11 +1131,79 @@
                   "type": "string"
                 },
                 "additionalProperties": {
-                  "type": [
-                    "string",
-                    "number",
-                    "boolean",
-                    "null"
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "exists": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "exists"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "contains": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "boolean"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "contains"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "gt": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "gt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "lt": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "lt"
+                      ],
+                      "additionalProperties": false
+                    }
                   ]
                 }
               }

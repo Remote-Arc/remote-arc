@@ -5,6 +5,7 @@ import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "../../hooks/use-i18n.js";
 import type { PlannedProgress } from "./planned-goal-view.js";
+import { TaskSavedSteps, type SavedStep } from "./task-saved-steps.js";
 const PlannedGoalProgress = React.lazy(() =>
   import("./planned-goal-view.js").then((module) => ({ default: module.PlannedGoalProgress })),
 );
@@ -192,7 +193,8 @@ export function TaskResults({
     objective?: string;
     success_criteria?: string;
     controller?: string;
-    steps?: { command?: string; cwd?: string; type?: string }[];
+    steps?: SavedStep[];
+    on_failure?: SavedStep[];
   } = {};
   try {
     instructions =
@@ -356,19 +358,10 @@ export function TaskResults({
                   </p>
                 </>
               ) : (
-                instructions.steps?.map((step, index) =>
-                  step.command ? (
-                    <div key={index}>
-                      <p>
-                        {tr("tasks.dashboardTaskView.shellCommandExecutedVerbatim")}
-                        {step.cwd ? ` · ${step.cwd}` : ""}
-                      </p>
-                      <pre>{step.command}</pre>
-                    </div>
-                  ) : (
-                    <p key={index}>{step.type}</p>
-                  ),
-                )
+                <TaskSavedSteps
+                  steps={instructions.steps || []}
+                  onFailure={instructions.on_failure}
+                />
               )}
             </div>
           </details>

@@ -17,6 +17,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/browserrunner"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/journal"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/machineid"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/service"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/config"
 )
@@ -212,6 +213,11 @@ func TestAuthenticatedWebsocketToolCallsReconnectAndPrivateJournal(t *testing.T)
 	presence := a.hello(ctx)["device"].(map[string]any)
 	if presence["connectedAt"] != previousConnection["connectedAt"] || presence["connectionSequence"] != uint64(2) {
 		t.Fatal("presence changed session identity")
+	}
+	if hash := machineid.Hash(); hash != "" && presence["machineHash"] != hash {
+		t.Fatalf("hello machineHash = %v, want this computer's hash", presence["machineHash"])
+	} else if hash == "" && presence["machineHash"] != nil {
+		t.Fatal("hello must omit machineHash when the computer has no identifier")
 	}
 	cancel()
 	select {

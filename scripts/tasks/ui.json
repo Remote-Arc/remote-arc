@@ -40,6 +40,7 @@
       ["node", "--import", "tsx", "scripts/service-health-verdict-test.ts"],
       ["node", "--import", "tsx", "scripts/monitor-reliability-test.tsx"],
       ["node", "--import", "tsx", "scripts/computer-plan-limit-test.tsx"],
+      ["node", "--import", "tsx", "scripts/shared-computer-trial-ui-test.tsx"],
       ["pnpm", "test:billing-preview"],
       ["node", "--import", "tsx", "scripts/business-fetch-test.ts"],
       ["node", "--import", "tsx", "scripts/service-health-test.tsx"],

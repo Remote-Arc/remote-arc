@@ -19,6 +19,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/browserrunner"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/journal"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/machineid"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/power"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/service"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/workspace"
@@ -181,7 +182,12 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 			}
 		}
 	}
-	return map[string]any{"type": "hello", "device": map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "executionPaused": a.WakeOnly || cfg.ExecutionPaused, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version, "capacity": a.fleetCapacity(ctx)}, "tools": names, "capabilities": capabilities}
+	device := map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "executionPaused": a.WakeOnly || cfg.ExecutionPaused, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version, "capacity": a.fleetCapacity(ctx)}
+	// One-way hash of the OS machine identifier; Relay grants the Free trial once per computer.
+	if hash := machineid.Hash(); hash != "" {
+		device["machineHash"] = hash
+	}
+	return map[string]any{"type": "hello", "device": device, "tools": names, "capabilities": capabilities}
 }
 
 // secretsReady: a one-time secret is only useful where start_process can

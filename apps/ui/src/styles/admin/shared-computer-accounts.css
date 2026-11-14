@@ -1,0 +1,71 @@
+.sharedComputers {
+  grid-column: 1/-1;
+  min-width: 0;
+  margin: 12px 20px 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: var(--panel);
+  color: var(--text);
+}
+.sharedComputersTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+}
+.sharedComputersBlocked {
+  border-radius: 100px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(206, 81, 76, 0.13);
+  color: #cf6554;
+}
+.sharedComputersNote {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.sharedComputersList {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sharedComputersList li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+.sharedComputersList li > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.sharedComputersList strong,
+.sharedComputersList span,
+.sharedComputersList small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sharedComputersList small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.sharedComputersTrial {
+  color: var(--muted);
+  font-size: 11px;
+}
+@media (max-width: 640px) {
+  .sharedComputersList li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+}

@@ -1028,6 +1028,28 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       } satisfies SecurityState);
     }
 
+    if (url.pathname === "/api/admin/shared-computers") {
+      const userId = url.searchParams.get("userId") || "u2";
+      const shared = userId === "u2";
+      return json({
+        userId,
+        rulesActive: true,
+        trialEndsAt: null,
+        trialBlockedBySharedComputer: shared,
+        accounts: shared
+          ? [
+              {
+                userId: "u3",
+                email: "maya@example.com",
+                name: "Maya",
+                match: "machine",
+                computer: "DESKTOP-PREVIEW",
+                trialEndsAt: new Date(Date.now() + 3 * 86_400_000).toISOString(),
+              },
+            ]
+          : [],
+      });
+    }
     if (url.pathname === "/api/admin/usage-insights") {
       const userId = url.searchParams.get("userId") || "u2";
       const month = new Date().toISOString().slice(0, 7);

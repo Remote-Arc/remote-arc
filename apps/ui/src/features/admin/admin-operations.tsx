@@ -4,6 +4,7 @@ import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useI18n } from "../../hooks/use-i18n.js";
 import { ProductIcon } from "../../components/product-icon.js";
 import { AdminUserUsageInsights } from "./user-usage-insights.js";
+import { AdminSharedComputers } from "./shared-computer-accounts.js";
 import {
   ACTIVATION_STAGES,
   type ActivationEvidence,
@@ -967,6 +968,7 @@ export function AdminOperations({
                 allowance={chosen.allowance}
                 extra={chosen.extra}
               />
+              <AdminSharedComputers key={"shared-" + chosen.id} userId={chosen.id} />
               <div className="opsUserDetail">
                 <div>
                   <p>

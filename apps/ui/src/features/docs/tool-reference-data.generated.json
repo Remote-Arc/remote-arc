@@ -2094,7 +2094,7 @@
     {
       "name": "read_binary_file",
       "title": "Read a binary file chunk on a remote computer",
-      "description": "Read a bounded binary-file byte range as base64 with MIME metadata. Available on every plan; account call limits and device permissions still apply, and Free includes 2 GB of binary transfer per month shared with file resources. Use offset/length for chunking; text files should use read_file.",
+      "description": "Read a bounded binary-file byte range with MIME metadata. A whole PNG, JPEG, GIF or WebP image (offset 0, file no larger than length, at most 3000 px per side) is returned as an image you can see; every other read returns base64 text, which fills context quickly. For a PDF or Office document, extract its text on the computer with start_process (for example pdftotext or Python, when installed) instead of reading its bytes. To move a file somewhere else, use create_file_resource. Available on every plan; account call limits and device permissions still apply, and Free includes 2 GB of binary transfer per month shared with file resources. Use offset/length for chunking; text files should use read_file.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",

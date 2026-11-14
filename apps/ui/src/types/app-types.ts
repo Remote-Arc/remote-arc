@@ -149,9 +149,12 @@ export type FreeOverflow = {
   trialDays: number;
   slowLaneCallsPerMinute: number;
   trial: { startedAt: string; endsAt: string; active: boolean } | null;
-  /** False when the account already used its trial or has ever subscribed. */
+  /** False when the account already used its trial, has ever subscribed, or
+   * uses a computer whose trial another account already took. */
   trialAvailable?: boolean;
   slowLaneCallsThisMonth: number;
+  /** Set when the only reason there is no trial is a shared computer. */
+  trialUnavailableReason?: "shared_computer";
 };
 /** Present when a Free account still has full-speed calls this month: what
  * follows once they run out. */
@@ -159,6 +162,8 @@ export type AfterAllowance = {
   next: "trial" | "slow_lane";
   trialDays: number;
   slowLaneCallsPerMinute: number;
+  /** Set when the only reason there is no trial is a shared computer. */
+  trialUnavailableReason?: "shared_computer";
 };
 export type MonthlyUsage = {
   month: string;

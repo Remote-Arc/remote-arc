@@ -237,16 +237,24 @@ export function ArcBillingPanel() {
       ? tr(
           after.next === "trial"
             ? "billing.arcBillingPanel.afterTheseCallsATrialThenSlow"
-            : "billing.arcBillingPanel.afterTheseCallsTheSlowLane",
+            : after.trialUnavailableReason === "shared_computer"
+              ? "billing.arcBillingPanel.afterTheseCallsSharedComputer"
+              : "billing.arcBillingPanel.afterTheseCallsTheSlowLane",
           { trialDays: after.trialDays, slowLaneCallsPerMinute: after.slowLaneCallsPerMinute },
         )
       : ""
     : overflow.trial?.active
       ? tr("billing.arcBillingPanel.unlimitedTrialFullSpeedUntil", { trialEnd })
       : overflow.trial || overflow.trialAvailable === false
-        ? tr("billing.arcBillingPanel.slowLaneCallsPerMinuteUntil", {
-            slowLaneCallsPerMinute: overflow.slowLaneCallsPerMinute,
-          })
+        ? tr(
+            overflow.trialUnavailableReason === "shared_computer"
+              ? "billing.arcBillingPanel.slowLaneSharedComputer"
+              : "billing.arcBillingPanel.slowLaneCallsPerMinuteUntil",
+            {
+              slowLaneCallsPerMinute: overflow.slowLaneCallsPerMinute,
+              trialDays: overflow.trialDays,
+            },
+          )
         : tr("billing.arcBillingPanel.yourNextCallStartsADay", { trialDays: overflow.trialDays });
   // Once the Connect Unlimited on offer includes Arc, Plus is no longer offered to new subscribers.
   const bundled = planIncludesArc(unlimited);

@@ -81,7 +81,13 @@ export function UsageConversionBanner({
   const body = onTrial
     ? tr("dashboard.usageConversion.thisMonthSFreeCallsRan", { trialEnd, perMinute, resetText })
     : slowLane
-      ? tr("dashboard.usageConversion.callsStillWorkPacedAtA", { perMinute, resetText })
+      ? overflow?.trialUnavailableReason === "shared_computer"
+        ? tr("dashboard.usageConversion.sharedComputerSlowLane", {
+            trialDays,
+            perMinute,
+            resetText,
+          })
+        : tr("dashboard.usageConversion.callsStillWorkPacedAtA", { perMinute, resetText })
       : ended && overflow
         ? tr("dashboard.usageConversion.yourNextCallStartsAFree", { trialDays })
         : ended
@@ -90,7 +96,9 @@ export function UsageConversionBanner({
             ? tr(
                 after.next === "trial"
                   ? "dashboard.usageConversion.afterYourFreeCallsATrial"
-                  : "dashboard.usageConversion.afterYourFreeCallsTheSlowLane",
+                  : after.trialUnavailableReason === "shared_computer"
+                    ? "dashboard.usageConversion.afterYourFreeCallsSharedComputer"
+                    : "dashboard.usageConversion.afterYourFreeCallsTheSlowLane",
                 { limit: usage.limit.toLocaleString(), trialDays, perMinute, resetText },
               )
             : tr("dashboard.usageConversion.yourExistingConnectionsStayPairedPlan");

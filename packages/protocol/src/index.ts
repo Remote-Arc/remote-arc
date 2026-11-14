@@ -301,6 +301,8 @@ export type DeviceMetadata = {
   arch?: string;
   hostname?: string;
   agentVersion: string;
+  /** One-way hash of the computer's OS identifier; absent from older Agents. */
+  machineHash?: string;
   pid?: number;
   backgroundProcess?: boolean;
   executionPaused?: boolean;

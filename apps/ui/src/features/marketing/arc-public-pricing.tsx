@@ -1,4 +1,4 @@
-import { CONNECT_FAIR_USE, CONNECT_FREE_OVERFLOW } from "@remotearc/protocol";
+import { ARC_TYPICAL_TASK_CREDITS, CONNECT_FAIR_USE } from "@remotearc/protocol";
 import { useI18n } from "../../hooks/use-i18n.js";
 import type { PlatformCatalog } from "../../hooks/use-platform-catalog.js";
 import {
@@ -7,6 +7,7 @@ import {
   offeredPlans,
   planIncludesArc,
 } from "../billing/arc-billing-client.js";
+import { planCardFeatures } from "./plan-card-features.js";
 import { planDescriptionKey } from "./plan-copy.js";
 import { PlanDetails } from "./plan-details-dialog.js";
 export function ArcPublicPricing({
@@ -146,63 +147,7 @@ export function ArcPublicPricing({
                     ) : null}
                     <p className="planDescription">{tr(planDescriptionKey(p))}</p>
                     <ul className="planIncluded">
-                      {(connect && planIncludesArc(p)
-                        ? [
-                            tr("marketing.arcPublicPricing.yourAgentsAtFullSpeedAll"),
-                            tr("marketing.arcPublicPricing.arcCreditsMonthForRoutines", {
-                              credits: p.monthlyCredits.toLocaleString(),
-                            }),
-                            p.deviceLimit != null
-                              ? tr("marketing.arcPublicPricing.upToComputersAndUnlimitedTransfer", {
-                                  computers: p.deviceLimit.toLocaleString(),
-                                })
-                              : tr("marketing.arcPublicPricing.unlimitedComputersAndFileTransfer"),
-                            tr("marketing.arcPublicPricing.terminalFilesBrowserFleetAndConnected"),
-                            tr("marketing.arcPublicPricing.yourAiOrArcAutoAndNamed"),
-                          ]
-                        : connect
-                          ? [
-                              tr("marketing.arcPublicPricing.yourAgentsAtFullSpeedAll"),
-                              tr("marketing.arcPublicPricing.unlimitedComputersAndFileTransfer"),
-                              tr(
-                                "marketing.arcPublicPricing.terminalFilesBrowserFleetAndConnected",
-                              ),
-                              tr("marketing.arcPublicPricing.worksWithYourOwnChatgptClaude"),
-                            ]
-                          : p.id === "free"
-                            ? [
-                                (catalog.connectFreeCalls === null
-                                  ? tr("marketing.arcPublicPricing.unlimited")
-                                  : catalog.connectFreeCalls.toLocaleString()) +
-                                  tr("marketing.arcPublicPricing.connectCallsMonth"),
-                                tr("marketing.arcPublicPricing.runOutAOneTimeDay", {
-                                  trialDays: CONNECT_FREE_OVERFLOW.trialDays,
-                                  slowLaneCallsPerMinute:
-                                    CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute,
-                                }),
-                                tr("marketing.arcPublicPricing.upToComputers"),
-                                tr("marketing.arcPublicPricing.gbFileTransferMonth"),
-                                tr("marketing.arcPublicPricing.devicePermissionsAndLocalUndo"),
-                              ]
-                            : [
-                                p.monthlyCredits.toLocaleString() +
-                                  tr("marketing.arcPublicPricing.creditsMonth"),
-                                tr("marketing.arcPublicPricing.allConfiguredPremiumModels"),
-                                tr("marketing.arcPublicPricing.oneOffAndRecurringTasks"),
-                                p.concurrentRuns + tr("marketing.arcPublicPricing.concurrentRuns"),
-                                tr("marketing.arcPublicPricing.upTo") +
-                                  p.maxSeconds / 60 +
-                                  tr("marketing.arcPublicPricing.minutesPerRun"),
-                                (p.id === "arc-plus-v1"
-                                  ? 10
-                                  : (p.deviceLimit ?? tr("marketing.arcPublicPricing.unlimited"))) +
-                                  tr("marketing.arcPublicPricing.connectedComputers"),
-                                p.connectToolCalls === null
-                                  ? tr("marketing.arcPublicPricing.unlimitedConnectCalls")
-                                  : p.connectToolCalls.toLocaleString() +
-                                    tr("marketing.arcPublicPricing.connectCallsMonth"),
-                              ]
-                      ).map((item) => (
+                      {planCardFeatures(p, catalog, tr).map((item) => (
                         <li key={item}>
                           <span aria-hidden="true">✓</span>
                           {item}
@@ -249,6 +194,12 @@ export function ArcPublicPricing({
             : "marketing.arcPublicPricing.connectUnlimitedFollowsPublishedFairUse",
           { computerRegistrationsPerDay: CONNECT_FAIR_USE.computerRegistrationsPerDay },
         )}
+        {plans.some(planIncludesArc)
+          ? " " +
+            tr("marketing.arcPublicPricing.taskEstimateBasis", {
+              credits: ARC_TYPICAL_TASK_CREDITS,
+            })
+          : null}
       </p>
       <section className="pricingEnterprise" aria-label="Enterprise">
         <div>

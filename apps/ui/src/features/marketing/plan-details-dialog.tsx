@@ -4,6 +4,7 @@ import { useI18n } from "../../hooks/use-i18n.js";
 import type { CatalogPlan, PlatformCatalog } from "../../hooks/use-platform-catalog.js";
 import type { Translate } from "../../locales/locale-catalog.js";
 import { planIncludesArc, transferSize } from "../billing/arc-billing-client.js";
+import { approxTaskCount } from "./plan-copy.js";
 import "../../styles/marketing/plan-details.css";
 
 type DetailRow = { key: string; label: string; value: string; note?: string };
@@ -49,7 +50,12 @@ export function planDetailSections(
     {
       key: "credits",
       label: tr("marketing.planDetails.arcCredits"),
-      value: arc ? perMonth(plan.monthlyCredits) : notIncluded,
+      value: arc
+        ? tr("marketing.planDetails.creditsPerMonthAboutTasks", {
+            value: count(plan.monthlyCredits),
+            tasks: count(approxTaskCount(plan.monthlyCredits)),
+          })
+        : notIncluded,
       ...(arc ? { note: tr("marketing.planDetails.creditsExpire") } : {}),
     },
     {

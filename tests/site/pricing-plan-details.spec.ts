@@ -91,6 +91,47 @@ for (const variant of ["", "?pricing=bundled"])
     },
   );
 
+test("Pro and Max cards compare the same terms, with Credits as tasks", async ({ page }, info) => {
+  const prefix = info.project.metadata.language === "zh" ? "/zh" : "";
+  await page.goto(prefix + "/pricing?pricing=bundled");
+  const cards = page.locator(".pricingPlans--saas .planCard");
+  await expect(cards).toHaveCount(3);
+  const plans = await catalogPlans(page);
+  const rows = async (label: string) =>
+    (
+      await cards
+        .filter({
+          has: page.locator(".planHeader > span", { hasText: new RegExp("^" + label + "$") }),
+        })
+        .locator(".planIncluded li")
+        .allInnerTexts()
+    ).map((row) => row.replace(/^✓\s*/, "").trim());
+  const proRows = await rows("PRO"),
+    maxRows = await rows("MAX");
+  expect(maxRows).toHaveLength(proRows.length);
+  for (const [label, cardRows] of [
+    ["Pro", proRows],
+    ["Max", maxRows],
+  ] as const) {
+    const plan = plans.find((item) => item.label === label)!;
+    const minutes = String(plan.maxSeconds / 60);
+    const at = (pattern: RegExp) => cardRows.findIndex((row) => pattern.test(row));
+    const computers = at(
+        new RegExp("\\b" + (await formatted(page, plan.deviceLimit!)) + "\\b.*(computers|台电脑)"),
+      ),
+      runs = at(new RegExp("\\b" + plan.concurrentRuns + "\\b.*\\b" + minutes + "\\b")),
+      credits = at(
+        new RegExp(
+          (await formatted(page, plan.monthlyCredits)).replace(",", "\\,") + ".*(about|约) [\\d,]+",
+        ),
+      );
+    expect(computers, label + " computers").toBeGreaterThanOrEqual(0);
+    expect(runs, label + " concurrent runs and minutes").toBe(computers + 1);
+    expect(credits, label + " Credits with a task estimate").toBeGreaterThan(runs);
+  }
+  await expect(page.locator(".pricingFinePrint")).toContainText(/per typical task|每次任务约/);
+});
+
 test("Plan details close from the close button and the backdrop", async ({ page }, info) => {
   const prefix = info.project.metadata.language === "zh" ? "/zh" : "";
   await page.goto(prefix + "/pricing?pricing=bundled");

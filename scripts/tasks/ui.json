@@ -31,6 +31,7 @@
       ["node", "--import", "tsx", "scripts/arc-chat-races-test.ts"],
       ["node", "--import", "tsx", "scripts/arc-verification-ui-test.tsx"],
       ["node", "--import", "tsx", "scripts/arc-billing-client-test.ts"],
+      ["node", "--import", "tsx", "scripts/plan-card-features-test.ts"],
       ["node", "--import", "tsx", "scripts/arc-skill-mentions-test.tsx"],
       ["node", "--import", "tsx", "scripts/arc-home-brief-test.mjs"],
       ["node", "--import", "tsx", "scripts/runtime-config-test.ts"],

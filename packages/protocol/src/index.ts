@@ -17,6 +17,10 @@ export const ARC_CREDIT_RATE = {
   costMicrosPerUnit: 2,
 } as const;
 export const ARC_TRIAL_CREDITS = 200;
+/** Credits one typical hosted Arc task spends. Used only to show a plan's Credits as
+ * an approximate task count. Rounded up from the production average per run,
+ * reviewed 2026-11-14; named models and long tasks spend more. */
+export const ARC_TYPICAL_TASK_CREDITS = 3;
 export const ARC_MEMORY_LIMITS = {
   facts: 100,
   work: 40,

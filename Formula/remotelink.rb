@@ -1,27 +1,27 @@
 class Remotelink < Formula
   desc "Controlled remote computer access for AI"
   homepage "https://remotearc.app"
-  version "0.7.1"
+  version "0.7.2"
   conflicts_with "remotelink-go", because: "both install remotelink"
 
   on_macos do
     on_arm do
-      url "https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-darwin-arm64", using: :nounzip
-      sha256 "496086d3196723154b50bb6c71e3e86e5e0e954a4d19a253650c80675dc995e0"
+      url "https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-darwin-arm64", using: :nounzip
+      sha256 "d2750afc17a2326020a47971c607397138b8537255079c5bba88f528fedd2484"
     end
     on_intel do
-      url "https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-darwin-amd64", using: :nounzip
-      sha256 "24e6d34c68ea537653cc0f9b1350af0be0d328784152ad5c8776544c3a33f6f2"
+      url "https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-darwin-amd64", using: :nounzip
+      sha256 "b3c67e66f92360d58c0098b3d4c210a7f6064c86b953c5dd09001acf989d145a"
     end
   end
   on_linux do
     on_arm do
-      url "https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-linux-arm64", using: :nounzip
-      sha256 "3affc0d9980f5b333efefc827c015b8afb378c297e9f2ad2094b958f786abe2b"
+      url "https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-linux-arm64", using: :nounzip
+      sha256 "f256dfdd1753f8cfbd694bba64ab535c3497707828366a39a023f63fec401554"
     end
     on_intel do
-      url "https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-linux-amd64", using: :nounzip
-      sha256 "304c40ed78b777ca673c8778e27220c389a7ac3ec55aee8a9062b2d3216843bf"
+      url "https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-linux-amd64", using: :nounzip
+      sha256 "44fcefc7675825b06e2e2549748c0b48e1736135f666599563a85d811a80e2a0"
     end
   end
 
@@ -31,6 +31,6 @@ class Remotelink < Formula
   end
 
   test do
-    assert_equal "0.7.1", shell_output("#{bin}/remotelink --version").strip
+    assert_equal "0.7.2", shell_output("#{bin}/remotelink --version").strip
   end
 end

@@ -2734,6 +2734,10 @@
     "marketing.useCases.useCases.yourAiFillsARealApplication": "你的 AI 在电脑上填写真实的申请表，并从你信任的文件夹上传简历。它在隐藏窗口中工作，只有页面需要你时才找你；登录一次，之后的任务保持登录。登录、验证码和人机验证需要你在任务浏览器中完成，最终提交由你单独批准。"
   },
   "releases": {
+    "0.7.2": {
+      "title": "客户端源码公开，从公开仓发布",
+      "summary": "Remote Arc 的客户端源码公开在 github.com/Remote-Arc/remote-arc，版本也从这里构建和发布，npm 的来源证明和 GitHub Releases 都指向公开的提交；云端服务在单独的私有仓库开发。Agent 的写入、编辑或撤销如果在调用过期前无法开始（比如文件被杀毒软件或同步软件锁住），会直接以 DEVICE_BUSY 拒绝且不做任何改动，不再超时后又在稍后执行，AI 客户端重试时不会重复写入或写入旧内容；撤销记录很多的电脑上写入也更快。发版后仍开着的旧页面需要已删除的文件时会自动刷新一次，不再白屏。续费扣款失败时套餐保留 7 天，期间 Stripe 会重试，之后扣款成功仍按原续费日期计算。"
+    },
     "0.7.1": {
       "title": "下载与 Homebrew tap 迁到 Remote-Arc",
       "summary": "Homebrew 改为从 github.com/Remote-Arc/remote-arc 添加 remote-arc/remote-arc tap，安装包、npm 启动器的备用下载和安装页都改从 Remote-Arc 的 GitHub Releases 下载，仍优先使用 Remote Arc 自己的下载镜像。之前用 Homebrew 安装的用户需要重新添加一次 tap。首次安装后安装程序会自动启动 Agent，Windows 程序显示 Remote Arc 图标；以后台服务运行的 Agent 在 Linux、macOS 和 Windows 上都可以在 Dashboard 里一键更新（0.7.1 起），更新后保留上一个稳定版本用于回退；无人值守的 Agent 等待配对时会逐渐放慢并停止轮询。新增 MCP 工具 fleet_run，可以一次在多台电脑（最多 25 台）上运行同一条命令或读取文件，并逐台返回结果。电脑的主人可以按电脑允许关机和重启（默认关闭）；删除保护不再拦截 /root、/srv 里的内容和 Program Files 里单个应用的文件夹这类正常删除。用 Link 绑定的美国银行账户付款后，套餐现在会正常开通，之前会出现已扣款但套餐没生效的情况。免费账号在用完每月 1 万次调用前就能看到之后会怎样，生命周期邮件也重新设计。"

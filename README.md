@@ -19,6 +19,15 @@ This repository holds the parts of Remote Arc that run on your computer and in y
 
 [![CI](https://github.com/Remote-Arc/remote-arc/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Remote-Arc/remote-arc/actions/workflows/ci.yml) [![Listed on MCP Market](https://mcpmarket.com/badge/server/remote-arc.svg?theme=dark)](https://mcpmarket.com/server/remote-arc?utm_source=readme&utm_medium=badge)
 
+<p>
+  <sub><b>Measured test coverage</b></sub><br />
+  <a href="https://github.com/Remote-Arc/remote-arc/tree/coverage-badges"><img src="https://raw.githubusercontent.com/Remote-Arc/remote-arc/coverage-badges/coverage.svg" alt="Go statement coverage" /></a>
+  <a href="https://github.com/Remote-Arc/remote-arc/tree/coverage-badges"><img src="https://raw.githubusercontent.com/Remote-Arc/remote-arc/coverage-badges/agent.svg" alt="Go Agent statement coverage" /></a>
+  <a href="https://github.com/Remote-Arc/remote-arc/tree/coverage-badges"><img src="https://raw.githubusercontent.com/Remote-Arc/remote-arc/coverage-badges/core.svg" alt="Go Execution Core statement coverage" /></a>
+</p>
+
+<sub>Latest measured statement coverage of the device Agent and Execution Core on Linux; target ≥90%.</sub>
+
 </div>
 
 ## What Remote Arc does
@@ -64,7 +73,7 @@ npx remotelink@latest
 <!-- native-install:start -->
 ### Native downloads and Homebrew
 
-Standalone 0.7.1 needs no Node.js or Go compiler. [Installation and upgrade guide](https://remotearc.app/downloads).
+Standalone 0.7.2 needs no Node.js or Go compiler. [Installation and upgrade guide](https://remotearc.app/downloads).
 
 On macOS or Linux (including WSL), install without Node.js:
 
@@ -76,14 +85,14 @@ The script verifies SHA256 and installs to ~/.local/bin without sudo. On a first
 
 | Platform | Download |
 | --- | --- |
-| macOS Apple Silicon | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-darwin-arm64) |
-| macOS Intel | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-darwin-amd64) |
-| Windows x64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-windows-amd64.exe) |
-| Windows ARM64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-windows-arm64.exe) |
-| Linux x64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-linux-amd64) |
-| Linux ARM64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/remotelink-v0.7.1-linux-arm64) |
+| macOS Apple Silicon | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-darwin-arm64) |
+| macOS Intel | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-darwin-amd64) |
+| Windows x64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-windows-amd64.exe) |
+| Windows ARM64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-windows-arm64.exe) |
+| Linux x64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-linux-amd64) |
+| Linux ARM64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-linux-arm64) |
 
-[SHA256SUMS](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.1/SHA256SUMS) · [Release notes](https://github.com/Remote-Arc/remote-arc/releases/tag/remotelink-v0.7.1)
+[SHA256SUMS](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/SHA256SUMS) · [Release notes](https://github.com/Remote-Arc/remote-arc/releases/tag/remotelink-v0.7.2)
 
 ```bash
 brew tap remote-arc/remote-arc https://github.com/Remote-Arc/remote-arc

@@ -2,6 +2,22 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.7.2 - 2026-11-14
+
+### Source and releases
+
+- Remote Arc's client source is public at `github.com/Remote-Arc/remote-arc`, and releases are built and published from it, so npm provenance and GitHub Releases point at public commits. The cloud service is developed in a separate private repository.
+
+### Agent
+
+- A write, edit or Undo that cannot start before its call expires, for example behind a file lock held by antivirus or a sync client, is refused with `DEVICE_BUSY` and nothing changed, instead of timing out and possibly running later. A retrying AI client no longer writes twice or writes stale content.
+- Writes no longer read every Undo record first, so they stay fast on computers with a long Undo history.
+
+### Website, Dashboard and billing
+
+- A page opened before a release reloads once instead of going blank when it needs a file the release removed, for example on "Update payment method".
+- When a subscription renewal charge fails, the plan stays active for 7 days while Stripe retries, and a later successful charge keeps the original renewal date.
+
 ## 0.7.1 - 2026-11-13
 
 ### Downloads and the Homebrew tap move to Remote-Arc

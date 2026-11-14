@@ -71,16 +71,15 @@ copy is required.
 <!-- latest-release:start -->
 ## Latest release
 
-**remotelink 0.7.1 — Downloads and the Homebrew tap move to Remote-Arc**
+**remotelink 0.7.2 — Source and releases**
 
-Published 2026-11-13
+Published 2026-11-14
 
-- Homebrew now taps `remote-arc/remote-arc` from `github.com/Remote-Arc/remote-arc`, and the formulas, the npm launcher's fallback and the install page download from Remote-Arc's GitHub Releases. Remote Arc's own download mirror is still tried first.
-- If you installed with Homebrew before, re-tap once: `brew untap yaohuangguan/remote-arc`, then `brew tap remote-arc/remote-arc https://github.com/Remote-Arc/remote-arc` and `brew install remote-arc/remote-arc/remotelink`.
-- After a first install, the installer starts the Agent, and the Windows executable shows the Remote Arc logo.
-- Background Agents on Linux, macOS and Windows can be updated from the Dashboard with "Update now", and the update card shows its progress inline. The Agent checks the release against GitHub Releases itself and refuses while work is running. Agents from 0.7.1 on can take later releases this way; older Agents keep the copy-command upgrade.
-- After an update, the Agent removes older release files once the new background service is running, and keeps the previous stable release so going back one version needs no download.
-- An Agent left waiting for pairing with nobody at the computer slows down and stops polling instead of polling forever.
+- Remote Arc's client source is public at `github.com/Remote-Arc/remote-arc`, and releases are built and published from it, so npm provenance and GitHub Releases point at public commits. The cloud service is developed in a separate private repository.
+- A write, edit or Undo that cannot start before its call expires, for example behind a file lock held by antivirus or a sync client, is refused with `DEVICE_BUSY` and nothing changed, instead of timing out and possibly running later. A retrying AI client no longer writes twice or writes stale content.
+- Writes no longer read every Undo record first, so they stay fast on computers with a long Undo history.
+- A page opened before a release reloads once instead of going blank when it needs a file the release removed, for example on "Update payment method".
+- When a subscription renewal charge fails, the plan stays active for 7 days while Stripe retries, and a later successful charge keeps the original renewal date.
 
 See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/Remote-Arc/remote-arc/blob/master/CHANGELOG.md).
 <!-- latest-release:end -->

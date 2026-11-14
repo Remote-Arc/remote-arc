@@ -9,7 +9,9 @@
 //
 // Environment: MESSAGE (head commit message), FAILED ("true" when any needed job
 // failed or was cancelled), PRIVATE_REPOSITORY, GITHUB_REPOSITORY_OWNER and
-// TARGET_URL. `gh` must be signed in with the export App's token.
+// TARGET_URL. `gh` must be signed in with the export App's token. When NEEDS
+// holds the workflow's toJSON(needs), it decides the result instead of FAILED,
+// and the failure description names the failed jobs.
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
@@ -27,6 +29,14 @@ export function publicStatus({ message = "", failed, context, passed, failedText
   };
 }
 
+/** Names of needed jobs that failed or were cancelled, from toJSON(needs). */
+export function failedNeeds(needsJson) {
+  const needs = JSON.parse(needsJson);
+  return Object.keys(needs).filter((name) =>
+    ["failure", "cancelled"].includes(needs[name]?.result),
+  );
+}
+
 function option(args, name) {
   const index = args.indexOf(name);
   if (index < 0 || !args[index + 1]) throw new Error(`Missing ${name}`);
@@ -34,12 +44,14 @@ function option(args, name) {
 }
 
 function main(args, env) {
+  const failedJobs = env.NEEDS ? failedNeeds(env.NEEDS) : null;
+  const failedText = option(args, "--failed");
   const status = publicStatus({
     message: env.MESSAGE,
-    failed: env.FAILED === "true",
+    failed: failedJobs ? failedJobs.length > 0 : env.FAILED === "true",
     context: option(args, "--context"),
     passed: option(args, "--passed"),
-    failedText: option(args, "--failed"),
+    failedText: failedJobs?.length ? `${failedText}: ${failedJobs.join(", ")}` : failedText,
   });
   if (!status) {
     console.log("No Source-Commit line in the head commit; nothing to report.");

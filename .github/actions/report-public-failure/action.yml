@@ -1,0 +1,41 @@
+name: Report a failed public job to the private pull request
+description: >-
+  Marks the private commit's `public-ci` status as failed as soon as one public
+  CI job fails, instead of when the slowest job finishes. Runs only on a
+  sync/<name> push with the export App configured; the final report job still
+  sets the run's overall result.
+inputs:
+  job:
+    description: Job name shown in the status, such as "go-device (windows-latest)".
+    required: true
+  app-id:
+    description: The export App's ID (vars.EXPORT_APP_ID).
+    required: true
+  private-key:
+    description: The export App's private key (secrets.EXPORT_APP_PRIVATE_KEY).
+    required: true
+  private-repository:
+    description: The private repository's name (vars.PRIVATE_REPOSITORY).
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: app
+      uses: actions/create-github-app-token@v3
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+        owner: ${{ github.repository_owner }}
+        repositories: ${{ inputs.private-repository }}
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ steps.app.outputs.token }}
+        MESSAGE: ${{ github.event.head_commit.message }}
+        FAILED: "true"
+        JOB: ${{ inputs.job }}
+        PRIVATE_REPOSITORY: ${{ inputs.private-repository }}
+        TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: >-
+        node scripts/report-public-status.mjs --context public-ci
+        --passed "Client tests passed in the public repository"
+        --failed "$JOB failed in the public repository; other jobs are still running"

@@ -27,6 +27,14 @@ jobs:
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      - name: Report this failure to the private pull request now
+        if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
+        uses: ./.github/actions/report-public-failure
+        with:
+          job: code-quality
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          private-repository: ${{ vars.PRIVATE_REPOSITORY }}
 
   media-intelligence:
     runs-on: ubuntu-latest
@@ -50,6 +58,14 @@ jobs:
       - run: ffmpeg -version && ffprobe -version
       - name: Real yt-dlp, HTTP captions, bounded FFmpeg and cited report
         run: node scripts/media-intelligence-integration.mjs --workspace "$RUNNER_TEMP/ra-media-intelligence"
+      - name: Report this failure to the private pull request now
+        if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
+        uses: ./.github/actions/report-public-failure
+        with:
+          job: media-intelligence
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          private-repository: ${{ vars.PRIVATE_REPOSITORY }}
 
   website:
     runs-on: ubuntu-latest
@@ -79,6 +95,14 @@ jobs:
             work/site-test-report/
             work/site-test-results/
           retention-days: 7
+      - name: Report this failure to the private pull request now
+        if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
+        uses: ./.github/actions/report-public-failure
+        with:
+          job: website
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          private-repository: ${{ vars.PRIVATE_REPOSITORY }}
 
   verify:
     runs-on: ubuntu-latest
@@ -106,6 +130,14 @@ jobs:
       - run: pnpm run ci
       - run: pnpm build:ui
       - run: pnpm test:recovery
+      - name: Report this failure to the private pull request now
+        if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
+        uses: ./.github/actions/report-public-failure
+        with:
+          job: verify
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          private-repository: ${{ vars.PRIVATE_REPOSITORY }}
 
   go-coverage:
     # Both full Go modules enforce 90%, including command entrypoints.
@@ -131,6 +163,14 @@ jobs:
         run: node scripts/go-coverage.mjs --target
       - name: Check synthetic takeover source fixtures
         run: python3 scripts/takeover-session-probe-test.py
+      - name: Report this failure to the private pull request now
+        if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
+        uses: ./.github/actions/report-public-failure
+        with:
+          job: go-coverage
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          private-repository: ${{ vars.PRIVATE_REPOSITORY }}
 
   go-distribution:
     runs-on: ubuntu-latest
@@ -164,6 +204,14 @@ jobs:
         with:
           name: go-device-binaries
           path: work/go-device/*
+      - name: Report this failure to the private pull request now
+        if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
+        uses: ./.github/actions/report-public-failure
+        with:
+          job: go-distribution
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          private-repository: ${{ vars.PRIVATE_REPOSITORY }}
 
   go-device:
     timeout-minutes: 20
@@ -236,6 +284,14 @@ jobs:
         with:
           name: agent-validation-${{ matrix.os }}
           path: work/benchmarks/*.json
+      - name: Report this failure to the private pull request now
+        if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
+        uses: ./.github/actions/report-public-failure
+        with:
+          job: go-device (${{ matrix.os }})
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          private-repository: ${{ vars.PRIVATE_REPOSITORY }}
 
   # A sync/pr-<number> branch mirrors a private pull request. Report this run's
   # result to the private commit it came from (the Source-Commit line) as the
@@ -249,8 +305,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/report-public-status.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
       - id: app
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ vars.EXPORT_APP_ID }}
           private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
@@ -259,19 +320,12 @@ jobs:
       - env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
           MESSAGE: ${{ github.event.head_commit.message }}
+          # Decides the result and names the failed jobs, so the final status keeps
+          # saying what broke after a job already reported its own failure.
+          NEEDS: ${{ toJSON(needs) }}
           PRIVATE_REPOSITORY: ${{ vars.PRIVATE_REPOSITORY }}
-          FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
-        run: |
-          source="$(printf '%s\n' "$MESSAGE" | sed -n 's/^Source-Commit: \([0-9a-f]\{40\}\)$/\1/p' | tail -n 1)"
-          if [ -z "$source" ]; then
-            echo "No Source-Commit line in the head commit; nothing to report."
-            exit 0
-          fi
-          if [ "$FAILED" = "true" ]; then
-            set -- failure "Client tests failed in the public repository"
-          else
-            set -- success "Client tests passed in the public repository"
-          fi
-          gh api "repos/$GITHUB_REPOSITORY_OWNER/$PRIVATE_REPOSITORY/statuses/$source" \
-            -f state="$1" -f context=public-ci -f description="$2" \
-            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: >-
+          node scripts/report-public-status.mjs --context public-ci
+          --passed "Client tests passed in the public repository"
+          --failed "Client tests failed in the public repository"

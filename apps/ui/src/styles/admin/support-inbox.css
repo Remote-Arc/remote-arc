@@ -154,6 +154,25 @@
   color: var(--text);
   background: color-mix(in srgb, var(--text) 5%, transparent);
 }
+/* An Apps applicant's plan: paying accounts are admitted to Google Testing first. */
+.adminSupportPlan {
+  font-size: 10px;
+  line-height: 1.5;
+  padding: 3px 7px;
+  border-radius: 5px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  white-space: nowrap;
+}
+.adminSupportPlan[data-plan="paid"] {
+  color: var(--bg);
+  background: var(--text);
+  font-weight: 600;
+}
+.adminSupportPlan[data-plan="trial"] {
+  color: var(--text);
+  font-weight: 600;
+}
 .adminSupportThreadMeta small,
 .adminSupportLastDirection {
   font-size: 10px;

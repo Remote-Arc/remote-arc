@@ -119,68 +119,12 @@
   font-size: 15px;
   color: var(--text);
 }
-.useCaseGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-  margin: 40px 0;
-}
-.useCaseCard {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 285px;
-  gap: 14px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 26px;
-  background: var(--panel);
-  text-decoration: none;
-  transition:
-    border-color 0.2s,
-    transform 0.2s;
-}
-.useCaseCard:hover {
-  border-color: #269bbb;
-  transform: translateY(-3px);
-}
-.useCaseCard h2 {
-  font-size: 23px;
-  letter-spacing: -0.025em;
-  line-height: 1.25;
-  margin: 0;
-  color: var(--text);
-}
-.useCaseCard p {
-  font-size: 16px;
-  line-height: 1.65;
-  margin: 0;
-  color: var(--muted);
-}
-.useCaseCard .caseMode {
-  font-size: 13px;
-  color: var(--muted);
-  margin-top: auto;
-  padding-top: 12px;
-  padding-right: 16px;
-}
-.useCaseCard > b {
-  position: absolute;
-  right: 24px;
-  bottom: 23px;
-  color: var(--text);
-}
 .caseBack {
   display: block;
   width: fit-content;
   margin-bottom: 22px;
   color: var(--muted);
   font-size: 14px;
-}
-.useCaseDetailBody {
-  max-width: 820px;
-  margin: 38px 0 0 !important;
 }
 .casePrompt {
   margin: 18px 0;
@@ -202,35 +146,6 @@
   line-height: 1.75;
   color: var(--text);
 }
-.caseRunModes {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 5px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--panel);
-  margin: 20px 0 4px;
-}
-.caseRunModes button {
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
-  padding: 11px 18px;
-  cursor: pointer;
-}
-.caseRunModes button[aria-pressed="true"] {
-  background: var(--text);
-  color: var(--bg);
-}
-.caseRunModes button:focus-visible {
-  outline: 2px solid #269bbb;
-  outline-offset: 3px;
-}
 .caseStartActions {
   display: flex;
   flex-wrap: wrap;
@@ -241,21 +156,6 @@
 .caseStartActions > span {
   font-size: 13px;
   color: var(--muted);
-}
-.caseArcRequirements {
-  padding: 24px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--panel);
-}
-.caseArcRequirements h2 {
-  margin-top: 0;
-}
-.caseArcRequirements > a {
-  display: inline-block;
-  margin-right: 22px;
-  color: var(--text);
-  font-size: 14px;
 }
 .casePrompt {
   overflow-wrap: anywhere;
@@ -326,9 +226,6 @@
   font-size: 14px;
   margin-top: auto;
 }
-.useCaseSectionTitle + .useCaseGrid {
-  margin-top: 24px;
-}
 @media (max-width: 620px) {
   .arcDelegatedWork > div {
     grid-template-columns: 1fr;
@@ -345,11 +242,6 @@
     gap: 12px;
   }
 }
-@media (max-width: 950px) {
-  .useCaseGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
 @media (max-width: 620px) {
   .productDocs .articleHeader h1,
   .revisedUseCases .articleHeader h1,
@@ -359,14 +251,6 @@
   .productDocs .technicalArticle h2,
   .revisedUseCases .technicalArticle h2 {
     font-size: 24px;
-  }
-  .useCaseGrid {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-  .useCaseCard {
-    min-height: 230px;
-    padding: 24px;
   }
   .docsAvailability {
     padding: 16px;
@@ -388,14 +272,6 @@
   }
   .productDocs .articleHeader {
     margin-bottom: 24px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .useCaseCard {
-    transition: none;
-  }
-  .useCaseCard:hover {
-    transform: none;
   }
 }
 
@@ -462,21 +338,6 @@
 
 .nativeInstall :is(#homebrew, #shell-install) {
   scroll-margin-top: 100px;
-}
-.revisedUseCases .technicalArticle > section.caseArcRequirements {
-  box-sizing: border-box;
-  max-width: 100%;
-  padding: 24px;
-  border: 1px solid var(--line);
-  overflow-wrap: anywhere;
-}
-.revisedUseCases .technicalArticle > section.caseArcRequirements h2 {
-  margin-top: 0;
-}
-@media (max-width: 620px) {
-  .revisedUseCases .technicalArticle > section.caseArcRequirements {
-    padding: 20px;
-  }
 }
 .connectCapabilities {
   margin-top: 36px;

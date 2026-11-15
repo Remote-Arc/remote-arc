@@ -9,6 +9,7 @@ import {
   PerformancePreview,
   WorkspacePreview,
 } from "../arc/arc-connected-previews.js";
+import { BrowserPreview } from "../arc/connected-browser-preview.js";
 import "../../../styles/marketing/use-cases/agent-use-cases.css";
 
 export function AgentUseCases() {
@@ -45,6 +46,16 @@ export function AgentUseCases() {
       prompt: tr("marketing.useCases.agentUseCases.helpMeWorkInAProject"),
       note: tr("marketing.useCases.agentUseCases.yourFilesAndProjectContextStay"),
       brands: ["macos", "linux"],
+    },
+    {
+      id: "browser",
+      icon: "link",
+      name: tr("marketing.useCases.agentUseCases.browser"),
+      title: tr("marketing.useCases.agentUseCases.browserTitle"),
+      detail: tr("marketing.useCases.agentUseCases.browserDetail"),
+      prompt: tr("marketing.useCases.agentUseCases.browserPrompt"),
+      note: tr("marketing.useCases.agentUseCases.browserNote"),
+      brands: ["browser"],
     },
     {
       id: "video",
@@ -126,12 +137,23 @@ export function AgentUseCases() {
             {current.brands.map((brand) => (
               <a
                 key={brand}
-                href={localizedWebsiteHref("/downloads", locale)}
+                href={localizedWebsiteHref(
+                  brand === "browser" ? "/chrome-extension" : "/downloads",
+                  locale,
+                )}
                 aria-label={tr("marketing.useCases.agentUseCases.connect") + brand}
               >
                 <img
                   src={"/platform-brands/" + brand + ".svg"}
-                  alt={brand === "macos" ? "Mac" : brand === "windows" ? "Windows" : "Linux"}
+                  alt={
+                    brand === "macos"
+                      ? "Mac"
+                      : brand === "windows"
+                        ? "Windows"
+                        : brand === "browser"
+                          ? "Chrome"
+                          : "Linux"
+                  }
                   width={24}
                   height={24}
                 />
@@ -161,12 +183,14 @@ export function AgentUseCases() {
             <small>{tr("marketing.useCases.agentUseCases.exampleWorkspace")}</small>
           </header>
           <div className="agentConnectedCanvas" key={current.id}>
-            {selected === 0 ? (
+            {current.id === "fleet" ? (
               <DeviceFleetPreview />
-            ) : selected === 1 ? (
+            ) : current.id === "performance" ? (
               <PerformancePreview />
-            ) : selected === 2 ? (
+            ) : current.id === "workspaces" ? (
               <WorkspacePreview />
+            ) : current.id === "browser" ? (
+              <BrowserPreview />
             ) : (
               <VideoEditingPreview />
             )}

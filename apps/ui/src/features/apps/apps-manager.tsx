@@ -19,6 +19,7 @@ import {
   GoogleConsentDialog,
   type GoogleBetaState,
 } from "./google-app-beta.js";
+import { AppsPlanNotice } from "./apps-plan-notice.js";
 import { billingRecovery } from "../../../../../packages/protocol/src/billing-recovery.js";
 import { BillingRecoveryActions } from "../billing/billing-recovery-actions.js";
 
@@ -80,6 +81,8 @@ export type AppsSnapshot = {
   apps: AppDefinition[];
   connections: AppConnection[];
   googleBeta?: GoogleBetaState;
+  /** False when the plan has no Apps; an older response does not send it. */
+  planIncludesApps?: boolean;
 };
 export type AppsRequest = (path: string, init?: RequestInit) => Promise<unknown>;
 
@@ -1335,6 +1338,7 @@ export function AppsManager({
       {loading && !snapshot && (
         <WorkspaceLoading label={tr("apps.appsManager.loadingAppConnections")} variant="rows" />
       )}
+      {snapshot?.enabled && snapshot.planIncludesApps === false && <AppsPlanNotice />}
       {snapshot && !snapshot.enabled && (
         <section className="appsManagerDisabled">
           <h2>{tr("apps.appsManager.appsAreNotEnabledYet")}</h2>

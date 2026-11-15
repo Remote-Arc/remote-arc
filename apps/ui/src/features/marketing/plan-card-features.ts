@@ -29,7 +29,10 @@ function arcPlanFeatures(plan: CatalogPlan, tr: Translate) {
       credits: count(plan.monthlyCredits),
       tasks: count(approxTaskCount(plan.monthlyCredits)),
     }),
-    tr("marketing.arcPublicPricing.terminalFilesBrowserFleetAndConnected"),
+    // A version that turns fleet_run off must not promise Fleet.
+    plan.fleetRun === false
+      ? tr("marketing.arcPublicPricing.terminalFilesBrowserAndConnectedApps")
+      : tr("marketing.arcPublicPricing.terminalFilesBrowserFleetAndConnected"),
     tr("marketing.arcPublicPricing.yourAiOrArcAutoAndNamed"),
   ];
 }

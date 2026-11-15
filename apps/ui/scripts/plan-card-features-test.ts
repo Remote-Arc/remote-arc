@@ -106,6 +106,15 @@ assert.deepEqual(planCardFeatures(max, catalog, zh).slice(1, 5), [
   "每月 3,000 Arc Credits · 约 1,000 次任务",
 ]);
 
+// A plan whose version turns fleet_run off does not claim Fleet; the line stays in place.
+const proWithoutFleet = planCardFeatures({ ...pro, fleetRun: false }, catalog, en);
+assert.equal(proWithoutFleet.length, maxRows.length);
+assert.equal(proWithoutFleet[5], "Terminal, files, browser and connected Apps");
+assert.equal(
+  planCardFeatures({ ...pro, fleetRun: false }, catalog, zh)[5],
+  "终端、文件、浏览器与已连接应用",
+);
+
 // A plan without a published routine count leaves that line out rather than guessing.
 assert.ok(
   !planCardFeatures({ ...max, routines: undefined }, catalog, en).some((row) =>

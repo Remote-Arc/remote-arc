@@ -10,7 +10,7 @@
   font-size: 15px;
   font-weight: 700;
   text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, #269bbb 60%, transparent);
+  text-decoration-color: color-mix(in srgb, var(--text) 40%, transparent);
   text-underline-offset: 4px;
   cursor: pointer;
 }
@@ -19,7 +19,7 @@
 }
 .planDetailsButton:focus-visible,
 .planDetailsClose:focus-visible {
-  outline: 2px solid #269bbb;
+  outline: 2px solid var(--text);
   outline-offset: 3px;
   border-radius: 4px;
 }

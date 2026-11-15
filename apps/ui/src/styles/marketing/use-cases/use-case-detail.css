@@ -1,0 +1,362 @@
+/* One use case: a hero with its art, a Connect/Arc choice, the prompt, steps and facts. */
+.useCaseDetail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+
+.caseHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 56px;
+  align-items: center;
+  padding-top: 8px;
+}
+
+.caseHeroText {
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+}
+
+.caseHeroText .caseBack {
+  margin-bottom: 8px;
+}
+
+.useCaseDetail .caseHeroText h1 {
+  margin: 0;
+  font-size: clamp(34px, 4vw, 54px);
+  font-weight: 500;
+  line-height: 1.06;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.caseHeroText p {
+  max-width: 600px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.caseHeroArt img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 22px;
+  border: 1px solid var(--line);
+  box-shadow: 0 30px 70px -36px rgba(15, 23, 42, 0.45);
+}
+
+/* Connect or Arc: two choice cards rather than a small switch. */
+.caseModes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.caseModes button {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  color: var(--muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.caseModes button:hover {
+  border-color: color-mix(in srgb, var(--text) 30%, var(--line));
+}
+
+.caseModes button[aria-pressed="true"] {
+  border: 1.5px solid transparent;
+  background:
+    radial-gradient(80% 120% at 0% 0%, rgba(125, 211, 252, 0.12), transparent 65%) padding-box,
+    linear-gradient(var(--panel), var(--panel)) padding-box,
+    linear-gradient(120deg, #7dd3fc, #a78bfa) border-box;
+  color: var(--text);
+}
+
+.caseModes button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
+.caseModeIcon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--panel-2);
+  color: var(--muted);
+}
+
+.caseModes button[aria-pressed="true"] .caseModeIcon {
+  background: linear-gradient(135deg, #7dd3fc, #a78bfa);
+  color: #111114;
+}
+
+.caseModeText {
+  display: grid;
+  gap: 4px;
+}
+
+.caseModeText strong {
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.caseModeText span {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Body */
+.caseBody {
+  display: grid;
+  gap: 40px;
+  min-width: 0;
+}
+
+.caseBody h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.caseBody p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.casePromptCard {
+  display: grid;
+  gap: 18px;
+  padding: 28px 32px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background:
+    radial-gradient(70% 90% at 100% 0%, rgba(167, 139, 250, 0.1), transparent 60%), var(--panel);
+}
+
+.casePromptTop {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.casePromptTop h2 {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.caseCopy {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.caseCopy:hover,
+.caseCopy:focus-visible {
+  background: var(--panel-2);
+}
+
+.caseCopy svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.useCaseDetail .casePrompt {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: clamp(18px, 1.7vw, 22px);
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+}
+
+.useCaseDetail .caseStartActions {
+  margin-top: 0;
+}
+
+.casePromptNote {
+  font-size: 14px !important;
+}
+
+.caseStepsSection {
+  display: grid;
+  gap: 18px;
+}
+
+.caseSteps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+
+.caseSteps li {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+}
+
+.caseStepIndex {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.caseSteps li p {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.caseFacts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.caseFact {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 22px;
+  border-top: 2px solid var(--line);
+}
+
+.caseFact h2 {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.caseFact p {
+  font-size: 14px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.useCaseDetail .caseFact .caseTools {
+  display: block;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.caseFactLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+.caseFactLinks a {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.useCaseDetail .articleEndLinks {
+  margin-top: 0;
+}
+
+@media (max-width: 900px) {
+  .caseHero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+
+  .caseHeroArt {
+    max-width: 520px;
+  }
+
+  .caseSteps,
+  .caseFacts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .caseFact {
+    padding: 18px 0 0;
+  }
+}
+
+@media (max-width: 620px) {
+  .caseModes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .caseModes button {
+    padding: 16px;
+  }
+
+  .casePromptCard {
+    padding: 22px 20px;
+  }
+
+  .caseSteps li {
+    grid-template-columns: 32px minmax(0, 1fr);
+    align-items: center;
+    padding: 16px;
+  }
+
+  .caseHeroText p {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .caseModes button {
+    transition: none;
+  }
+}

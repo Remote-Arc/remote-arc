@@ -63,7 +63,7 @@
   font-weight: 600;
 }
 .planComparisonYes {
-  color: #269bbb;
+  color: var(--text);
   font-weight: 700;
 }
 .planComparisonNo {

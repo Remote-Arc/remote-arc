@@ -1,79 +1,136 @@
+import "../../styles/marketing/home/platform-intro.css";
 import { useI18n } from "../../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../../lib/marketing-paths.js";
 import { ProductIcon as Icon } from "../../components/product-icon.js";
+
+const P = "marketing.productPositioning.";
+const APP_ICONS = ["github", "slack", "gmail", "notion", "googledrive", "linear", "jira"];
+const FLEET = [
+  { os: "macos", name: "macOS" },
+  { os: "linux", name: "Linux", picked: true },
+  { os: "windows", name: "Windows" },
+];
+
+/** Connected Apps, shown as the brand tiles the hero uses. */
+function AppsVisual({ more }: { more: string }) {
+  return (
+    <div className="pillarApps">
+      {APP_ICONS.map((id) => (
+        <span key={id}>
+          <img src={"/app-brands/" + id + ".svg"} alt="" width="22" height="22" loading="lazy" />
+        </span>
+      ))}
+      <span className="pillarAppsMore">{more}</span>
+    </div>
+  );
+}
+
+/** Three computers; the one that fits the task is picked. */
+function FleetVisual({ bestFit }: { bestFit: string }) {
+  return (
+    <ul className="pillarFleet">
+      {FLEET.map((device) => (
+        <li key={device.os} data-picked={device.picked || undefined}>
+          <img
+            src={"/platform-brands/" + device.os + ".svg"}
+            alt=""
+            width="16"
+            height="16"
+            loading="lazy"
+          />
+          <span>{device.name}</span>
+          <i aria-hidden="true" />
+          {device.picked && <em>{bestFit}</em>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** A routine's recent runs and its next one. */
+function RoutineVisual({ schedule, next }: { schedule: string; next: string }) {
+  return (
+    <div className="pillarRoutine">
+      <span className="pillarRoutineSchedule">
+        <Icon name="routine" size={14} />
+        {schedule}
+      </span>
+      <ol>
+        {[0, 1, 2, 3].map((run) => (
+          <li key={run} data-done="">
+            <Icon name="check" size={12} />
+          </li>
+        ))}
+        <li data-next="" />
+      </ol>
+      <span className="pillarRoutineNext">{next}</span>
+    </div>
+  );
+}
+
+/** The home page's platform section: one line on what Remote Arc is, then its three
+ * parts, each with a small picture of it working. */
 export function ProductFocus() {
   const { tr, locale } = useI18n();
-  const items = [
+  const pillars = [
     {
-      number: "01",
-      icon: "apps" as const,
-      label: tr("marketing.productPositioning.yourApps"),
-      title: tr("marketing.productPositioning.bringYourToolsTogether"),
-      text: tr("marketing.productPositioning.workAcrossGithubSlackGmailNotion"),
+      label: tr(`${P}yourApps`),
+      title: tr(`${P}bringYourToolsTogether`),
+      text: tr(`${P}workAcrossGithubSlackGmailNotion`),
       href: "/integrations",
-      action: tr("marketing.productPositioning.exploreApps"),
+      action: tr(`${P}exploreApps`),
+      visual: <AppsVisual more={tr(`${P}appsMore`)} />,
     },
     {
-      number: "02",
-      icon: "device" as const,
-      label: tr("marketing.productPositioning.intelligentFleet"),
-      title: tr("marketing.productPositioning.theRightComputerForTheJob"),
-      text: tr("marketing.productPositioning.matchToolsOperatingSystemsTrustedWorkspaces"),
+      label: tr(`${P}intelligentFleet`),
+      title: tr(`${P}theRightComputerForTheJob`),
+      text: tr(`${P}matchToolsOperatingSystemsTrustedWorkspaces`),
       href: "/docs/device-fleet",
-      action: tr("marketing.productPositioning.exploreYourFleet"),
+      action: tr(`${P}exploreYourFleet`),
+      visual: <FleetVisual bestFit={tr(`${P}bestFit`)} />,
     },
     {
-      number: "03",
-      icon: "routine" as const,
-      label: tr("marketing.productPositioning.tasksRoutines"),
-      title: tr("marketing.productPositioning.oneRequestWorkThatFollowsThrough"),
-      text: tr("marketing.productPositioning.delegateATaskOrSetUp"),
+      label: tr(`${P}tasksRoutines`),
+      title: tr(`${P}oneRequestWorkThatFollowsThrough`),
+      text: tr(`${P}delegateATaskOrSetUp`),
       href: "/arc",
-      action: tr("marketing.productPositioning.meetArc"),
+      action: tr(`${P}meetArc`),
+      visual: <RoutineVisual schedule={tr(`${P}routineSchedule`)} next={tr(`${P}routineNext`)} />,
     },
   ];
   return (
     <section className="homePlatformIntro" aria-labelledby="home-platform-heading">
       <header className="homePlatformHeader">
         <div>
-          <span className="eyebrow">{tr("marketing.productPositioning.theRemoteArcPlatform")}</span>
-          <h2 id="home-platform-heading">
-            {tr("marketing.productPositioning.agentInfrastructureForRealWorkAcross")}
-          </h2>
+          <span className="eyebrow">{tr(`${P}theRemoteArcPlatform`)}</span>
+          <h2 id="home-platform-heading">{tr(`${P}agentInfrastructureForRealWorkAcross`)}</h2>
         </div>
-        <div className="homePlatformSummary">
-          <p>
-            <strong>Arc</strong>
-            {tr("marketing.productPositioning.isYourHostedAiAgentWritten")}
-          </p>
-          <p>
-            <strong>Connect</strong>
-            {tr("marketing.productPositioning.bringsTheSameAuthorizedAppsAnd")}
-          </p>
-          <p>{tr("marketing.productPositioning.remoteArcManagesContextPermissionsSaved")}</p>
-          <p>{tr("marketing.productPositioning.remoteArcIsInfrastructureThatTurns")}</p>
+        <div className="homePlatformAside">
+          <p>{tr(`${P}lead`)}</p>
           <a href={localizedWebsiteHref("/docs/architecture", locale)}>
-            {tr("marketing.productPositioning.howThePlatformWorks")}
+            {tr(`${P}howThePlatformWorks`)}
             <Icon name="arrowUpRight" size={15} />
           </a>
         </div>
       </header>
-      <div className="productFocus">
-        {items.map((item) => (
-          <article key={item.number}>
-            <div className="productFocusTop">
-              <span>
-                {item.number} / {item.label}
-              </span>
-              <Icon name={item.icon} size={19} />
+      <div className="platformPillars">
+        {pillars.map((pillar) => (
+          <a
+            key={pillar.href}
+            className="platformPillar"
+            href={localizedWebsiteHref(pillar.href, locale)}
+          >
+            <div className="platformPillarVisual" aria-hidden="true">
+              {pillar.visual}
             </div>
-            <h3>{item.title}</h3>
-            <p>{item.text}</p>
-            <a href={item.href}>
-              {item.action}
+            <span className="platformPillarLabel">{pillar.label}</span>
+            <h3>{pillar.title}</h3>
+            <p>{pillar.text}</p>
+            <span className="platformPillarAction">
+              {pillar.action}
               <Icon name="arrowUpRight" size={15} />
-            </a>
-          </article>
+            </span>
+          </a>
         ))}
       </div>
     </section>

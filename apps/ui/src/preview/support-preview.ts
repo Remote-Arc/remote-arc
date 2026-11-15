@@ -26,6 +26,8 @@ export function createSupportPreview(storage: Pick<Storage, "getItem" | "setItem
     last_message_at: ago(minutes),
     source,
     beta_status: beta,
+    // A preview applicant on the Arc trial; customer email has no plan.
+    applicant_plan: source === "google-beta" ? "trial" : null,
     last_direction: "inbound",
     last_delivery_status: "received",
   });
@@ -64,6 +66,7 @@ export function createSupportPreview(storage: Pick<Storage, "getItem" | "setItem
         providers: ["gmail", "google_calendar", "google_drive"],
         status: "pending",
         reviewedAt: null,
+        applicantPlan: "trial",
       },
       messages: [
         mail(

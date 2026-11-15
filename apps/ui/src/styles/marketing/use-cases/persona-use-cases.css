@@ -1,0 +1,265 @@
+/* Personas: a row of portraits, and one panel for the chosen persona. */
+.personaTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.personaTabs::-webkit-scrollbar {
+  display: none;
+}
+
+.personaTabs button {
+  display: grid;
+  flex: 1 0 112px;
+  gap: 10px;
+  justify-items: center;
+  padding: 14px 8px;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.personaTabs img {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  outline: 3px solid transparent;
+  outline-offset: 3px;
+  filter: saturate(0.55);
+  opacity: 0.8;
+  transition:
+    outline-color 0.2s ease,
+    filter 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.personaTabs button:hover img,
+.personaTabs button[aria-selected="true"] img {
+  filter: none;
+  opacity: 1;
+}
+
+.personaTabs button[aria-selected="true"] {
+  background: var(--panel-2);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.personaTabs button[aria-selected="true"] img {
+  outline-color: var(--text);
+}
+
+.personaTabs button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.personaPanel {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+  padding: 40px;
+  border-radius: 28px;
+  /* The brand's sky-to-violet glow, as on the home page, over the theme surface. */
+  background:
+    radial-gradient(70% 90% at 0% 0%, rgba(125, 211, 252, 0.14), transparent 60%),
+    radial-gradient(60% 80% at 100% 100%, rgba(167, 139, 250, 0.1), transparent 60%), var(--panel);
+  border: 1px solid var(--line);
+}
+
+.personaPortrait img {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  filter: drop-shadow(0 24px 30px rgba(15, 23, 42, 0.18));
+}
+
+.personaBody {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.personaBody h3 {
+  margin: 0;
+  font-size: clamp(26px, 2.6vw, 34px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.personaIntro {
+  margin: -8px 0 4px;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.personaTasks {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.personaTasks li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.personaTaskIndex {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.personaTasks p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.personaCopy {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  align-self: center;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0.55;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease;
+}
+
+.personaCopy svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.personaTasks li:hover .personaCopy,
+.personaCopy:focus-visible,
+.personaCopy[data-copied] {
+  opacity: 1;
+}
+
+.personaCopy:hover,
+.personaCopy:focus-visible {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.personaCopy[data-copied] {
+  color: var(--text);
+}
+
+.personaLimit {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.personaFooter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.personaPlan {
+  padding: 11px 18px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.personaPlan:hover,
+.personaPlan:focus-visible {
+  opacity: 0.86;
+}
+
+.personaFooter > span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.personaRelated {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.personaRelated a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--muted) 45%, transparent);
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  .personaPanel {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    padding: 24px 20px;
+  }
+
+  .personaPortrait img {
+    max-width: 140px;
+    margin: 0 auto;
+  }
+
+  .personaTabs button {
+    flex-basis: 88px;
+  }
+
+  .personaTabs img {
+    width: 52px;
+    height: 52px;
+  }
+
+  .personaCopy {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .personaTabs img,
+  .personaCopy {
+    transition: none;
+  }
+}

@@ -1,6 +1,8 @@
 export type SupportStatus = "open" | "waiting" | "resolved";
 export type SupportSource = "email" | "google-beta";
 export type BetaStatus = "pending" | "approved" | "declined";
+/** An Apps applicant's plan now; paying accounts are admitted to Google Testing first. */
+export type ApplicantPlan = "paid" | "trial" | "free";
 export type SupportThread = {
   id: string;
   sender_email: string;
@@ -9,6 +11,7 @@ export type SupportThread = {
   last_message_at: string;
   source: SupportSource;
   beta_status: BetaStatus | null;
+  applicant_plan: ApplicantPlan | null;
   last_direction: "inbound" | "outbound" | null;
   last_delivery_status: string | null;
 };
@@ -31,6 +34,7 @@ export type SupportDetail = {
     providers: string[];
     status: BetaStatus;
     reviewedAt: string | null;
+    applicantPlan: ApplicantPlan | null;
   };
 };
 export const GOOGLE_BETA_APP_NAMES: Record<string, string> = {

@@ -41,7 +41,7 @@ const UseCaseCatalog = React.lazy(() =>
   import("./use-cases/use-cases.js").then((module) => ({ default: module.UseCaseCatalog })),
 );
 const UseCaseDetail = React.lazy(() =>
-  import("./use-cases/use-cases.js").then((module) => ({ default: module.UseCaseDetail })),
+  import("./use-cases/use-case-detail.js").then((module) => ({ default: module.UseCaseDetail })),
 );
 export function Landing({ user }: { user?: User | null }) {
   const { tr } = useI18n();
@@ -381,7 +381,7 @@ export function SecurityModelPage({ user }: { user?: User | null }) {
   const { tr } = useI18n();
   return (
     <PublicLayout user={user}>
-      <main className="technicalDoc">
+      <main className="technicalDoc securityModelPage">
         <header className="articleHeader">
           <span className="eyebrow">{tr("marketing.marketingPages.security")}</span>
           <h1>{tr("marketing.marketingPages.securityAndTrustModel")}</h1>

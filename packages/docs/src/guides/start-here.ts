@@ -10,8 +10,8 @@ export const startHereSections: DocSection[] = [
     list: {
       items: [
         {
-          en: "Arc is the hosted personal agent at agent.remotearc.app. Remote Arc runs the model for you, so you do not need a model API key. Activate the 14-day Auto trial, or choose Pro / Max on the dedicated checkout page linked from Plan & usage.",
-          zh: "Arc 是 agent.remotearc.app 上的托管个人智能体。模型由 Remote Arc 运行，你不需要模型 API Key。可以开启 14 天 Auto 试用，或从“套餐与用量”进入独立支付页选择 Pro / Max。",
+          en: "Arc is the hosted personal agent at agent.remotearc.app. Remote Arc runs the model for you, so you do not need a model API key. Activate the 7-day Auto trial, or choose Pro / Max on the dedicated checkout page linked from Plan & usage.",
+          zh: "Arc 是 agent.remotearc.app 上的托管个人智能体。模型由 Remote Arc 运行，你不需要模型 API Key。可以开启 7 天 Auto 试用，或从“套餐与用量”进入独立支付页选择 Pro / Max。",
         },
         {
           en: "Connect exposes your authorized Apps and computers to an AI client you already use, such as ChatGPT, Claude, Cursor or Codex, through one Remote MCP endpoint. Your client does the reasoning; Remote Arc checks permissions and carries out the tool calls.",

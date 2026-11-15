@@ -3,11 +3,11 @@
   padding: 68px 0 50px;
   color: var(--text);
 }
-:root[data-theme="light"] .pricingContent {
-  --pricing-muted: #536c77;
-}
-:root[data-theme="dark"] .pricingContent {
-  --pricing-muted: #9eb0ba;
+.pricingContent {
+  /* The brand's sky-to-violet accent, as in the home page headline. */
+  --pricing-accent: linear-gradient(90deg, #7dd3fc, #a78bfa);
+  /* Secondary buttons take the theme's neutral surface instead of the dashboard navy. */
+  --control-bg: var(--panel-2);
 }
 .pricingContent .eyebrow {
   font-size: 13px;
@@ -54,13 +54,7 @@
 }
 .plusPlan,
 .featuredPlan {
-  background: linear-gradient(
-    150deg,
-    color-mix(in srgb, var(--panel) 93%, #269bbb 7%),
-    var(--panel)
-  );
-  border-top: 3px solid #269bbb;
-  box-shadow: 0 18px 46px rgba(20, 90, 110, 0.09);
+  background: var(--panel);
 }
 .planHeader {
   display: flex;
@@ -85,9 +79,8 @@
   font-weight: 720;
 }
 .plusBadge {
-  border-color: color-mix(in srgb, #269bbb 45%, var(--line));
   color: var(--text);
-  background: color-mix(in srgb, #269bbb 10%, transparent);
+  background: var(--panel-2);
 }
 .hostedPrice {
   display: flex;
@@ -150,7 +143,7 @@
 }
 .planIncluded li > span {
   font-weight: 800;
-  color: #269bbb;
+  color: var(--text);
 }
 .planCard > .primaryButton,
 .planCard > .ghostButton,
@@ -348,7 +341,7 @@
 }
 .pricingContent a:focus-visible,
 .pricingContent summary:focus-visible {
-  outline: 3px solid #269bbb;
+  outline: 2px solid var(--text);
   outline-offset: 5px;
 }
 @media (max-width: 900px) {
@@ -478,7 +471,13 @@
 }
 .featuredPlan {
   position: relative;
-  border-color: color-mix(in srgb, #269bbb 55%, var(--line));
+  /* A gradient border that keeps the card's rounded corners. */
+  border: 1.5px solid transparent;
+  background:
+    radial-gradient(90% 60% at 0% 0%, rgba(125, 211, 252, 0.1), transparent 70%) padding-box,
+    linear-gradient(var(--panel), var(--panel)) padding-box,
+    var(--pricing-accent) border-box;
+  box-shadow: 0 24px 60px -30px rgba(125, 140, 250, 0.45);
 }
 /* Sits on the card's top edge so the plan name and price stay aligned with the other cards. */
 .planRibbon {
@@ -490,8 +489,8 @@
   font-size: 12px;
   font-weight: 780;
   letter-spacing: 0.06em;
-  color: #fff;
-  background: #1d7f99;
+  color: #111114;
+  background: var(--pricing-accent);
   white-space: nowrap;
 }
 .hostedPrice > strong > small {
@@ -505,8 +504,8 @@
   border-radius: 999px;
   font-size: 12px;
   font-weight: 760;
-  color: var(--text);
-  background: color-mix(in srgb, #269bbb 22%, transparent);
+  color: #111114;
+  background: var(--pricing-accent);
   white-space: nowrap;
 }
 .planActions {

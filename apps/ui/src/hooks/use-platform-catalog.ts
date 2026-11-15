@@ -22,6 +22,8 @@ export type CatalogPlan = {
   notifications?: boolean;
   unattendedBrowser?: boolean;
   fleetRun?: boolean;
+  apps?: boolean;
+  unattendedApps?: boolean;
   versionId: string;
 };
 export type PlatformCatalog = {

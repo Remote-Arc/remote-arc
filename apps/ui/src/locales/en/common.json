@@ -325,6 +325,7 @@
     "billing.arcBillingClient.arcCreditsEveryMonth": "{credits} Arc Credits every month · Arc runs routines on your computers while you are away",
     "billing.arcBillingClient.bringYourOwnAiOrLetArc": "Bring your own ChatGPT, Claude or Codex, or let Arc run the AI · Auto and named models",
     "billing.arcBillingClient.localTerminalFilesBrowserFleetAnd": "Local terminal, files, browser, Fleet and connected Apps",
+    "billing.arcBillingClient.localTerminalFilesBrowserAndApps": "Local terminal, files, browser and connected Apps",
     "billing.arcBillingClient.thisBillingRequestCouldNotBe": "This billing request could not be completed. Check your current payment status before retrying, and keep the error reference if you need help.",
     "billing.arcBillingClient.unlimitedConnectCallsPublishedFairUse": "Unlimited Connect calls · published fair-use rate limits only",
     "billing.arcBillingClient.unlimitedFileTransfer": "Unlimited file transfer",

@@ -722,36 +722,15 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
     if (url.pathname === "/api/browser-extension/version")
       return json({ version: companionManifest.version });
     if (url.pathname === "/api/billing/catalog") {
-      const plans =
-        new URLSearchParams(location.search).get("pricing") === "bundled"
-          ? previewBillingPlans.map((plan) => {
-              if (plan.id === "connect-unlimited-v1")
-                return {
-                  ...plan,
-                  label: "Pro",
-                  yearlyPriceCents: 14900,
-                  monthlyCredits: 500,
-                  deviceLimit: 20,
-                  allHostedModels: true,
-                };
-              if (plan.id === "arc-pro-v1")
-                return {
-                  ...plan,
-                  label: "Max",
-                  monthlyPriceCents: 4900,
-                  monthlyCredits: 3000,
-                  deviceLimit: 100,
-                };
-              return plan;
-            })
-          : previewBillingPlans;
+      // The decided terms, which already bundle Arc with Pro (?pricing=bundled shows the same).
+      const plans = previewBillingPlans;
       return json({
         arcAvailable: (await runtimeConfig()).arcAvailable,
         billingAvailable: false,
         connectFreeCalls: 10000,
         plans,
         topups: ARC_TOPUPS.map((p) => ({ ...p, versionId: "preview:" + p.id })),
-        trial: { days: 14, credits: 200 },
+        trial: { days: 7, credits: 300 },
       });
     }
     if (url.pathname === "/api/arc/employees") return json({ employees: previewEmployees });

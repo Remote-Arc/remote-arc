@@ -143,6 +143,38 @@ test("Connected capabilities show fleet, performance, workspaces and a local vid
   expect(videoDraft.searchParams.get("prompt")).toMatch(/MP4/);
 });
 
+// The browser scene shows Arc's tab group on an allowed site, keeps an unshared tab
+// out of view, and holds sending for the person; its logo leads to Chrome Companion.
+test("Connected capabilities include a browser scene that waits before sending", async ({
+  page,
+}, info) => {
+  const zh = info.project.metadata.language === "zh";
+  const section = page.locator("#agent-use-cases");
+  await section.scrollIntoViewIfNeeded();
+  await section.getByRole("tab", { name: zh ? "浏览器" : "Browser" }).click();
+  const panel = section.locator(".agentConnectedPanel");
+  await expect(panel).toHaveAttribute("data-workflow", "browser");
+  const browser = panel.locator(".connectedBrowser");
+  await expect(browser.locator(".connectedBrowserGroup")).toHaveText("Remote Arc");
+  await expect(browser.locator(".connectedBrowserTab[data-hidden]")).toContainText(
+    zh ? "不可见" : "Not visible",
+  );
+  await expect(browser.locator(".connectedBrowserAddress")).toContainText(
+    zh ? "已允许的网站" : "Allowed site",
+  );
+  await expect(browser.locator("tr[data-unpaid]")).toHaveCount(2);
+  await expect(browser.locator(".connectedBrowserSteps li[data-waiting]")).toContainText(
+    zh ? "等你确认" : "Waiting for you",
+  );
+  await expect(panel.locator(".agentConnectedLogos a")).toHaveAttribute(
+    "href",
+    (zh ? "/zh" : "") + "/chrome-extension",
+  );
+  const draft = new URL((await panel.locator(".agentConnectedAction").getAttribute("href"))!);
+  expect(draft.searchParams.get("prompt")).toMatch(zh ? /发票/ : /invoices/);
+  expect(await section.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+});
+
 test("New previews have no horizontal overflow or missing images", async ({ page }) => {
   for (const selector of [".slackAgentPreview", "#agent-use-cases", ".appsDirectory"]) {
     const region = page.locator(selector);

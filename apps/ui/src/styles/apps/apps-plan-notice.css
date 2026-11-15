@@ -1,0 +1,43 @@
+/* The Apps page notice for a plan without Apps. */
+.appsPlanNotice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding: 18px 22px;
+  border: 1px solid var(--dash-line);
+  border-radius: 11px;
+  background: var(--dash-surface);
+}
+
+.appsPlanNotice h2 {
+  margin: 0 0 4px;
+  color: var(--dash-text);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.appsPlanNotice p {
+  margin: 0;
+  color: var(--dash-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.appsPlanNoticeAction {
+  flex: none;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: var(--dash-text);
+  color: var(--dash-surface);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.appsPlanNoticeAction:hover,
+.appsPlanNoticeAction:focus-visible {
+  opacity: 0.86;
+}

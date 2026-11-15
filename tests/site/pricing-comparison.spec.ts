@@ -26,7 +26,12 @@ for (const variant of ["", "?pricing=bundled"])
       const plans = (await page.evaluate(async () => {
         const catalog = await (await fetch("/api/billing/catalog")).json();
         return catalog.plans;
-      })) as { label: string; deviceLimit: number | null; connectToolCalls: number | null }[];
+      })) as {
+        label: string;
+        deviceLimit: number | null;
+        connectToolCalls: number | null;
+        connectionLimit?: number;
+      }[];
       const shown = await page
         .locator(".pricingPlans--saas .planHeader > span:first-child")
         .allInnerTexts();
@@ -41,6 +46,26 @@ for (const variant of ["", "?pricing=bundled"])
             plan.deviceLimit.toLocaleString(zh ? "zh-CN" : "en-US"),
           );
       }
+      // Apps show how many accounts each plan connects, and routine use is its own row.
+      const appsRow = table.getByRole("row").filter({
+        has: page.getByRole("rowheader", {
+          name: zh ? "应用连接（Gmail、GitHub、Slack 等）" : "Apps (Gmail, GitHub, Slack and more)",
+        }),
+      });
+      for (const label of shown) {
+        const plan = plans.find((item) => item.label.toUpperCase() === label.trim().toUpperCase())!;
+        if (plan.connectionLimit)
+          await expect(appsRow.locator(`td[data-label="${plan.label}"]`)).toHaveText(
+            zh
+              ? `最多 ${plan.connectionLimit.toLocaleString("zh-CN")} 个连接`
+              : `Up to ${plan.connectionLimit.toLocaleString("en-US")} connections`,
+          );
+      }
+      await expect(
+        table.getByRole("rowheader", {
+          name: zh ? "routine 里使用应用连接" : "Apps inside routines",
+        }),
+      ).toBeVisible();
       // Free states what happens after its allowance; safety comes with every plan.
       await expect(table).toContainText(zh ? "只能用读取类工具" : "read tools only");
       await expect(
@@ -50,3 +75,25 @@ for (const variant of ["", "?pricing=bundled"])
       ).toBeVisible();
     },
   );
+
+// A link to one plan (a use case's "See the Max plan") highlights that plan and
+// brings it into view; without one, or for Free, the recommended plan stays Pro.
+test("A pricing link to one plan highlights that plan", async ({ page }, info) => {
+  const prefix = info.project.metadata.language === "zh" ? "/zh" : "";
+  await page.goto(prefix + "/pricing#max");
+  const featured = page.locator(".planCard.featuredPlan");
+  await expect(featured).toHaveCount(1);
+  await expect(featured).toHaveAttribute("id", "max");
+  await expect(featured.locator(".planRibbon")).toHaveText(prefix ? "适合你" : "FITS YOUR WORK");
+  await expect(featured.locator(".planActions a").first()).toHaveClass(/primaryButton/);
+  await expect(page.locator("#pro .planActions a").first()).toHaveClass(/ghostButton/);
+  await expect(featured).toBeInViewport();
+
+  for (const hash of ["", "#free", "#nothing"]) {
+    await page.goto(prefix + "/pricing" + hash);
+    await expect(page.locator(".planCard.featuredPlan")).toHaveAttribute("id", "pro");
+    await expect(page.locator(".planCard.featuredPlan .planRibbon")).toHaveText(
+      prefix ? "推荐" : "RECOMMENDED",
+    );
+  }
+});

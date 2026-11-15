@@ -54,10 +54,10 @@ export const arcSections: DocSection[] = [
     ],
   },
   {
-    heading: { en: "Your 14-day trial", zh: "14 天试用" },
+    heading: { en: "Your 7-day trial", zh: "7 天试用" },
     text: {
-      en: "Activate the trial yourself in Arc Chat. It includes 200 Credits and starts only when you confirm. No card is needed and nothing is charged automatically.",
-      zh: "在 Arc Chat 中主动开启试用，包含 200 Credits，只有你确认后才开始。无需信用卡，也不会自动扣费。",
+      en: "Activate the trial yourself in Arc Chat. It includes 200 Credits and Apps, and starts only when you confirm. No card is needed and nothing is charged automatically.",
+      zh: "在 Arc Chat 中主动开启试用，包含 200 Credits 和 Apps，只有你确认后才开始。无需信用卡，也不会自动扣费。",
     },
     list: {
       items: [

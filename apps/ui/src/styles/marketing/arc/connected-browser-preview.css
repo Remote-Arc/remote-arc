@@ -1,0 +1,192 @@
+/* Browser preview: a Chrome window with Arc's tab group, an allowed site, the
+ * page it reads and the step that waits for you. */
+.connectedBrowser {
+  overflow: hidden;
+  border: 1px solid var(--site-line);
+  border-radius: 11px;
+  background: var(--site-surface);
+  color: var(--site-ink);
+  font-size: 10px;
+}
+
+.connectedBrowserTabs {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 9px 12px 0;
+  background: var(--site-subtle);
+  overflow: hidden;
+}
+
+.connectedBrowserGroup {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(120deg, #7dd3fc, #a78bfa);
+  color: #111114;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.connectedBrowserTab {
+  display: inline-flex;
+  flex: none;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 11px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  color: var(--site-muted);
+  white-space: nowrap;
+}
+
+.connectedBrowserTab > i {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: #a78bfa;
+}
+
+.connectedBrowserTab[data-active] {
+  border-color: var(--site-line);
+  background: var(--site-surface);
+  color: var(--site-ink);
+}
+
+/* A tab the user did not share: Arc cannot see it. */
+.connectedBrowserTab[data-hidden] {
+  margin-left: auto;
+  opacity: 0.55;
+  filter: blur(0.3px);
+}
+
+.connectedBrowserTab[data-hidden] small {
+  padding: 1px 6px;
+  border: 1px dashed var(--site-line);
+  border-radius: 999px;
+  font-size: 7px;
+}
+
+.connectedBrowserAddress {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  padding: 8px 12px;
+  border-top: 1px solid var(--site-line);
+  border-bottom: 1px solid var(--site-line);
+  color: var(--site-muted);
+}
+
+.connectedBrowserAddress svg {
+  color: #39c58d;
+}
+
+.connectedBrowserAddress > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connectedBrowserAddress > small {
+  margin-left: auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #39c58d 16%, transparent);
+  color: #39c58d;
+  font-size: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.connectedBrowserPage {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.connectedBrowserPage table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.connectedBrowserPage td {
+  padding: 7px 6px;
+  border-bottom: 1px solid var(--site-line);
+}
+
+.connectedBrowserPage td:nth-child(2) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.connectedBrowserPage td:last-child {
+  width: 1%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.connectedBrowserPage td span {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--site-subtle);
+  color: var(--site-muted);
+  font-size: 8px;
+}
+
+/* The rows Arc picked out. */
+.connectedBrowserPage tr[data-unpaid] td {
+  background: color-mix(in srgb, #a78bfa 9%, transparent);
+}
+
+.connectedBrowserPage tr[data-unpaid] td span {
+  background: color-mix(in srgb, #f08a5d 18%, transparent);
+  color: #f08a5d;
+}
+
+.connectedBrowserSteps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.connectedBrowserSteps li {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  color: var(--site-muted);
+}
+
+.connectedBrowserSteps li[data-done] svg {
+  color: #39c58d;
+}
+
+.connectedBrowserSteps li[data-waiting] {
+  padding: 7px 9px;
+  border: 1px solid color-mix(in srgb, #a78bfa 45%, var(--site-line));
+  border-radius: 8px;
+  color: var(--site-ink);
+}
+
+.connectedBrowserSteps li[data-waiting] svg {
+  color: #a78bfa;
+}
+
+.connectedBrowserSteps b {
+  margin-left: auto;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--site-ink);
+  color: var(--site-surface);
+  font-size: 8px;
+  font-weight: 600;
+}
+
+@media (max-width: 620px) {
+  .connectedBrowserTab:not([data-active]):not([data-hidden]) {
+    display: none;
+  }
+}

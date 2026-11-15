@@ -1,0 +1,304 @@
+/* Home: the platform section. A short header, then three linked cards, each led
+ * by a small picture of that part working. */
+.homePlatformIntro {
+  margin: 0 0 82px;
+}
+
+.homePlatformHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 20px 64px;
+  align-items: end;
+  margin-bottom: 36px;
+}
+
+.homePlatformHeader h2 {
+  margin: 15px 0 0;
+  max-width: 620px;
+  font-size: clamp(29px, 3.2vw, 42px);
+  font-weight: 500;
+  line-height: 1.16;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.homePlatformAside {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.homePlatformAside p {
+  max-width: 440px;
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.homePlatformAside a {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  color: var(--site-ink);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.homePlatformAside a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.platformPillars {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.platformPillar {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 14px 14px 24px;
+  border: 1px solid var(--site-line);
+  border-radius: 20px;
+  background: var(--site-surface);
+  color: var(--site-ink);
+  text-decoration: none;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.platformPillar:hover {
+  border-color: color-mix(in srgb, var(--site-ink) 28%, var(--site-line));
+  transform: translateY(-2px);
+}
+
+.platformPillar:focus-visible {
+  outline: 2px solid var(--site-ink);
+  outline-offset: 3px;
+}
+
+.platformPillarVisual {
+  display: grid;
+  place-items: center;
+  height: 156px;
+  margin-bottom: 22px;
+  border-radius: 14px;
+  /* The brand's sky-to-violet glow, as in the hero, over the theme surface. */
+  background:
+    radial-gradient(80% 90% at 20% 0%, rgba(125, 211, 252, 0.12), transparent 60%),
+    radial-gradient(70% 90% at 100% 100%, rgba(167, 139, 250, 0.12), transparent 60%),
+    var(--site-subtle);
+  overflow: hidden;
+}
+
+.platformPillarLabel,
+.platformPillar h3,
+.platformPillar p,
+.platformPillarAction {
+  margin-inline: 12px;
+}
+
+.platformPillarLabel {
+  color: var(--site-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.platformPillar h3 {
+  margin-top: 10px;
+  margin-bottom: 8px;
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.03em;
+}
+
+.platformPillar p {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.platformPillarAction {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: auto;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Apps: brand tiles, as in the hero. */
+.pillarApps {
+  display: grid;
+  grid-template-columns: repeat(4, 44px);
+  gap: 10px;
+}
+
+.pillarApps > span {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--site-line);
+  border-radius: 12px;
+  /* White tiles, as in the hero, so every brand mark reads in both themes. */
+  background: #fff;
+  box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.5);
+}
+
+.pillarApps > span:nth-child(odd) {
+  transform: translateY(-5px);
+}
+
+.pillarApps .pillarAppsMore {
+  background: var(--site-surface);
+  color: var(--site-muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Fleet: three computers, the best fit picked. */
+.pillarFleet {
+  display: grid;
+  gap: 7px;
+  width: min(250px, 84%);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pillarFleet li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid var(--site-line);
+  border-radius: 11px;
+  background: var(--site-surface);
+  color: var(--site-muted);
+  font-size: 12px;
+}
+
+.pillarFleet img {
+  opacity: 0.85;
+}
+
+.pillarFleet i {
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: #4ade80;
+}
+
+.pillarFleet em {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #7dd3fc, #a78bfa);
+  color: #111114;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.pillarFleet li[data-picked] {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--site-surface), var(--site-surface)) padding-box,
+    linear-gradient(120deg, #7dd3fc, #a78bfa) border-box;
+  border: 1px solid transparent;
+  color: var(--site-ink);
+  transform: scale(1.04);
+}
+
+/* Routines: recent runs and the next one. */
+.pillarRoutine {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+}
+
+.pillarRoutineSchedule {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  padding: 6px 12px;
+  border: 1px solid var(--site-line);
+  border-radius: 999px;
+  background: var(--site-surface);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pillarRoutine ol {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pillarRoutine li {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+}
+
+.pillarRoutine li[data-done] {
+  background: color-mix(in srgb, #4ade80 18%, var(--site-surface));
+  color: #4ade80;
+}
+
+.pillarRoutine li[data-next] {
+  border: 2px dashed #a78bfa;
+}
+
+.pillarRoutineNext {
+  color: var(--site-muted);
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .homePlatformIntro {
+    margin-bottom: 50px;
+  }
+
+  .homePlatformHeader {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    margin-bottom: 26px;
+  }
+
+  .platformPillars {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .platformPillarVisual {
+    height: 140px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .platformPillar {
+    transition: none;
+  }
+
+  .platformPillar:hover {
+    transform: none;
+  }
+}

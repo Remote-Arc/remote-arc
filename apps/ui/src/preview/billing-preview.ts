@@ -14,12 +14,48 @@ export const PUBLISHED_PLAN_LABELS: Readonly<Record<string, string>> = {
   [CONNECT_UNLIMITED_PLAN_ID]: "Pro",
   "arc-pro-v1": "Max",
 };
+/**
+ * The plan terms decided for publication (Remote-Arc/remote-arc-docs →
+ * docs/plan-tracking-2026-11.zh.md). Production prices from its published
+ * versions; previews show these terms so pages and tests match what is published.
+ * Terms not listed keep production's current values.
+ */
+const PREVIEW_PLAN_TERMS: Readonly<Record<string, Record<string, unknown>>> = {
+  free: {
+    routines: 1,
+    connectionLimit: 2,
+    notifications: false,
+    unattendedBrowser: false,
+    fleetRun: false,
+    unattendedApps: false,
+  },
+  [CONNECT_UNLIMITED_PLAN_ID]: {
+    yearlyPriceCents: 19000,
+    monthlyCredits: 500,
+    deviceLimit: 5,
+    routines: 20,
+    concurrentRuns: 2,
+    maxSteps: 16,
+    maxTokens: 48000,
+    maxSeconds: 1800,
+    allHostedModels: true,
+    fleetRun: false,
+  },
+  "arc-pro-v1": {
+    monthlyPriceCents: 4900,
+    yearlyPriceCents: 49000,
+    monthlyCredits: 3000,
+    deviceLimit: 20,
+    routines: 100,
+    concurrentRuns: 5,
+    maxSeconds: 3600,
+  },
+};
 export const previewBillingPlans = ARC_PLANS.map((p) => ({
   ...p,
   label: PUBLISHED_PLAN_LABELS[p.id] ?? p.label,
   versionId: "preview:" + p.id,
-  // Preview the yearly Connect Unlimited offer (US$99/year).
-  ...(p.id === CONNECT_UNLIMITED_PLAN_ID ? { yearlyPriceCents: 9900 } : {}),
+  ...PREVIEW_PLAN_TERMS[p.id],
 }));
 const storageKey = "remote-arc-billing-preview-v1";
 type State = {

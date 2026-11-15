@@ -20,8 +20,10 @@ export function PlanComparison({
   const { tr, locale } = useI18n(),
     count = (value: number) => value.toLocaleString(locale === "zh" ? "zh-CN" : "en-US"),
     unlimited = tr("marketing.planComparison.unlimited"),
-    included = (plan: CatalogPlan, key: "notifications" | "unattendedBrowser" | "fleetRun") =>
-      plan[key] !== false;
+    included = (
+      plan: CatalogPlan,
+      key: "notifications" | "unattendedBrowser" | "fleetRun" | "apps" | "unattendedApps",
+    ) => plan[key] !== false;
   const rows: Row[] = [
     { key: "marketing.planComparison.bestFor", cell: (p) => tr(planAudienceKey(p)) },
     {
@@ -77,6 +79,20 @@ export function PlanComparison({
           runs: p.concurrentRuns,
           minutes: Math.round(p.maxSeconds / 60),
         }),
+    },
+    {
+      key: "marketing.planComparison.apps",
+      // How many accounts a plan can connect; a plan without Apps has them in the Arc trial.
+      cell: (p) =>
+        !included(p, "apps")
+          ? tr("marketing.planComparison.appsDuringTrial", { days: catalog.trial.days })
+          : p.connectionLimit
+            ? tr("marketing.planComparison.upToConnections", { count: count(p.connectionLimit) })
+            : true,
+    },
+    {
+      key: "marketing.planComparison.appsInRoutines",
+      cell: (p) => included(p, "unattendedApps"),
     },
     {
       key: "marketing.planComparison.browserInRoutines",

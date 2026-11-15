@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img">
+<defs>
+  <radialGradient id="bg" cx=".3" cy=".22" r=".95"><stop stop-color="#34404f"/><stop offset=".55" stop-color="#1d1d24"/><stop offset="1" stop-color="#141418"/></radialGradient>
+  <radialGradient id="halo" cx=".85" cy=".9" r=".6"><stop stop-color="#a78bfa" stop-opacity=".35"/><stop offset="1" stop-color="#a78bfa" stop-opacity="0"/></radialGradient>
+  <linearGradient id="skin" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f5d2b8"/><stop offset="1" stop-color="#d9a588"/></linearGradient>
+  <linearGradient id="shirt" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e0a33b"/><stop offset="1" stop-color="#a8701d"/></linearGradient>
+  <linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b4532a"/><stop offset="1" stop-color="#7a3218"/></linearGradient>
+  <filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="11" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4"/></filter>
+  <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 .17  0 0 0 0 .14  0 0 0 0 .19  0 0 0 .22 0"/></filter>
+  <clipPath id="frame"><circle cx="160" cy="160" r="156"/></clipPath>
+</defs>
+<g clip-path="url(#frame)">
+  <rect width="320" height="320" fill="url(#bg)"/><rect width="320" height="320" fill="url(#halo)"/>
+  <path d="M-10 250 C70 214 120 280 200 244 S300 222 330 236 L330 330 L-10 330 Z" fill="#ffffff" opacity=".05"/>
+  <g filter="url(#rough)"><path d="M204 130 C238 150 246 196 226 228 C240 196 228 168 204 160 Z" fill="url(#hair)"/>
+  <path d="M60 330 C70 262 112 236 160 236 C208 236 250 262 260 330 Z" fill="url(#shirt)"/>
+  <path d="M112 252 C130 268 190 268 208 252" stroke="#a8701d" stroke-width="5" fill="none" stroke-linecap="round" opacity=".55"/>
+  <path d="M143 196 L177 196 L180 248 C168 256 152 256 140 248 Z" fill="#d9a588"/>
+  <ellipse cx="111" cy="170" rx="10" ry="15" fill="#d9a588"/>
+  <ellipse cx="209" cy="170" rx="10" ry="15" fill="#d9a588"/>
+  <ellipse cx="160" cy="162" rx="49" ry="58" fill="url(#skin)"/>
+  <ellipse cx="136" cy="186" rx="10" ry="6" fill="#e0776a" opacity=".28"/>
+  <ellipse cx="184" cy="186" rx="10" ry="6" fill="#e0776a" opacity=".28"/>
+  <path d="M128 150 Q139 144 150 149" stroke="#7a3218" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <path d="M170 149 Q181 144 192 150" stroke="#7a3218" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <ellipse cx="140" cy="166" rx="6" ry="7.5" fill="#2b2330"/><circle cx="142.5" cy="163.5" r="2" fill="#fff"/>
+  <ellipse cx="180" cy="166" rx="6" ry="7.5" fill="#2b2330"/><circle cx="182.5" cy="163.5" r="2" fill="#fff"/>
+  <path d="M158 172 Q154 186 161 188" stroke="#d9a588" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M146 200 Q160 210 174 200" stroke="#8f3f3f" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M106 160 C98 110 132 90 162 92 C196 94 220 118 212 158 C206 128 186 114 160 116 C140 118 124 126 118 146 C114 150 110 154 106 160 Z" fill="url(#hair)"/><circle cx="206" cy="132" r="7" fill="#e0a33b"/><g transform="rotate(-8 108 268)"><rect x="70" y="214" width="76" height="108" rx="12" fill="#262230"/><rect x="77" y="224" width="62" height="86" rx="6" fill="#18303a"/><rect x="82" y="232" width="48" height="5" rx="2.5" fill="#8fd3b8"/><rect x="92" y="243" width="30" height="5" rx="2.5" fill="#cfe7dd"/><rect x="82" y="254" width="12" height="5" rx="2.5" fill="#8fd3b8"/><rect x="92" y="265" width="48" height="5" rx="2.5" fill="#f08a5d"/><rect x="82" y="276" width="30" height="5" rx="2.5" fill="#8fd3b8"/></g><path d="M196 300 C190 280 214 268 226 280 C232 262 262 266 262 288 C278 288 280 306 266 310 L204 310 C192 310 190 302 196 300 Z" fill="#fff" opacity=".85"/><rect x="220" y="288" width="26" height="14" rx="3" fill="#7a4a6e"/></g>
+  <rect width="320" height="320" filter="url(#grain)" opacity=".7"/>
+</g>
+<circle cx="160" cy="160" r="156" fill="none" stroke="#ffffff" stroke-width="2" opacity=".14"/>
+</svg>

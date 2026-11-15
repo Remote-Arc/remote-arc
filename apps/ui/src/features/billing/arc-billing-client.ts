@@ -233,7 +233,7 @@ export const checkoutHref = (id: string) =>
   "/checkout?product=" + encodeURIComponent(checkoutProductSlug(id));
 export function connectPlanFeatures(
   tr: Translate,
-  plan?: { monthlyCredits?: number; deviceLimit?: number | null },
+  plan?: { monthlyCredits?: number; deviceLimit?: number | null; fleetRun?: boolean },
 ) {
   const registrationsPerDay = CONNECT_FAIR_USE.computerRegistrationsPerDay;
   if (planIncludesArc(plan))
@@ -249,7 +249,10 @@ export function connectPlanFeatures(
           })
         : tr("billing.arcBillingClient.unlimitedRegisteredComputersEachAuthenticatedAnd"),
       tr("billing.arcBillingClient.unlimitedFileTransfer"),
-      tr("billing.arcBillingClient.localTerminalFilesBrowserFleetAnd"),
+      // A version that turns fleet_run off must not promise Fleet.
+      plan!.fleetRun === false
+        ? tr("billing.arcBillingClient.localTerminalFilesBrowserAndApps")
+        : tr("billing.arcBillingClient.localTerminalFilesBrowserFleetAnd"),
       tr("billing.arcBillingClient.bringYourOwnAiOrLetArc"),
     ];
   return [

@@ -22,7 +22,11 @@ export function planAudienceKey(plan: Plan) {
 
 /** The pricing page anchor of a plan card, so other pages can link to one plan. */
 export function planAnchor(plan: Plan) {
-  return plan.id === "free" ? "free" : isConnectOnlyPlan(plan) ? "pro" : "max";
+  if (plan.id === "free") return "free";
+  if (isConnectOnlyPlan(plan)) return "pro";
+  // Max is arc-pro-v1. Another hosted plan still in the catalog (Plus) keeps its own
+  // id, so two cards never share an anchor.
+  return plan.id === "arc-pro-v1" ? "max" : plan.id;
 }
 
 /** About how many typical Arc tasks a Credit allowance covers, rounded down to two

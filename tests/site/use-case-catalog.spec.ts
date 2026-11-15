@@ -5,13 +5,13 @@ import { SKILL_USE_CASES } from "../../packages/docs/src/skill-use-cases";
 
 const catalogSize = useCaseSlugs.length;
 const arcCatalogSize = useCaseSlugs.filter((slug) => !ARC_USE_CASES[slug].connectOnly).length;
-test("catalog stays flat and illustrated, with searchable audio and a dedicated video use case", async ({
+test("the library lists every use case with art, searches audio and opens the video use case", async ({
   page,
 }, info) => {
   const zh = info.project.metadata.language === "zh",
     prefix = zh ? "/zh" : "";
   await page.goto(prefix + "/use-cases");
-  const cards = page.locator(".visualUseCaseGrid .useCaseCard");
+  const cards = page.locator(".useCaseList .useCaseRow");
   await expect(cards).toHaveCount(catalogSize);
   await expect(page.locator("#video-gallery")).toHaveCount(0);
   await expect(page.locator("video")).toHaveCount(0);
@@ -38,14 +38,15 @@ test("catalog stays flat and illustrated, with searchable audio and a dedicated 
     await image.evaluate((element) => (element as HTMLImageElement).decode());
   }
   await page
-    .locator(".flatUseCaseCatalog")
-    .screenshot({ path: "work/gallery/" + info.project.name + "-flat-catalog.png" });
-  await page.getByRole("button", { name: zh ? "使用 Arc" : "With Arc", exact: true }).click();
+    .locator(".useCasePage")
+    .screenshot({ path: "work/gallery/" + info.project.name + "-use-case-page.png" });
+  // The page has no Connect/Arc switch; a link that asks for Arc still lists Arc's cases.
+  await expect(page.getByRole("button", { name: zh ? "使用 Arc" : "With Arc" })).toHaveCount(0);
+  await page.goto(prefix + "/use-cases?mode=arc");
   await expect(cards).toHaveCount(arcCatalogSize);
+  await page.goto(prefix + "/use-cases");
   await page
-    .getByRole("button", { name: zh ? "使用 Connect" : "With Connect", exact: true })
-    .click();
-  await page
+    .locator(".useCaseList")
     .getByRole("link", { name: new RegExp(zh ? "制作视频与动态图形" : "Create a finished video") })
     .click();
   await expect(page).toHaveURL(/\/use-cases\/video-creation/);
@@ -66,7 +67,7 @@ test("Media Intelligence, Manim and Blender open localized detail pages in Arc a
     for (const slug of ["video-analysis", "mathematical-animation", "blender-3d"]) {
       const workflow = SKILL_USE_CASES.find((item) => item.slug === slug)!;
       await page.goto(prefix + "/use-cases?mode=" + mode);
-      await page.locator(`.useCaseCard[href="${prefix}/use-cases/${slug}?mode=${mode}"]`).click();
+      await page.locator(`.useCaseRow[href="${prefix}/use-cases/${slug}?mode=${mode}"]`).click();
       await expect(page).toHaveURL(new RegExp("/use-cases/" + slug + "\\?mode=" + mode + "$"));
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(workflow.title[language]);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(

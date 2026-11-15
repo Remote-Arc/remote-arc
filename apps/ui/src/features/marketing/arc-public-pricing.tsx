@@ -1,5 +1,7 @@
 import { ARC_TYPICAL_TASK_CREDITS, CONNECT_FAIR_USE } from "@remotearc/protocol";
+import { useEffect } from "react";
 import { useI18n } from "../../hooks/use-i18n.js";
+import { useUrlHash } from "../../hooks/marketing/use-url-hash.js";
 import type { PlatformCatalog } from "../../hooks/use-platform-catalog.js";
 import {
   checkoutProductSlug,
@@ -23,7 +25,18 @@ export function ArcPublicPricing({
   const { tr, locale } = useI18n(),
     billing = "https://agent.remotearc.app/checkout",
     plans = offeredPlans(catalog.plans),
-    bundled = planIncludesArc(catalog.plans.find(isConnectOnlyPlan));
+    bundled = planIncludesArc(catalog.plans.find(isConnectOnlyPlan)),
+    hash = useUrlHash();
+  // A link to one paid plan (/pricing#max from a use case) highlights that plan;
+  // otherwise the recommended plan is the paid plan that brings your own AI.
+  const linked = plans.find((p) => p.id !== "free" && planAnchor(p) === hash),
+    highlighted = (p: (typeof plans)[number]) => (linked ? p === linked : isConnectOnlyPlan(p));
+  // The cards render after the catalog loads, so the browser's own jump to the
+  // hash found nothing; bring the linked card into view once it exists.
+  const linkedAnchor = linked ? planAnchor(linked) : "";
+  useEffect(() => {
+    if (linkedAnchor) document.getElementById(linkedAnchor)?.scrollIntoView({ block: "center" });
+  }, [linkedAnchor]);
   // Once the paid plan includes Arc, every plan is one ladder; before that, plans
   // that bring your own AI and Arc's own agent plans are shown apart.
   const groups = bundled
@@ -84,6 +97,7 @@ export function ArcPublicPricing({
             <div className="planGroupCards">
               {group.plans.map((p) => {
                 const connect = isConnectOnlyPlan(p),
+                  featured = highlighted(p),
                   yearly = p.yearlyPriceCents || null,
                   checkout =
                     billing +
@@ -93,14 +107,18 @@ export function ArcPublicPricing({
                   <article
                     className={
                       "planCard " +
-                      (p.id === "free" ? "freePlan" : connect ? "featuredPlan" : "arcPlan")
+                      (p.id === "free" ? "freePlan" : featured ? "featuredPlan" : "arcPlan")
                     }
                     key={p.id}
                     id={planAnchor(p)}
                   >
-                    {connect && (
+                    {featured && (
                       <span className="planRibbon">
-                        {tr("marketing.arcPublicPricing.recommended")}
+                        {tr(
+                          linked
+                            ? "marketing.arcPublicPricing.recommendedForYou"
+                            : "marketing.arcPublicPricing.recommended",
+                        )}
                       </span>
                     )}
                     <div className="planHeader">
@@ -160,7 +178,7 @@ export function ArcPublicPricing({
                     <PlanDetails plan={p} catalog={catalog} />
                     <div className="planActions">
                       <a
-                        className={connect ? "primaryButton" : "ghostButton"}
+                        className={featured ? "primaryButton" : "ghostButton"}
                         href={
                           p.id === "free"
                             ? startHref

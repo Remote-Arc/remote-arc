@@ -171,8 +171,8 @@ function previewData(): Payments {
       topups: ARC_TOPUPS.map((p) => ({ ...p, versionId: "preview:" + p.id, revision: 1 })),
       trial: {
         id: "arc-trial-v1",
-        days: 14,
-        credits: 200,
+        days: 7,
+        credits: 300,
         versionId: "preview:trial",
         revision: 1,
       },
@@ -235,7 +235,13 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
     // show their feature switches; a version without them includes each feature.
     const switches =
       current && "monthlyPriceCents" in current
-        ? { notifications: true, unattendedBrowser: true, fleetRun: true }
+        ? {
+            notifications: true,
+            unattendedBrowser: true,
+            fleetRun: true,
+            apps: true,
+            unattendedApps: true,
+          }
         : {};
     setEditing(
       current
@@ -325,6 +331,8 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
       notifications: tr("admin.payments.adminPayments.includesNotifications"),
       unattendedBrowser: tr("admin.payments.adminPayments.includesUnattendedBrowser"),
       fleetRun: tr("admin.payments.adminPayments.includesFleetRun"),
+      apps: tr("admin.payments.adminPayments.includesApps"),
+      unattendedApps: tr("admin.payments.adminPayments.includesUnattendedApps"),
     })[key] || key;
   if (!data)
     return (

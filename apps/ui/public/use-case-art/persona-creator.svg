@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img">
+<defs>
+  <radialGradient id="bg" cx=".3" cy=".22" r=".95"><stop stop-color="#34404f"/><stop offset=".55" stop-color="#1d1d24"/><stop offset="1" stop-color="#141418"/></radialGradient>
+  <radialGradient id="halo" cx=".85" cy=".9" r=".6"><stop stop-color="#a78bfa" stop-opacity=".35"/><stop offset="1" stop-color="#a78bfa" stop-opacity="0"/></radialGradient>
+  <linearGradient id="skin" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f0c09a"/><stop offset="1" stop-color="#cf9270"/></linearGradient>
+  <linearGradient id="shirt" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2f7a5c"/><stop offset="1" stop-color="#1c4d39"/></linearGradient>
+  <linearGradient id="hair" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6b3d22"/><stop offset="1" stop-color="#40220f"/></linearGradient>
+  <filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="17" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4"/></filter>
+  <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 .17  0 0 0 0 .14  0 0 0 0 .19  0 0 0 .22 0"/></filter>
+  <clipPath id="frame"><circle cx="160" cy="160" r="156"/></clipPath>
+</defs>
+<g clip-path="url(#frame)">
+  <rect width="320" height="320" fill="url(#bg)"/><rect width="320" height="320" fill="url(#halo)"/>
+  <path d="M-10 250 C70 214 120 280 200 244 S300 222 330 236 L330 330 L-10 330 Z" fill="#ffffff" opacity=".05"/>
+  <g filter="url(#rough)"><g fill="url(#hair)"><circle cx="110" cy="182" r="15"/><circle cx="104" cy="160" r="15"/><circle cx="214" cy="160" r="15"/><circle cx="210" cy="184" r="15"/></g>
+  <path d="M60 330 C70 262 112 236 160 236 C208 236 250 262 260 330 Z" fill="url(#shirt)"/>
+  <path d="M112 252 C130 268 190 268 208 252" stroke="#1c4d39" stroke-width="5" fill="none" stroke-linecap="round" opacity=".55"/>
+  <path d="M143 196 L177 196 L180 248 C168 256 152 256 140 248 Z" fill="#cf9270"/>
+  <ellipse cx="111" cy="170" rx="10" ry="15" fill="#cf9270"/>
+  <ellipse cx="209" cy="170" rx="10" ry="15" fill="#cf9270"/>
+  <ellipse cx="160" cy="162" rx="49" ry="58" fill="url(#skin)"/>
+  <ellipse cx="136" cy="186" rx="10" ry="6" fill="#e0776a" opacity=".28"/>
+  <ellipse cx="184" cy="186" rx="10" ry="6" fill="#e0776a" opacity=".28"/>
+  <path d="M128 150 Q139 144 150 149" stroke="#40220f" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <path d="M170 149 Q181 144 192 150" stroke="#40220f" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <ellipse cx="140" cy="166" rx="6" ry="7.5" fill="#2b2330"/><circle cx="142.5" cy="163.5" r="2" fill="#fff"/>
+  <ellipse cx="180" cy="166" rx="6" ry="7.5" fill="#2b2330"/><circle cx="182.5" cy="163.5" r="2" fill="#fff"/>
+  <path d="M158 172 Q154 186 161 188" stroke="#cf9270" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M146 200 Q160 210 174 200" stroke="#8f3f3f" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M106 140 C108 96 140 82 162 82 C190 82 218 98 214 140 Z" fill="#e0a33b"/><rect x="102" y="128" width="116" height="20" rx="10" fill="#b97d1e"/><g transform="rotate(-10 236 270)"><rect x="196" y="244" width="96" height="66" rx="10" fill="#262230"/><rect x="214" y="232" width="30" height="16" rx="4" fill="#262230"/><circle cx="244" cy="277" r="22" fill="#3d3550"/><circle cx="244" cy="277" r="13" fill="#7fb6e0"/><circle cx="238" cy="271" r="4" fill="#fff" opacity=".8"/><circle cx="278" cy="256" r="4" fill="#f08a5d"/></g><g transform="rotate(12 70 262)"><rect x="34" y="250" width="74" height="54" rx="4" fill="#262230"/><path d="M34 250 L108 250 L104 236 L30 236 Z" fill="#fffaf0"/><path d="M44 236 L52 250 M62 236 L70 250 M80 236 L88 250" stroke="#262230" stroke-width="6"/></g></g>
+  <rect width="320" height="320" filter="url(#grain)" opacity=".7"/>
+</g>
+<circle cx="160" cy="160" r="156" fill="none" stroke="#ffffff" stroke-width="2" opacity=".14"/>
+</svg>

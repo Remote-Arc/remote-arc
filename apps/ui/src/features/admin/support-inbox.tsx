@@ -8,6 +8,7 @@ import {
   GOOGLE_BETA_APP_NAMES,
   type SupportThread as Thread,
   type SupportDetail as Detail,
+  type ApplicantPlan,
 } from "./support-inbox-model.js";
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -190,6 +191,14 @@ export function AdminSupportInbox({ initialThread = "" }: { initialThread?: stri
       waiting: tr("admin.supportInbox.waitingForCustomer"),
       resolved: tr("admin.supportInbox.resolved"),
     })[status] || status;
+  const planLabel = (plan: ApplicantPlan) =>
+    tr(
+      plan === "paid"
+        ? "admin.supportInbox.planPaid"
+        : plan === "trial"
+          ? "admin.supportInbox.planTrial"
+          : "admin.supportInbox.planFree",
+    );
   const betaLabel = (status: string) =>
     ({
       pending: tr("admin.supportInbox.pendingReview"),
@@ -325,6 +334,11 @@ export function AdminSupportInbox({ initialThread = "" }: { initialThread?: stri
                       ? tr("admin.supportInbox.appsApplication")
                       : tr("admin.supportInbox.customerEmail")}
                   </span>
+                  {item.applicant_plan && (
+                    <span className="adminSupportPlan" data-plan={item.applicant_plan}>
+                      {planLabel(item.applicant_plan)}
+                    </span>
+                  )}
                   <small>
                     {item.beta_status === "pending"
                       ? betaLabel("pending")
@@ -407,6 +421,15 @@ export function AdminSupportInbox({ initialThread = "" }: { initialThread?: stri
                       <dt>{tr("admin.supportInbox.googleAccountAddToTestList")}</dt>
                       <dd>{detail.beta.googleEmail}</dd>
                     </div>
+                    {detail.beta.applicantPlan && (
+                      <div>
+                        <dt>{tr("admin.supportInbox.applicantPlan")}</dt>
+                        <dd>
+                          {planLabel(detail.beta.applicantPlan)} ·{" "}
+                          {tr("admin.supportInbox.paidAccountsFirst")}
+                        </dd>
+                      </div>
+                    )}
                   </dl>
                   <div className="adminSupportProviders">
                     {detail.beta.providers.map((provider) => (

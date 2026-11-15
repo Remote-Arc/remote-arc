@@ -1533,6 +1533,15 @@
     "admin.userUsageInsights.utcCurrentMonth": "UTC · current month",
     "admin.userUsageInsights.whereTheCallsWent": "Where the calls went",
     "admin.userUsageInsights.withinBudget": "Within budget",
-    "admin.userUsageInsights.workDelivered": "Work delivered"
+    "admin.userUsageInsights.workDelivered": "Work delivered",
+    "admin.adminFleetFilters.anyPlan": "Any plan",
+    "admin.adminFleetFilters.paidPlans": "Any paid plan",
+    "admin.adminFleetFilters.plan": "Plan",
+    "admin.adminFleetFilters.planAdmin": "Admin",
+    "admin.adminFleetFilters.planFree": "Free",
+    "admin.adminFleetFilters.planMax": "Max",
+    "admin.adminFleetFilters.planPlus": "Plus",
+    "admin.adminFleetFilters.planPro": "Pro",
+    "admin.adminOperations.recentlyActiveFirst": "Recently active first"
   }
 }

@@ -1,28 +1,46 @@
 import React from "react";
 import { useI18n } from "../../hooks/use-i18n.js";
+import type { MessageKey } from "../../locales/locale-catalog.js";
+import {
+  ADMIN_PLAN_FILTERS,
+  type AdminPlanFilter,
+} from "../../../../../packages/protocol/src/admin-activation.js";
 import "../../styles/admin/admin-fleet-filters.css";
 
-/** Finds accounts that run, or want, several computers. Mirrors the
- * min_computers, platform and limit_refused parameters of /api/admin/operations. */
+/** Finds accounts that run, or want, several computers, and narrows them to a
+ * plan. Mirrors the min_computers, platform, limit_refused and plan parameters of
+ * /api/admin/operations. */
 export type FleetFilter = {
   minComputers: number;
   platform: "" | "linux" | "darwin" | "win32";
   limitRefused: boolean;
+  plan: AdminPlanFilter;
 };
 
 export const DEFAULT_FLEET_FILTER: FleetFilter = {
   minComputers: 0,
   platform: "",
   limitRefused: false,
+  plan: "all",
 };
 
 const COMPUTER_MINIMUMS = [2, 3, 5, 10] as const;
+const PLAN_LABELS = {
+  all: "admin.adminFleetFilters.anyPlan",
+  paid: "admin.adminFleetFilters.paidPlans",
+  pro: "admin.adminFleetFilters.planPro",
+  max: "admin.adminFleetFilters.planMax",
+  plus: "admin.adminFleetFilters.planPlus",
+  free: "admin.adminFleetFilters.planFree",
+  admin: "admin.adminFleetFilters.planAdmin",
+} as const satisfies Record<AdminPlanFilter, MessageKey>;
 
 export function fleetFilterParams(filter: FleetFilter): Record<string, string> {
   return {
     ...(filter.minComputers > 0 ? { min_computers: String(filter.minComputers) } : {}),
     ...(filter.platform ? { platform: filter.platform } : {}),
     ...(filter.limitRefused ? { limit_refused: "1" } : {}),
+    ...(filter.plan !== "all" ? { plan: filter.plan } : {}),
   };
 }
 
@@ -36,6 +54,20 @@ export function FleetFilterControls({
   const { tr } = useI18n();
   return (
     <>
+      <label>
+        {tr("admin.adminFleetFilters.plan")}
+        <select
+          aria-label={tr("admin.adminFleetFilters.plan")}
+          value={value.plan}
+          onChange={(e) => onChange({ ...value, plan: e.target.value as AdminPlanFilter })}
+        >
+          {ADMIN_PLAN_FILTERS.map((plan) => (
+            <option key={plan} value={plan}>
+              {tr(PLAN_LABELS[plan])}
+            </option>
+          ))}
+        </select>
+      </label>
       <label>
         {tr("admin.adminFleetFilters.computers")}
         <select

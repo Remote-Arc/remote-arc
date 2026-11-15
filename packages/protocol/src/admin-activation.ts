@@ -18,7 +18,13 @@ export const ACTIVATION_STAGES = [
   { id: "history_unknown", en: "History incomplete", zh: "历史记录不完整" },
 ] as const;
 export type ActivationStage = (typeof ACTIVATION_STAGES)[number]["id"];
-export type ActivationSort = "recent" | "usage" | "activation_asc" | "activation_desc";
+/** `active` puts the most recent recorded activity first; accounts with none come last. */
+export type ActivationSort = "recent" | "active" | "usage" | "activation_asc" | "activation_desc";
+/** Plan filter for the admin user list. A tier is the plan the row's label shows: Admin
+ * first, then the highest active paid subscription, then legacy Plus, else Free.
+ * `paid` is any active paid subscription on a non-admin account. */
+export const ADMIN_PLAN_FILTERS = ["all", "paid", "pro", "max", "plus", "free", "admin"] as const;
+export type AdminPlanFilter = (typeof ADMIN_PLAN_FILTERS)[number];
 export type ActivationEvidence = {
   activation_stage: ActivationStage;
   first_mcp_connected_at: string | null;

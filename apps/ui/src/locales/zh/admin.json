@@ -1533,6 +1533,15 @@
     "admin.userUsageInsights.utcCurrentMonth": "UTC · 本月",
     "admin.userUsageInsights.whereTheCallsWent": "调用消耗在哪里",
     "admin.userUsageInsights.withinBudget": "额度正常",
-    "admin.userUsageInsights.workDelivered": "有效工作量"
+    "admin.userUsageInsights.workDelivered": "有效工作量",
+    "admin.adminFleetFilters.anyPlan": "不限套餐",
+    "admin.adminFleetFilters.paidPlans": "所有付费套餐",
+    "admin.adminFleetFilters.plan": "套餐",
+    "admin.adminFleetFilters.planAdmin": "管理员",
+    "admin.adminFleetFilters.planFree": "Free",
+    "admin.adminFleetFilters.planMax": "Max",
+    "admin.adminFleetFilters.planPlus": "Plus",
+    "admin.adminFleetFilters.planPro": "Pro",
+    "admin.adminOperations.recentlyActiveFirst": "最近活跃优先"
   }
 }

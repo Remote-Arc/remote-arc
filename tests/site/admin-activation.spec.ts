@@ -63,6 +63,21 @@ test("Admin activation filters, sorting and provenance evidence stay distinct fr
   await expect(page.locator(".opsTable tbody tr").first()).toContainText(
     zh ? "仅注册" : "Registered only",
   );
+  // Recently active puts the latest activity first, not the newest sign-up.
+  await sort.selectOption("active");
+  await expect(page.locator(".opsTable tbody tr").nth(0)).toContainText("owner@example.com");
+  await expect(page.locator(".opsTable tbody tr").nth(1)).toContainText("tester@example.com");
+  await sort.selectOption("recent");
+  await expect(page.locator(".opsTable tbody tr").first()).toContainText("tester@example.com");
+  const plan = page.getByRole("combobox", { name: zh ? "套餐" : "Plan", exact: true });
+  await plan.selectOption("plus");
+  await expect(page.locator(".opsTable tbody tr")).toHaveCount(1);
+  await expect(page.locator(".opsTable tbody")).toContainText("builder@example.com");
+  await expect(page.locator(".opsResultStatus")).toContainText("1");
+  await plan.selectOption("admin");
+  await expect(page.locator(".opsTable tbody tr")).toHaveCount(1);
+  await expect(page.locator(".opsTable tbody")).toContainText("owner@example.com");
+  await plan.selectOption("all");
   await page
     .getByLabel(zh ? "搜索用户" : "Search users", { exact: true })
     .fill("tester@example.com");

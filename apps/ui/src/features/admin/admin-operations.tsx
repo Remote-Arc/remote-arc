@@ -727,6 +727,7 @@ export function AdminOperations({
                   }}
                 >
                   <option value="usage">{tr("admin.adminOperations.highestUsageFirst")}</option>
+                  <option value="active">{tr("admin.adminOperations.recentlyActiveFirst")}</option>
                   <option value="recent">{tr("admin.adminOperations.newestRegistered")}</option>
                   <option value="activation_asc">
                     {tr("admin.adminOperations.activationEarlyStagesFirst")}

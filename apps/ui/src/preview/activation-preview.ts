@@ -16,6 +16,8 @@ export function previewActivationUsers<
     allowance: number | null;
     device_count: number;
     online_devices: number;
+    last_activity: string | null;
+    has_plus_grant: number;
   },
 >(seeds: T[], url: URL) {
   const ago = (days: number) => new Date(Date.now() - days * 86400000).toISOString();
@@ -27,20 +29,26 @@ export function previewActivationUsers<
       id: "activation-" + stage.id,
       email: `sample-${i + 1}@example.com`,
       name: stage.zh,
+      plan: "free",
+      has_plus_grant: 0,
       used: 0,
       allowance: 10000,
       device_count: i >= 3 ? 1 : 0,
       online_devices: 0,
+      last_activity: i === 0 ? null : ago(4 + i),
     })),
     {
       ...registered,
       id: "activation-history_unknown",
       email: "history@example.com",
       name: "Historical account",
+      plan: "free",
+      has_plus_grant: 0,
       used: 0,
       allowance: 10000,
       device_count: 1,
       online_devices: 0,
+      last_activity: ago(20),
     },
   ];
   const users = rows.map((row, i) => {
@@ -89,8 +97,14 @@ export function previewActivationUsers<
     };
   });
   const query = (url.searchParams.get("query") || "").toLowerCase();
-  const matched = users.filter((user) =>
-    (user.name + " " + user.email).toLowerCase().includes(query),
+  // The preview has no paid subscriptions, so its tiers are Admin, Plus and Free.
+  const tier = (user: (typeof users)[number]) =>
+    user.role === "admin" ? "admin" : user.plan === "plus" || user.has_plus_grant ? "plus" : "free";
+  const plan = url.searchParams.get("plan") || "all";
+  const matched = users.filter(
+    (user) =>
+      (user.name + " " + user.email).toLowerCase().includes(query) &&
+      (plan === "all" || tier(user) === plan),
   );
   const activationCounts = Object.fromEntries(
     ACTIVATION_STAGES.map((stage) => [
@@ -110,7 +124,9 @@ export function previewActivationUsers<
         (rank(a) - rank(b)) * (sort === "activation_desc" ? -1 : 1)
       : sort === "recent"
         ? b.created_at.localeCompare(a.created_at)
-        : (b.allowance ? b.used / b.allowance : 0) - (a.allowance ? a.used / a.allowance : 0),
+        : sort === "active"
+          ? (b.last_activity || "").localeCompare(a.last_activity || "")
+          : (b.allowance ? b.used / b.allowance : 0) - (a.allowance ? a.used / a.allowance : 0),
   );
   const page = Math.max(0, Number(url.searchParams.get("page") || 0) | 0);
   return {

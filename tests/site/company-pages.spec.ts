@@ -10,6 +10,14 @@ test("About explains why Remote Arc exists and links to the story and careers", 
     zh ? "让 AI 能安全地在真实电脑上干活。" : "Making it safe for AI to work on real computers.",
   );
   await expect(page.locator(".companyGrid li")).toHaveCount(4);
+  const promo = page.locator("#promo-film video");
+  await expect(promo).toHaveAttribute(
+    "src",
+    new RegExp(
+      "/media/demo-gallery/remote-arc-promo-" + (zh ? "zh" : "en") + "-[a-f0-9]{12}\\.mp4$",
+    ),
+  );
+  await expect(promo).toHaveAttribute("preload", "none");
   await expect(
     page.getByRole("link", {
       name: zh ? "阅读创立 Remote Arc 的初衷 →" : "Read why Remote Arc was built →",

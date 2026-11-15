@@ -2,6 +2,7 @@ import React from "react";
 import { PublicLayout } from "../../components/public-layout.js";
 import { useI18n } from "../../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../../lib/marketing-paths.js";
+import { PromoFilmSection } from "../marketing/home/promo-film.js";
 import type { User } from "../../types/app-types.js";
 import "../../styles/company/company-pages.css";
 
@@ -23,6 +24,8 @@ export function AboutPage({ user }: { user?: User | null }) {
           <h1>{tr("company.about.title")}</h1>
           <p>{tr("company.about.intro")}</p>
         </header>
+
+        <PromoFilmSection />
 
         <section className="companySection" aria-labelledby="about-why">
           <h2 id="about-why">{tr("company.about.why.title")}</h2>

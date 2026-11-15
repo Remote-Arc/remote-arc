@@ -168,7 +168,7 @@ test("New previews have no horizontal overflow or missing images", async ({ page
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test("See it in action opens how it works, and only the product film lives on /demo, muted and unloaded until played", async ({
+test("See it in action opens how it works, and /demo pins the promo film above the product film, both muted and unloaded until played", async ({
   page,
 }, info) => {
   const zh = info.project.metadata.language === "zh";
@@ -186,10 +186,26 @@ test("See it in action opens how it works, and only the product film lives on /d
   page.on("request", (request) => {
     if (request.url().includes("remote-arc-plugin-demo")) removedSessionMedia.push(request.url());
     // The posters may load with the page; the film itself must wait for play.
-    if (/\/media\/demo-gallery\/remote-arc-film-[a-z]+-[a-f0-9]{12}\.mp4/.test(request.url()))
+    if (
+      /\/media\/demo-gallery\/remote-arc-(film|promo)-[a-z]+-[a-f0-9]{12}\.mp4/.test(request.url())
+    )
       media.push(request.url());
   });
   await page.goto(prefix + "/demo");
+  // The promo film is pinned first, in the website language.
+  const promo = page.locator("#promo-film");
+  const promoVideo = promo.locator("video");
+  await expect(promo.getByRole("heading", { level: 2 })).toHaveText(
+    zh ? "46 秒看懂 Remote Arc" : "Remote Arc in 46 seconds",
+  );
+  await expect(promoVideo).toHaveAttribute(
+    "src",
+    new RegExp(
+      "/media/demo-gallery/remote-arc-promo-" + (zh ? "zh" : "en") + "-[a-f0-9]{12}\\.mp4$",
+    ),
+  );
+  await expect(promoVideo).toHaveAttribute("preload", "none");
+  expect(await promoVideo.evaluate((element: HTMLVideoElement) => element.muted)).toBe(true);
   const film = page.locator("#film");
   const video = film.locator("video");
   await expect(video).toHaveAttribute(
@@ -212,7 +228,11 @@ test("See it in action opens how it works, and only the product film lives on /d
       exact: true,
     }),
   ).toHaveCount(0);
-  await expect(page.locator("main video")).toHaveCount(1);
+  await expect(page.locator("main video")).toHaveCount(2);
+  expect(
+    (await film.boundingBox())!.y,
+    "the promo film sits above the product film",
+  ).toBeGreaterThan((await promo.boundingBox())!.y);
   await expect(page.locator(".pluginDemoIntro")).not.toContainText("ChatGPT");
   expect(removedSessionMedia, "the retired session video and poster are not requested").toEqual([]);
   expect(media, "no film bytes before the viewer presses play").toEqual([]);

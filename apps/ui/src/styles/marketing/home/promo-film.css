@@ -1,0 +1,35 @@
+/* The promo film: pinned above the product film on /demo and shown on /about. */
+.promoFilm {
+  width: min(1120px, 100%);
+  margin: 56px auto 0;
+  scroll-margin-top: 96px;
+}
+
+.promoFilm > header {
+  text-align: center;
+}
+
+.promoFilm > header h2 {
+  margin: 0 0 8px;
+  text-wrap: balance;
+  font-size: clamp(26px, 3vw, 36px);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.promoFilm > header p {
+  max-width: 680px;
+  margin: 0 auto 24px;
+  color: var(--site-muted, #a8adb8);
+  font-size: 15px;
+  line-height: 1.6;
+  text-wrap: balance;
+}
+
+.promoFilmStage {
+  overflow: hidden;
+  border: 1px solid var(--site-line, #ffffff1f);
+  border-radius: 18px;
+  background: #000;
+  box-shadow: 0 30px 90px rgba(56, 189, 248, 0.12);
+}

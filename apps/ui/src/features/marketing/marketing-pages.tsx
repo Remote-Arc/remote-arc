@@ -4,6 +4,7 @@ import { InstallCommands } from "../../components/install-commands.js";
 import { HomeConnectionScene, type HomeConnectionMode } from "./home/home-connection-scene.js";
 import { RequestVolume } from "./home/request-volume.js";
 import { ProductFilmSection } from "./home/product-film.js";
+import { PromoFilmSection } from "./home/promo-film.js";
 import { PlanSummary } from "./plan-summary.js";
 import { ProductFocus } from "./product-positioning.js";
 import { AgentUseCases } from "./use-cases/agent-use-cases.js";
@@ -131,6 +132,7 @@ export function DemoPage({ user }: { user?: User | null }) {
           <p>{tr("marketing.demoPage.intro")}</p>
         </section>
 
+        <PromoFilmSection />
         <ProductFilmSection />
       </main>
     </PublicLayout>

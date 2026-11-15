@@ -41,6 +41,35 @@ export const PRODUCT_FILMS: SiteVideo[] = [
   },
 ];
 
+/**
+ * The 46-second promo film (live-action footage, CG data centre and site UI captures),
+ * pinned above the product film on /demo and shown on /about. One edition per language.
+ */
+export const PROMO_FILMS: SiteVideo[] = [
+  {
+    id: "promo-film-en",
+    language: "en",
+    video: "remote-arc-promo-en-f500ba4a2c1f.mp4",
+    sha256: "f500ba4a2c1fc0541933d041a298fead069d8846894c646468f7b1402cffc83e",
+    poster: "remote-arc-promo-en-poster-e35d27296354.webp",
+    posterSha256: "e35d272963543f10625e2622edd1fc2850b869a4e2ea1082ec3c81894dfd2d0e",
+    width: 1920,
+    height: 1080,
+    duration: 46.0,
+  },
+  {
+    id: "promo-film-zh",
+    language: "zh",
+    video: "remote-arc-promo-zh-c228174ec7f9.mp4",
+    sha256: "c228174ec7f955209147b2fdf063f86134838d07cec5b662dd31fdca25d91b02",
+    poster: "remote-arc-promo-zh-poster-6a2b4d3d1782.webp",
+    posterSha256: "6a2b4d3d178292734f9a2a95526321a26686c3002e72d76a137ea0f52cb86e9b",
+    width: 1920,
+    height: 1080,
+    duration: 46.0,
+  },
+];
+
 /** Archived ChatGPT session retained for existing direct media links. */
 export const PLUGIN_DEMO: SiteVideo = {
   id: "chatgpt-plugin-demo",
@@ -54,7 +83,10 @@ export const PLUGIN_DEMO: SiteVideo = {
   duration: 481.1,
 };
 
-export const SITE_VIDEOS: SiteVideo[] = [...PRODUCT_FILMS, PLUGIN_DEMO];
+export const SITE_VIDEOS: SiteVideo[] = [...PROMO_FILMS, ...PRODUCT_FILMS, PLUGIN_DEMO];
 
 export const productFilm = (language: string) =>
   PRODUCT_FILMS.find((film) => film.language === language) ?? PRODUCT_FILMS[0]!;
+
+export const promoFilm = (language: string) =>
+  PROMO_FILMS.find((film) => film.language === language) ?? PROMO_FILMS[0]!;

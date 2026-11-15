@@ -1,11 +1,10 @@
 import type { Translate } from "../../../locales/locale-catalog.js";
-import { ArcTaskCard, type ArcWork } from "./arc-task-card.js";
+import type { ArcWork } from "./arc-task-card.js";
 import { WorkspaceLoading } from "../../../components/workspace-loading.js";
 import { useEffect, useState } from "react";
 import { arcRequest } from "../../../hooks/arc/use-arc-chat.js";
 import { ArcExecutionLog } from "./arc-execution-log.js";
 import { ProductIcon as Icon } from "../../../components/product-icon.js";
-import { ConnectTasks, isSavedRoutine } from "../../tasks/connect-tasks.js";
 type Work = ArcWork;
 type Run = {
   id: string;
@@ -19,30 +18,21 @@ type Run = {
   automation_id: string | null;
   title?: string;
 };
+/** Arc → Activity: every Arc run, its conversation and its execution log.
+ * Tasks and routines themselves live on the routines page. */
 export function ArcWorkWorkspace({
-  view,
   tr,
   onChat,
-  devices = [],
-  onConnectAI,
 }: {
-  view: "tasks" | "routines" | "activity";
+  view: "activity";
   tr: Translate;
   onChat: (prompt?: string, sessionId?: string) => void;
-  onOpenTeams?: () => void;
-  /** Computers, to name where a routine saved from an AI runs. */
-  devices?: { id: string; name: string }[];
-  onConnectAI?: () => void;
 }) {
-  // Routines saved from a connected AI are listed here too, after Arc's own work.
-  const [saved, setSaved] = useState<{ status: string; trigger_json: string | null }[]>([]);
   const [data, setData] = useState<{ work: Work[]; runs: Run[] } | null>(null),
     [error, setError] = useState(false),
     [query, setQuery] = useState(""),
     [filter, setFilter] = useState("all"),
-    [revision, setRevision] = useState(0),
-    [kind, setKind] = useState(view === "routines" ? "routine" : "all"),
-    [draft, setDraft] = useState("");
+    [revision, setRevision] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
@@ -67,41 +57,8 @@ export function ArcWorkWorkspace({
       clearTimeout(timer);
     };
   }, [revision]);
-  const title =
-    view === "activity"
-      ? tr("arc.workspace.arcWorkspace.activity")
-      : tr("arc.workspace.arcWorkspace.tasks");
-  const description =
-    view === "activity"
-      ? tr("arc.workspace.arcWorkspace.everyExecutionItsConversationAndIts")
-      : tr("arc.workspace.arcWorkspace.onePlaceForWorkYouDelegate");
-  const prompt = tr("arc.workspace.arcWorkspace.helpMeCreateAndMaintainA");
-  const starters = [
-    {
-      icon: "routine" as const,
-      name: tr("arc.workspace.arcWorkspace.priceWatch"),
-      detail: tr("arc.workspace.arcWorkspace.everyFewHoursNotifyOnChange"),
-      prompt: tr("arc.workspace.arcWorkspace.priceWatchPrompt"),
-    },
-    {
-      icon: "tasks" as const,
-      name: tr("arc.workspace.arcWorkspace.releaseReadiness"),
-      detail: tr("arc.workspace.arcWorkspace.oneTimeGithubProjectChecks"),
-      prompt: tr("arc.workspace.arcWorkspace.createAOneOffTaskTo"),
-    },
-    {
-      icon: "activity" as const,
-      name: tr("arc.workspace.arcWorkspace.nightlyTests"),
-      detail: tr("arc.workspace.arcWorkspace.everyNightTellMeIfRed"),
-      prompt: tr("arc.workspace.arcWorkspace.nightlyTestsPrompt"),
-    },
-    {
-      icon: "device" as const,
-      name: tr("arc.workspace.arcWorkspace.computerCheckIn"),
-      detail: tr("arc.workspace.arcWorkspace.oneTimeDevicesOngoingWork"),
-      prompt: tr("arc.workspace.arcWorkspace.createAOneOffTaskTo2"),
-    },
-  ];
+  const title = tr("arc.workspace.arcWorkspace.activity");
+  const description = tr("arc.workspace.arcWorkspace.everyExecutionItsConversationAndIts");
   const status = (value: string) =>
     ({
       succeeded: tr("arc.workspace.arcWorkspace.runFinished"),
@@ -132,102 +89,20 @@ export function ArcWorkWorkspace({
         ["queued", "thinking", "working", "waiting", "running"].includes(value)) ||
       (filter === "finished" && ["succeeded", "completed", "cancelled"].includes(value)) ||
       (filter === "attention" && ["failed", "unknown", "paused"].includes(value)));
-  const work = (data?.work || []).filter(
-    (w) => (kind === "all" || w.kind === kind) && matches(w.name, w.status),
-  );
   const runs = (data?.runs || []).filter((r) => matches(r.title || r.id, r.status));
   return (
-    <section className="arcWorkPage" data-work-view={view === "activity" ? "activity" : "tasks"}>
+    <section className="arcWorkPage" data-work-view="activity">
       <header className="overviewTopbar">
         <div>
           <span className="eyebrow">ARC / {title.toUpperCase()}</span>
           <h1>{title}</h1>
           <p>{description}</p>
         </div>
-        <button
-          className="addButton arcRadiantCta"
-          type="button"
-          onClick={() => onChat(view === "activity" ? undefined : prompt)}
-        >
+        <button className="addButton arcRadiantCta" type="button" onClick={() => onChat()}>
           <Icon name="add" />
           {tr("arc.workspace.arcWorkspace.createWithArc")}
         </button>
       </header>
-      {view !== "activity" && (
-        <>
-          <form
-            className="arcWorkComposer"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (draft.trim()) onChat(prompt + "\n\n" + draft.trim());
-            }}
-          >
-            <label htmlFor="arc-work-request">
-              {tr("arc.workspace.arcWorkspace.whatCanArcTakeOffYour")}
-            </label>
-            <textarea
-              id="arc-work-request"
-              rows={2}
-              maxLength={4000}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder={tr("arc.workspace.arcWorkspace.composerExample")}
-            />
-            <footer>
-              <span>{tr("arc.workspace.arcWorkspace.describeItArcSetsItUp")}</span>
-              <button className="arcRadiantCta" type="submit" disabled={!draft.trim()}>
-                {tr("arc.workspace.arcWorkspace.continueWithArc")}
-                <Icon name="arrowUpRight" size={14} />
-              </button>
-            </footer>
-          </form>
-          <section
-            className="arcTaskStarters"
-            aria-label={tr("arc.workspace.arcWorkspace.taskStarters")}
-          >
-            <div className="arcWorkSectionHeader">
-              <h2>{tr("arc.workspace.arcWorkspace.startWithALittleInspiration")}</h2>
-              <span>{tr("arc.workspace.arcWorkspace.personalizeInConversation")}</span>
-            </div>
-            <div>
-              {starters.map((starter) => (
-                <button type="button" key={starter.name} onClick={() => onChat(starter.prompt)}>
-                  <Icon name={starter.icon} />
-                  <strong>{starter.name}</strong>
-                  <small>{starter.detail}</small>
-                  <Icon name="arrowUpRight" size={14} />
-                </button>
-              ))}
-            </div>
-          </section>
-          <div
-            className="arcTaskKinds"
-            role="group"
-            aria-label={tr("arc.workspace.arcWorkspace.taskFrequency")}
-          >
-            {[
-              ["all", tr("arc.workspace.arcWorkspace.allTasks")],
-              ["task", tr("arc.workspace.arcWorkspace.oneOff")],
-              ["routine", tr("arc.workspace.arcWorkspace.recurring")],
-            ].map(([value, label]) => (
-              <button
-                type="button"
-                key={value}
-                aria-pressed={kind === value}
-                onClick={() => setKind(value!)}
-              >
-                {label}
-                <span>
-                  {(data?.work || []).filter((w) => value === "all" || w.kind === value).length +
-                    saved.filter(
-                      (task) => value === "all" || (value === "routine") === isSavedRoutine(task),
-                    ).length}
-                </span>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
       <div className="arcWorkToolbar">
         <label className="arcWorkSearch">
           <Icon name="search" />
@@ -282,20 +157,7 @@ export function ArcWorkWorkspace({
         <WorkspaceLoading label={tr("arc.workspace.arcWorkspace.loadingYourWork")} />
       ) : (
         <>
-          {view !== "activity" && (
-            <div className="arcWorkGrid arcWorkTaskCards">
-              {work.map((w) => (
-                <ArcTaskCard
-                  key={w.id}
-                  work={w}
-                  tr={tr}
-                  onOpen={(id) => onChat(undefined, id)}
-                  onManage={onChat}
-                />
-              ))}
-            </div>
-          )}
-          {view === "activity" && runs.length > 0 && (
+          {runs.length > 0 && (
             <div className="arcWorkRuns">
               <div className="arcWorkSectionHeader">
                 <h2>{tr("arc.workspace.arcWorkspace.executionHistory")}</h2>
@@ -346,47 +208,22 @@ export function ArcWorkWorkspace({
               })}
             </div>
           )}
-          {view !== "activity" && (
-            <ConnectTasks
-              variant="arc"
-              devices={devices}
-              onConnectAI={onConnectAI || (() => undefined)}
-              arcFilter={{ query, filter, kind: kind as "all" | "task" | "routine" }}
-              onLoaded={setSaved}
-            />
-          )}
-          {(view === "activity" ? !runs.length : !work.length && !saved.length) && (
+          {!runs.length && (
             <div className="arcWorkEmpty">
               <span className="arcWorkEmptyIcon">
-                <Icon
-                  name={
-                    view === "routines" ? "routine" : view === "activity" ? "activity" : "tasks"
-                  }
-                  size={27}
-                />
+                <Icon name="activity" size={27} />
               </span>
               <h2>
                 {query || filter !== "all"
                   ? tr("arc.workspace.arcWorkspace.noMatchingWork")
-                  : view === "routines"
-                    ? tr("arc.workspace.arcWorkspace.makeRoomInYourDay")
-                    : view === "activity"
-                      ? tr("arc.workspace.arcWorkspace.everyRunLeavesAClearTrail")
-                      : tr("arc.workspace.arcWorkspace.goodWorkStartsWithAConversation")}
+                  : tr("arc.workspace.arcWorkspace.everyRunLeavesAClearTrail")}
               </h2>
               <p>
                 {query || filter !== "all"
                   ? tr("arc.workspace.arcWorkspace.tryADifferentSearchOrFilter")
-                  : view === "routines"
-                    ? tr("arc.workspace.arcWorkspace.routineEmptyExample")
-                    : view === "activity"
-                      ? tr("arc.workspace.arcWorkspace.completedAndOngoingChatTaskAnd")
-                      : tr("arc.workspace.arcWorkspace.describeATaskAboveOrChoose")}
+                  : tr("arc.workspace.arcWorkspace.completedAndOngoingChatTaskAnd")}
               </p>
-              <button
-                className="ghostButton"
-                onClick={() => onChat(view === "activity" ? undefined : prompt)}
-              >
+              <button className="ghostButton" onClick={() => onChat()}>
                 {tr("arc.workspace.arcWorkspace.startAConversation")}
                 <Icon name="arrowUpRight" size={15} />
               </button>

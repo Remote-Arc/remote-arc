@@ -1,0 +1,444 @@
+.routinesPage {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
+.routinesHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+.routinesHeader h1 {
+  margin: 4px 0 6px;
+}
+.routinesHeader p {
+  margin: 0;
+  max-width: 720px;
+  color: var(--muted);
+}
+
+/* Buttons: global rules strip button borders with !important, so outlines are inset shadows. */
+.routinesPage button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.routinesPage button:disabled {
+  opacity: 0.55;
+}
+.routinesPage .routinePrimary {
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 600;
+  box-shadow: none;
+}
+.routinesPage .routineDanger {
+  color: var(--red);
+}
+.routineMuted {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.routineError {
+  margin: 0;
+  color: var(--red);
+  font-size: 13px;
+}
+.routinePill {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* Needs you */
+.routinesNeeds h2 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+.routinesNeeds h2 span {
+  color: var(--muted);
+  font-weight: 500;
+}
+.routinesNeeds > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+.routinesNeeds article {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.routinesNeeds article[data-need="decision"],
+.routinesNeeds article[data-need="failed"] {
+  border-color: color-mix(in srgb, var(--red) 45%, var(--line));
+}
+.routinesNeeds article[data-need="offline"] {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.routinesNeeds header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.routinesNeeds p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.routinesNeeds footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Toolbar */
+.routinesToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.routinesToolbar [role="group"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.routinesPage .routinesToolbar [role="group"] button {
+  min-height: 34px;
+  box-shadow: none;
+  background: transparent;
+  color: var(--muted);
+}
+.routinesPage .routinesToolbar [role="group"] button[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--bg);
+}
+.routinesToolbar button span {
+  opacity: 0.7;
+}
+.routinesToolbar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 280px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.routinesToolbar input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+
+/* List + detail */
+.routinesBody {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: flex-start;
+}
+.routinesList {
+  flex: 999 1 560px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.routinesListHead,
+.routinesPage .routineRow {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 2.2fr) minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 1.5fr)
+    minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+.routinesListHead {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.routinesPage .routineRow {
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 16px;
+  border-radius: 0;
+  box-shadow: inset 0 -1px 0 var(--line);
+  background: transparent;
+  text-align: left;
+  justify-content: stretch;
+}
+.routinesPage .routineRow[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+  box-shadow:
+    inset 3px 0 0 var(--text),
+    inset 0 -1px 0 var(--line);
+}
+.routineRowName {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.routineRowName small {
+  color: var(--muted);
+}
+.routineRowResult,
+.routineDetailResult {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.routineRowResult i,
+.routineDetailResult span,
+.routineRuns li > span {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--muted);
+}
+[data-tone="passed"] > i,
+[data-tone="passed"] > span {
+  background: #1f9d55;
+}
+[data-tone="failed"] > i,
+[data-tone="failed"] > span {
+  background: var(--red);
+}
+[data-tone="warning"] > i,
+[data-tone="warning"] > span {
+  background: #c98a00;
+}
+[data-tone="running"] > i,
+[data-tone="running"] > span {
+  background: var(--accent);
+}
+.routinesNoMatch {
+  padding: 16px;
+}
+
+.routineDetail {
+  flex: 1 1 360px;
+  max-width: 480px;
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.routinesPage .routineDetailBack {
+  display: none;
+}
+.routineDetailHeader h2 {
+  margin: 4px 0;
+  font-size: 19px;
+}
+.routineDetailMeta,
+.routineDetailResult {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+.routineDetailActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.routineDetailSection h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.routineFacts {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 2fr);
+  gap: 8px 12px;
+  margin: 12px 0 0;
+  font-size: 13px;
+}
+.routineFacts dt {
+  color: var(--muted);
+}
+.routineFacts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.routineRuns {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.routineRuns li {
+  display: flex;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.routineRuns li > span {
+  margin-top: 5px;
+}
+.routineRuns pre {
+  max-height: 200px;
+  overflow: auto;
+  margin: 6px 0 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 11px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Empty */
+.routinesEmpty {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.routinesEmptyWays {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.routinesEmptyWays article {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+}
+.routinesEmptyWays article > span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.routinesEmptyWays h2,
+.routinesEmpty section h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.routinesEmptyWays p {
+  margin: 0;
+  color: var(--muted);
+}
+.routinesTemplates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+.routinesPage .routinesTemplates button {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-height: 104px;
+  padding: 14px;
+  border-radius: 12px;
+  text-align: left;
+  white-space: normal;
+}
+.routinesTemplates small {
+  color: var(--muted);
+}
+
+/* Phones: the list, or the selected routine on its own. */
+@media (max-width: 959px) {
+  .routinesListHead {
+    display: none;
+  }
+  .routinesPage .routineRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "name next" "result result";
+  }
+  .routinesPage .routineRow > span:nth-child(2),
+  .routinesPage .routineRow > span:nth-child(3) {
+    display: none;
+  }
+  .routineRowName {
+    grid-area: name;
+  }
+  .routineRowResult {
+    grid-area: result;
+  }
+  .routinesPage[data-view="detail"] .routinesList,
+  .routinesPage[data-view="detail"] .routinesNeeds,
+  .routinesPage[data-view="detail"] .routinesToolbar,
+  .routinesPage[data-view="detail"] .routinesHeader {
+    display: none;
+  }
+  .routineDetail {
+    max-width: none;
+  }
+  .routinesPage .routineDetailBack {
+    display: inline-flex;
+    align-self: flex-start;
+    min-height: 44px;
+    box-shadow: none;
+    background: transparent;
+    padding: 0;
+  }
+}
+
+/* Saved steps read as a compact list inside the detail panel. */
+.routineDetail .taskSavedStepHead {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.routineDetail .taskSavedStepHead strong {
+  color: var(--text);
+}
+.routineDetail .taskSavedInstructions pre {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.routineDetail .taskSavedStepRule {
+  font-size: 12px;
+}

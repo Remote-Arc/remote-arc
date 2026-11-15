@@ -21,8 +21,8 @@ export class ConnectTasksErrorBoundary extends React.Component<Props, State> {
     if (!this.state.failed) return this.props.children;
     const { tr } = this.props;
     return (
-      <section className="connectTasks" role="alert">
-        <div className="connectTasksNotice">
+      <section className="routinesPage" role="alert">
+        <div className="routineError">
           <div>
             <h2>{tr("tasks.connectTasksErrorBoundary.tasksCouldnTBeDisplayed")}</h2>
             <p>{tr("tasks.connectTasksErrorBoundary.yourSavedTasksHaveNotBeen")}</p>

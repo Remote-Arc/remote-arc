@@ -66,9 +66,13 @@ for (const nextProfile of [0, 1])
     await expect(dialog).toHaveAccessibleName(/Edit agent|编辑智能体/);
   });
 
-test("Transient work refresh failures preserve cards and recover with retry", async ({ page }) => {
+test("Transient work refresh failures preserve routines and recover with retry", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
   await page.goto("/dashboard/agent/tasks");
-  await expect(page.locator(".arcWorkCard")).toHaveCount(2);
+  const rows = page.locator(".routineRow");
+  await expect(rows).toHaveCount(6);
   await page.evaluate(() => {
     const native = window.fetch;
     (window as any).__workFailed = false;
@@ -83,19 +87,17 @@ test("Transient work refresh failures preserve cards and recover with retry", as
       return native(input, init);
     };
   });
+  // Other Arc views also read the work list; the routines list refreshes every 15 seconds.
   await expect.poll(() => page.evaluate(() => (window as any).__workFailed)).toBe(true);
-  await expect(page.locator(".arcWorkPage")).toContainText(
-    /Work is unavailable|Could not refresh|暂时无法加载工作|暂时无法刷新/,
-  );
-  await expect(page.locator(".arcWorkCard")).toHaveCount(2);
-  const alert = page.locator(".arcWorkPage").getByRole("alert");
-  await expect(alert).toContainText(/Could not refresh|暂时无法刷新/);
+  const alert = page.locator(".routinesPage").getByRole("alert");
+  await expect(alert).toContainText(/Could not refresh|刷新失败/, { timeout: 20_000 });
+  await expect(rows).toHaveCount(6);
   await page.evaluate(() => {
     (window as any).__workRecover = true;
   });
   await alert.getByRole("button", { name: /Try again|重试/ }).click();
   await expect(alert).toHaveCount(0);
-  await expect(page.locator(".arcWorkCard")).toHaveCount(2);
+  await expect(rows).toHaveCount(6);
 });
 
 test("Voice input respects the message length limit and explains omitted speech", async ({

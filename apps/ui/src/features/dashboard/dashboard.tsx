@@ -4,7 +4,7 @@ import { useRunnerAttention } from "../../hooks/use-runner-attention.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import { AppsManager } from "../apps/apps-manager.js";
 import { ArcWorkWorkspace } from "../arc/workspace/arc-workspace.js";
-import { ConnectTasks } from "../tasks/connect-tasks.js";
+import { RoutinesPage } from "../routines/routines-page.js";
 import { ConnectTasksErrorBoundary } from "../tasks/connect-tasks-error-boundary.js";
 import { ProductIcon, type ProductIconName } from "../../components/product-icon.js";
 import { WorkspacePicker } from "./workspace-picker.js";
@@ -257,30 +257,20 @@ export function Dashboard(props: DashboardProps) {
           </div>
         )}
 
-        {active === "automations" && (
+        {/* One routines page in both workspaces: Connect shows it even where Arc is off. */}
+        {["automations", "agent-goals", "agent-routines"].includes(active) && (
           <ConnectTasksErrorBoundary tr={tr}>
-            <ConnectTasks
+            <RoutinesPage
+              arcAvailable={arcAvailable}
               devices={devices}
+              onChat={openArcChat}
               onConnectAI={() => navigateTab("connect")}
-              onOpenArc={arcAvailable ? () => navigateTab("agent-goals") : undefined}
             />
           </ConnectTasksErrorBoundary>
         )}
 
-        {["agent-goals", "agent-routines", "agent-activity"].includes(active) && (
-          <ArcWorkWorkspace
-            view={
-              active === "agent-routines"
-                ? "routines"
-                : active === "agent-activity"
-                  ? "activity"
-                  : "tasks"
-            }
-            tr={tr}
-            onChat={openArcChat}
-            devices={devices}
-            onConnectAI={() => navigateTab("connect")}
-          />
+        {active === "agent-activity" && (
+          <ArcWorkWorkspace view="activity" tr={tr} onChat={openArcChat} />
         )}
 
         {active === "agent-teams" && (

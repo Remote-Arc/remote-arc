@@ -82,9 +82,23 @@ export function useNotificationSettings() {
 
   const save = (kind: NotificationChannelKind, change: Change) =>
     run(kind, async () => {
-      const value = await request("/" + kind, { method: "PUT", body: JSON.stringify(change) });
-      setSettings({ events: value.events, channels: value.channels } as NotificationSettings);
-      if (typeof value.webhook_secret === "string") setSecret(value.webhook_secret);
+      // A chosen event shows at once; the saved settings replace it, or a failure undoes it.
+      const before = settings;
+      if (change.events && before)
+        setSettings({
+          ...before,
+          channels: before.channels.map((channel) =>
+            channel.kind === kind ? { ...channel, events: change.events! } : channel,
+          ),
+        });
+      try {
+        const value = await request("/" + kind, { method: "PUT", body: JSON.stringify(change) });
+        setSettings({ events: value.events, channels: value.channels } as NotificationSettings);
+        if (typeof value.webhook_secret === "string") setSecret(value.webhook_secret);
+      } catch (error) {
+        if (change.events) setSettings(before);
+        throw error;
+      }
     });
 
   const sendTest = (kind: NotificationChannelKind) =>

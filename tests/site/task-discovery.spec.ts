@@ -28,9 +28,11 @@ test("Saved tasks are explicit in Chat and open a persistent result conversation
 
 test("A task is reachable before its first run and has a history badge", async ({ page }) => {
   await page.goto("/dashboard/agent/tasks");
-  const task = page.locator(".arcWorkGrid [data-task-id=sample-task]");
-  await expect(task).toContainText(/No runs yet|尚未执行/);
-  await task.getByRole("button", { name: /Open task conversation|打开任务对话/ }).click();
+  const row = page.locator(".routineRow[data-routine-id=sample-task]");
+  await expect(row).toContainText(/No runs yet|还没运行过/);
+  await row.click();
+  const detail = page.locator(".routineDetail[data-routine-id=sample-task]");
+  await detail.getByRole("button", { name: /Open its conversation|打开它的对话/ }).click();
   await expect(page).toHaveURL(/session=sample-task/);
   await expect(page.locator(".arcChatTaskCards")).toContainText("Prepare the next release summary");
   await expect(page.locator(".arcChatTaskCards")).toContainText(/Task conversation|任务对话/);

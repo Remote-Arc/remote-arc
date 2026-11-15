@@ -15,7 +15,7 @@ import "./features/marketing/home/home-connection-scene.js";
 import "./features/apps/apps-manager.js";
 import "./features/marketing/use-cases/agent-use-cases.js";
 import "./features/arc/workspace/arc-workspace.js";
-import "./features/tasks/connect-tasks.js";
+import "./features/routines/routines-page.js";
 import "./features/dashboard/workspace-picker.js";
 import "./lib/dashboard-workspaces.js";
 import "./styles/dashboard-workspaces.css";

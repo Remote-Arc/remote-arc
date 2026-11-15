@@ -45,7 +45,7 @@ export function useNotificationSettings() {
       message: string;
     } | null>(null),
     [secret, setSecret] = useState<string | null>(null),
-    [tested, setTested] = useState<NotificationChannelKind | null>(null);
+    [tested, setTested] = useState<{ kind: NotificationChannelKind; sent: boolean } | null>(null);
   const pending = useRef(false);
 
   const load = useCallback(async () => {
@@ -103,8 +103,11 @@ export function useNotificationSettings() {
 
   const sendTest = (kind: NotificationChannelKind) =>
     run(kind, async () => {
-      await request("/" + kind + "/test", { method: "POST" });
-      setTested(kind);
+      // The Relay sends the test at once and says whether it went out.
+      const value = await request("/" + kind + "/test", { method: "POST" });
+      if (typeof value.error === "string")
+        throw Object.assign(new Error(value.error), { code: value.error });
+      setTested({ kind, sent: value.sent === true });
     });
 
   return {
@@ -117,7 +120,8 @@ export function useNotificationSettings() {
     /** The webhook signing secret, shown once after it is created. */
     secret,
     dismissSecret: () => setSecret(null),
-    tested,
+    /** Whether the last test went out, for the channel it belongs to. */
+    testedFor: (kind: NotificationChannelKind) => (tested?.kind === kind ? tested : null),
     save,
     sendTest,
   };

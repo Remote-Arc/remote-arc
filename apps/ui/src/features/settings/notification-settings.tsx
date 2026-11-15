@@ -153,8 +153,12 @@ function ChannelCard({ channel, model }: { channel: NotificationChannel; model: 
               {tr("settings.notificationSettings.sendTest")}
             </button>
             <span>
-              {model.tested === kind
-                ? tr("settings.notificationSettings.testQueued")
+              {model.testedFor(kind)
+                ? tr(
+                    model.testedFor(kind)!.sent
+                      ? "settings.notificationSettings.testSent"
+                      : "settings.notificationSettings.testQueued",
+                  )
                 : channel.last_error
                   ? tr("settings.notificationSettings.lastError", { code: channel.last_error })
                   : channel.last_delivery_at

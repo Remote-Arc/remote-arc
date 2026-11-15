@@ -33,5 +33,5 @@ test("notification settings explain Slack linking, set up a signed webhook once 
   await runFailed.click();
   await expect(runFailed).not.toBeChecked();
   await webhook.getByRole("button", { name: /Send a test|发送测试/ }).click();
-  await expect(webhook).toContainText(/Test queued|测试已排队/);
+  await expect(webhook).toContainText(/Test sent|测试已发送/);
 });

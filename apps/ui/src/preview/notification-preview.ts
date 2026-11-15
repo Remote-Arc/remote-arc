@@ -43,7 +43,8 @@ export function createNotificationPreview() {
       const match = url.pathname.match(/^\/api\/notifications\/(slack|webhook)(\/test)?$/);
       if (!match) return null;
       const channel = channels.find((item) => item.kind === match[1])!;
-      if (match[2] && method === "POST") return reply({ queued: true }, 202);
+      if (match[2] && method === "POST")
+        return reply({ queued: false, sent: true, error: null }, 202);
       if (method !== "PUT") return reply({ error: "METHOD_NOT_ALLOWED" }, 405);
       const change = JSON.parse(String(body || "{}")) as {
         enabled?: boolean;

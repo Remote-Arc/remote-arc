@@ -166,8 +166,8 @@ export function ArcCheckout({ email }: { email: string }) {
     connectOnly = connect && !arcIncluded,
     arcPaid = paid && planIncludesArc(data!.plan),
     available = connect ? (data?.connectEnabled ?? data?.enabled) : data?.enabled;
-  // Yearly is offered only for Connect Unlimited, and only once its price is published.
-  const yearlyCents = connect ? plan?.yearlyPriceCents || null : null,
+  // Yearly is offered for a plan once its version publishes a yearly price (Pro, Max).
+  const yearlyCents = plan?.yearlyPriceCents || null,
     billed: BillingInterval = yearlyCents && cycle === "year" ? "year" : "month",
     active = data?.subscriptions.find((s) => s.status === "active"),
     pendingChange = Boolean(data?.subscriptions.some((s) => s.pending_product_id));

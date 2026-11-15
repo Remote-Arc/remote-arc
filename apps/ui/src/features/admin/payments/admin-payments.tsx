@@ -231,12 +231,17 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
   const configs = data ? [...data.catalog.plans, ...data.catalog.topups, data.catalog.trial] : [],
     current = configs.find((p) => p.id === selected);
   useEffect(() => {
-    // Connect Unlimited may add a yearly price; blank keeps it monthly-only.
+    // Connect Unlimited may add a yearly price; blank keeps it monthly-only. Plans
+    // show their feature switches; a version without them includes each feature.
+    const switches =
+      current && "monthlyPriceCents" in current
+        ? { notifications: true, unattendedBrowser: true, fleetRun: true }
+        : {};
     setEditing(
       current
-        ? current.id === CONNECT_UNLIMITED_PLAN_ID
-          ? { yearlyPriceCents: null, ...current }
-          : { ...current }
+        ? [CONNECT_UNLIMITED_PLAN_ID, "arc-pro-v1"].includes(current.id)
+          ? { yearlyPriceCents: null, ...switches, ...current }
+          : { ...switches, ...current }
         : null,
     );
     setDraft(null);
@@ -317,6 +322,9 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
       maxTokens: tr("admin.payments.adminPayments.tokensPerRun"),
       maxSeconds: tr("admin.payments.adminPayments.secondsPerRun"),
       allHostedModels: tr("admin.payments.adminPayments.allHostedModels"),
+      notifications: tr("admin.payments.adminPayments.includesNotifications"),
+      unattendedBrowser: tr("admin.payments.adminPayments.includesUnattendedBrowser"),
+      fleetRun: tr("admin.payments.adminPayments.includesFleetRun"),
     })[key] || key;
   if (!data)
     return (

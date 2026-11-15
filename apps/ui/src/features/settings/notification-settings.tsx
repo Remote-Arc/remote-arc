@@ -30,6 +30,7 @@ const UNAVAILABLE_TEXT = {
   SLACK_NOT_CONFIGURED: "settings.notificationSettings.unavailableSlack",
   SLACK_NOT_LINKED: "settings.notificationSettings.slackNotLinked",
   WEBHOOK_NOT_CONFIGURED: "settings.notificationSettings.unavailableWebhook",
+  PLAN_UPGRADE_REQUIRED: "settings.notificationSettings.unavailablePlan",
 } as const;
 const unavailableText = (code: string | null | undefined) =>
   code && code in UNAVAILABLE_TEXT ? UNAVAILABLE_TEXT[code as keyof typeof UNAVAILABLE_TEXT] : null;

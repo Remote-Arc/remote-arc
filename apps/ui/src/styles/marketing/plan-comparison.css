@@ -1,0 +1,118 @@
+/* The "Compare every plan" table under the pricing cards, and each card's audience line. */
+.planAudience {
+  margin: 18px 0 6px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.planComparison {
+  width: min(1120px, calc(100% - 32px));
+  margin: 72px auto 24px;
+}
+.planComparison > header {
+  margin-bottom: 20px;
+}
+.planComparison > header h2 {
+  margin: 0 0 8px;
+  font-size: clamp(26px, 3vw, 34px);
+  letter-spacing: -0.02em;
+}
+.planComparison > header p {
+  max-width: 720px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.planComparisonScroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.planComparison table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.planComparison th,
+.planComparison td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.45;
+}
+.planComparison tbody tr:last-child th,
+.planComparison tbody tr:last-child td {
+  border-bottom: 0;
+}
+.planComparison thead th {
+  position: sticky;
+  top: 0;
+  background: var(--panel-2, var(--bg));
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.planComparison tbody th {
+  width: 26%;
+  color: var(--muted);
+  font-weight: 600;
+}
+.planComparisonYes {
+  color: #269bbb;
+  font-weight: 700;
+}
+.planComparisonNo {
+  color: var(--muted);
+}
+.planComparison .visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Phones: one block per term, each plan's value on its own labelled line. */
+@media (max-width: 640px) {
+  .planComparisonScroll {
+    overflow: visible;
+    border: 0;
+  }
+  .planComparison table {
+    min-width: 0;
+  }
+  .planComparison thead {
+    display: none;
+  }
+  .planComparison tbody tr {
+    display: block;
+    margin-bottom: 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  .planComparison tbody th,
+  .planComparison tbody td {
+    display: block;
+    width: auto;
+    padding: 10px 14px;
+  }
+  .planComparison tbody td {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    gap: 12px;
+  }
+  .planComparison tbody th {
+    color: var(--text);
+  }
+  .planComparison tbody td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-weight: 600;
+  }
+}

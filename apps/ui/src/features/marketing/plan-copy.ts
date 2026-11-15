@@ -13,6 +13,18 @@ export function planDescriptionKey(plan: Plan) {
     : "marketing.arcPublicPricing.forManyComputersAndAutomation";
 }
 
+/** Who each public plan is for: the first line of its card and comparison column. */
+export function planAudienceKey(plan: Plan) {
+  if (plan.id === "free") return "marketing.planComparison.forFree";
+  if (isConnectOnlyPlan(plan)) return "marketing.planComparison.forPro";
+  return "marketing.planComparison.forMax";
+}
+
+/** The pricing page anchor of a plan card, so other pages can link to one plan. */
+export function planAnchor(plan: Plan) {
+  return plan.id === "free" ? "free" : isConnectOnlyPlan(plan) ? "pro" : "max";
+}
+
 /** About how many typical Arc tasks a Credit allowance covers, rounded down to two
  * significant figures so the estimate never overstates the allowance. */
 export function approxTaskCount(credits: number) {
@@ -23,6 +35,6 @@ export function approxTaskCount(credits: number) {
 
 /** Price per month as the plan card shows it: the yearly price per month when one is offered. */
 export function planMonthlyCents(plan: Plan) {
-  const yearly = isConnectOnlyPlan(plan) && plan.yearlyPriceCents ? plan.yearlyPriceCents : null;
+  const yearly = plan.yearlyPriceCents || null;
   return { cents: yearly ? yearly / 12 : plan.monthlyPriceCents, billedYearlyCents: yearly };
 }

@@ -8,7 +8,8 @@ import {
   planIncludesArc,
 } from "../billing/arc-billing-client.js";
 import { planCardFeatures } from "./plan-card-features.js";
-import { planDescriptionKey } from "./plan-copy.js";
+import { planAnchor, planAudienceKey, planDescriptionKey } from "./plan-copy.js";
+import { PlanComparison } from "./plan-comparison.js";
 import { PlanDetails } from "./plan-details-dialog.js";
 export function ArcPublicPricing({
   catalog,
@@ -83,7 +84,7 @@ export function ArcPublicPricing({
             <div className="planGroupCards">
               {group.plans.map((p) => {
                 const connect = isConnectOnlyPlan(p),
-                  yearly = connect && p.yearlyPriceCents ? p.yearlyPriceCents : null,
+                  yearly = p.yearlyPriceCents || null,
                   checkout =
                     billing +
                     "?" +
@@ -95,6 +96,7 @@ export function ArcPublicPricing({
                       (p.id === "free" ? "freePlan" : connect ? "featuredPlan" : "arcPlan")
                     }
                     key={p.id}
+                    id={planAnchor(p)}
                   >
                     {connect && (
                       <span className="planRibbon">
@@ -145,6 +147,7 @@ export function ArcPublicPricing({
                         })}
                       </p>
                     ) : null}
+                    <p className="planAudience">{tr(planAudienceKey(p))}</p>
                     <p className="planDescription">{tr(planDescriptionKey(p))}</p>
                     <ul className="planIncluded">
                       {planCardFeatures(p, catalog, tr).map((item) => (
@@ -187,6 +190,7 @@ export function ArcPublicPricing({
           </div>
         ))}
       </section>
+      <PlanComparison plans={plans} catalog={catalog} />
       <p className="pricingFinePrint">
         {tr(
           bundled

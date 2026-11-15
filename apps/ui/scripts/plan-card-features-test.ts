@@ -78,10 +78,10 @@ const pro: CatalogPlan = {
 const proRows = planCardFeatures(pro, catalog, en),
   maxRows = planCardFeatures(max, catalog, en);
 assert.deepEqual(maxRows, [
-  "Your agents at full speed all month · no call cap, no slow lane",
+  "No call cap · file edits, commands and Apps never pause",
+  "Scheduled routines: up to 100",
   "Up to 100 computers · unlimited file transfer",
   "Parallel tasks: 5 · up to 60 minutes each",
-  "Scheduled routines: up to 100",
   "3,000 Arc Credits / month · about 1,000 tasks",
   "Terminal, files, browser, Fleet and connected Apps",
   "Your own ChatGPT, Claude or Codex, or Arc with Auto and named models",
@@ -89,9 +89,9 @@ assert.deepEqual(maxRows, [
 // Pro lists the same terms in the same order, so each line compares with Max's.
 assert.equal(proRows.length, maxRows.length);
 assert.deepEqual(proRows.slice(1, 5), [
+  "Scheduled routines: up to 20",
   "Up to 20 computers · unlimited file transfer",
   "Parallel tasks: 2 · up to 30 minutes each",
-  "Scheduled routines: up to 20",
   "500 Arc Credits / month · about 160 tasks",
 ]);
 assert.ok(
@@ -100,9 +100,9 @@ assert.ok(
   "Max leads with capacity, not Credits",
 );
 assert.deepEqual(planCardFeatures(max, catalog, zh).slice(1, 5), [
+  "最多 100 个定时 Routine",
   "最多 100 台电脑 · 不限文件传输",
   "5 个任务同时运行 · 单次最长 60 分钟",
-  "最多 100 个定时 Routine",
   "每月 3,000 Arc Credits · 约 1,000 次任务",
 ]);
 

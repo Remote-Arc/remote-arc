@@ -4,7 +4,7 @@ export type CatalogPlan = {
   id: string;
   label: string;
   monthlyPriceCents: number;
-  /** Connect Unlimited only, once a yearly price is published. */
+  /** Pro and Max, once a yearly price is published. */
   yearlyPriceCents?: number | null;
   monthlyCredits: number;
   connectToolCalls: number | null;
@@ -18,6 +18,10 @@ export type CatalogPlan = {
   maxSteps?: number;
   maxTokens?: number;
   allHostedModels: boolean;
+  /** Feature switches. A version that does not set one includes the feature. */
+  notifications?: boolean;
+  unattendedBrowser?: boolean;
+  fleetRun?: boolean;
   versionId: string;
 };
 export type PlatformCatalog = {

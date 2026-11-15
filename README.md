@@ -1,6 +1,6 @@
 # Latest measured coverage
 
-Source: [34ff1dd](https://github.com/Remote-Arc/remote-arc/commit/34ff1dd0e3e78e74557db059fa0aa0d6aad8812f) · [CI run](https://github.com/Remote-Arc/remote-arc/actions/runs/43704231442) · 2026-11-15T10:44:54Z
+Source: [060bd63](https://github.com/Remote-Arc/remote-arc/commit/060bd6350e6d3e853006abf905448ab2f83ba886) · [CI run](https://github.com/Remote-Arc/remote-arc/actions/runs/43760538468) · 2026-11-15T21:09:14Z
 
 **Go statement coverage: 90.90% (9309/10241). Target: ≥90%.**
 

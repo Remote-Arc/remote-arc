@@ -1118,6 +1118,7 @@
     "billing.planChange.credit": "当前套餐未用时间抵扣",
     "billing.planChange.tax": "税费",
     "billing.planChange.dueToday": "今天应付",
+    "billing.planChange.repriced": "打开页面后今天应付的金额有变化。请确认新金额后重新勾选同意；刚才没有扣费。",
     "billing.planChange.renews": "{date} 起按 {price} 续费。",
     "billing.planChange.agree": "我同意 Remote Arc 现在从我保存的付款方式扣 {total}，之后每次续费扣 {price}，直到我在“设置 → 套餐与用量”取消续费。",
     "billing.planChange.upgradeNow": "立即升级",

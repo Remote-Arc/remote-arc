@@ -1118,6 +1118,7 @@
     "billing.planChange.credit": "Credit for unused time on your current plan",
     "billing.planChange.tax": "Tax",
     "billing.planChange.dueToday": "Due today",
+    "billing.planChange.repriced": "Today's amount changed since you opened this page. Review the new amount and agree again; nothing was charged.",
     "billing.planChange.renews": "Your plan renews on {date} at {price}.",
     "billing.planChange.agree": "I agree that Remote Arc charges {total} to my saved payment method now and {price} at each renewal until I cancel renewal in Settings → Plan & usage.",
     "billing.planChange.upgradeNow": "Upgrade now",

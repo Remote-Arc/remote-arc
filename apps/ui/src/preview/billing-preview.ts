@@ -400,7 +400,6 @@ export function createBillingPreview(storage: Pick<Storage, "getItem" | "setItem
                   creditCents,
                   taxCents: 0,
                   totalCents: priceCents - creditCents,
-                  prorationDate: Math.floor(Date.now() / 1000),
                   renewsAt: new Date(
                     Date.now() + (interval === "year" ? 365 : 30) * 86400000,
                   ).toISOString(),

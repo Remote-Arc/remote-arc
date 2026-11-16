@@ -102,6 +102,11 @@ export function PlanChangeSummary({
               <dd>{usd(preview.totalCents ?? 0)}</dd>
             </div>
           </dl>
+          {change.repriced && (
+            <p role="status" className="planChangeError">
+              {tr("billing.planChange.repriced")}
+            </p>
+          )}
           <p className="planChangeQuiet">
             {tr("billing.planChange.renews", { date: date(preview.renewsAt), price: recurring })}
           </p>

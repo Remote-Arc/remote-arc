@@ -6,7 +6,7 @@ test("the Overview starts the Connect trial only when the person clicks", async 
   page,
 }, info) => {
   const zh = info.project.metadata.language === "zh";
-  await page.goto("/dashboard/connect/overview?quota=full");
+  await page.goto("/dashboard/connect/overview?quota=full&protrial=off");
   const banner = page.locator(".usageConversion");
   await expect(banner).toContainText(zh ? "试用不会自动开始" : "never starts by itself");
   const start = banner.getByRole("button", {
@@ -22,7 +22,7 @@ test("the Overview starts the Connect trial only when the person clicks", async 
 
 test("the Overview says why there is no trial on a shared computer", async ({ page }, info) => {
   const zh = info.project.metadata.language === "zh";
-  await page.goto("/dashboard/connect/overview?quota=shared");
+  await page.goto("/dashboard/connect/overview?quota=shared&protrial=off");
   const banner = page.locator(".usageConversion");
   await expect(banner).toContainText(
     zh ? "这台电脑上的另一个账号已经用过" : "another account on this computer has already used it",
@@ -32,7 +32,7 @@ test("the Overview says why there is no trial on a shared computer", async ({ pa
 
 test("a used-up write cap offers the trial instead of starting it", async ({ page }, info) => {
   const zh = info.project.metadata.language === "zh";
-  await page.goto("/dashboard/connect/overview?quota=writes-next");
+  await page.goto("/dashboard/connect/overview?quota=writes-next&protrial=off");
   const banner = page.locator(".usageConversion");
   await expect(
     banner.getByRole("button", { name: zh ? "开始 7 天试用" : "Start the 7-day trial" }),

@@ -74,14 +74,23 @@ export function ArcPublicPricing({
           <span className="eyebrow">ARC / {catalog.trial.days}-DAY TRIAL</span>
           <h2>{tr("marketing.arcPublicPricing.tryYourPersonalAgent")}</h2>
           <p>
-            {tr("marketing.arcPublicPricing.daysCreditsActivateWhenYouAre", {
-              days: catalog.trial.days,
-              credits: catalog.trial.credits,
-            })}
+            {tr(
+              catalog.proTrial
+                ? "marketing.arcPublicPricing.proTrialDaysCredits"
+                : "marketing.arcPublicPricing.daysCreditsActivateWhenYouAre",
+              { days: catalog.trial.days, credits: catalog.trial.credits },
+            )}
             {tr("marketing.arcPublicPricing.autoIsIncludedNamedModelsRequire")}
           </p>
         </div>
-        <a className="primaryButton" href="https://agent.remotearc.app/dashboard/arc/chat">
+        <a
+          className="primaryButton"
+          href={
+            catalog.proTrial
+              ? "https://agent.remotearc.app/checkout?product=pro&trial=1"
+              : "https://agent.remotearc.app/dashboard/arc/chat"
+          }
+        >
           {tr("marketing.arcPublicPricing.startFreeTrial")} ↗
         </a>
       </section>

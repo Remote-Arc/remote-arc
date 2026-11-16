@@ -25,6 +25,10 @@ import "../../styles/settings/dashboard-settings.css";
 import "../../styles/billing/arc-billing-panel.css";
 import "../../styles/billing/arc-checkout.css";
 import { BillingRecoveryActions } from "./billing-recovery-actions.js";
+import { ProTrialChoiceNote, proTrialEndDate } from "./pro-trial-choice.js";
+import { useProTrialChoice } from "../../hooks/settings/use-pro-trial-choice.js";
+import { usePlanChange } from "../../hooks/settings/use-plan-change.js";
+import { PlanChangeSummary } from "./plan-change-summary.js";
 import {
   billingRecovery,
   paymentStatusHref,
@@ -171,6 +175,24 @@ export function ArcCheckout({ email }: { email: string }) {
     billed: BillingInterval = yearlyCents && cycle === "year" ? "year" : "month",
     active = data?.subscriptions.find((s) => s.status === "active"),
     pendingChange = Boolean(data?.subscriptions.some((s) => s.pending_product_id));
+  const trialChoice = useProTrialChoice(data, plan, billed, paid),
+    trialStarted = new URLSearchParams(location.search).get("trial") === "1";
+  // A paid account (or one in its trial) previews a plan change before confirming it.
+  const held = data?.subscriptions.find((s) => ["active", "trialing"].includes(s.status)),
+    samePlan = Boolean(
+      paid &&
+      plan?.id === data?.plan.id &&
+      billed === (held?.billing_interval ?? "month") &&
+      !pendingChange &&
+      !(data && plan && addsArc(data.plan, plan)),
+    );
+  const planChange = usePlanChange({
+    enabled: Boolean(paid && plan && !samePlan && !embedded),
+    productId: plan?.id,
+    versionId: plan?.versionId,
+    interval: billed,
+    onChanged: () => setRevision((value) => value + 1),
+  });
   async function proceed() {
     if (sending.current || !available || !product || result === "success") return;
     sending.current = true;
@@ -185,6 +207,7 @@ export function ArcCheckout({ email }: { email: string }) {
           ...(plan ? { interval: billed } : {}),
           ...(!(paid && plan) ? { uiMode: "elements" } : {}),
           ...(!paid && plan && !connect && promo.trim() ? { promoCode: promo.trim() } : {}),
+          ...(trialChoice.on ? { trial: true } : {}),
         },
         createCheckout = () =>
           billingRequest<
@@ -230,6 +253,7 @@ export function ArcCheckout({ email }: { email: string }) {
       location.assign(
         checkoutHref(selected) +
           (billed === "year" ? "&interval=year" : "") +
+          (trialChoice.on ? "&trial=1" : "") +
           "&checkout=success&session_id=" +
           encodeURIComponent(embedded.sessionId),
       );
@@ -372,6 +396,11 @@ export function ArcCheckout({ email }: { email: string }) {
           ? "Max"
           : previousPlan?.label || previousCheckout.label || ""
       : "",
+    planName = plan ? (connect ? "Pro" : plan.id === MAX_PLAN_ID ? "Max" : plan.label) : "",
+    pricePerPeriod = tr(
+      billed === "year" ? "billing.planChange.perYear" : "billing.planChange.perMonth",
+      { price },
+    ),
     requestedLabel = plan
       ? (connect ? "Pro" : plan.id === MAX_PLAN_ID ? "Max" : plan.label) +
         " · " +
@@ -608,21 +637,37 @@ export function ArcCheckout({ email }: { email: string }) {
                   summary={{
                     label: orderLabel,
                     subtotal: price,
-                    total: price,
-                    cadence: plan
-                      ? billed === "year"
-                        ? tr("billing.arcCheckout.year")
-                        : tr("billing.arcCheckout.month")
-                      : tr("billing.arcCheckout.oneTime"),
-                    recurringNote: plan
-                      ? billed === "year"
-                        ? arcIncluded
-                          ? tr("billing.arcCheckout.renewsYearlyUntilCancelledCreditsEachMonth")
-                          : tr("billing.arcCheckout.renewsYearlyUntilCancelledNoMonthly")
-                        : connectOnly
-                          ? tr("billing.arcCheckout.renewsMonthlyUntilCancelledNoMonthly")
-                          : tr("billing.arcCheckout.renewsMonthlyUntilCancelledMonthlyCredits")
-                      : tr("billing.arcCheckout.topUpCreditsDoNotExpire"),
+                    total: trialChoice.on ? usd(0) : price,
+                    ...(trialChoice.on && trialChoice.offer
+                      ? {
+                          submitLabel: tr("billing.proTrial.startTrial", {
+                            days: trialChoice.offer.days,
+                          }),
+                        }
+                      : {}),
+                    // Nothing recurs today during a trial; the note says what follows.
+                    cadence: trialChoice.on
+                      ? ""
+                      : plan
+                        ? billed === "year"
+                          ? tr("billing.arcCheckout.year")
+                          : tr("billing.arcCheckout.month")
+                        : tr("billing.arcCheckout.oneTime"),
+                    recurringNote:
+                      trialChoice.on && trialChoice.offer
+                        ? tr("billing.proTrial.recurringNote", {
+                            price: pricePerPeriod,
+                            date: proTrialEndDate(trialChoice.offer.days, locale),
+                          })
+                        : plan
+                          ? billed === "year"
+                            ? arcIncluded
+                              ? tr("billing.arcCheckout.renewsYearlyUntilCancelledCreditsEachMonth")
+                              : tr("billing.arcCheckout.renewsYearlyUntilCancelledNoMonthly")
+                            : connectOnly
+                              ? tr("billing.arcCheckout.renewsMonthlyUntilCancelledNoMonthly")
+                              : tr("billing.arcCheckout.renewsMonthlyUntilCancelledMonthlyCredits")
+                          : tr("billing.arcCheckout.topUpCreditsDoNotExpire"),
                   }}
                 />
               ) : (
@@ -634,14 +679,18 @@ export function ArcCheckout({ email }: { email: string }) {
           <section className="arcCheckoutResult" role="status">
             <h2>
               {payment === "confirmed"
-                ? tr("billing.arcCheckout.paymentConfirmed")
+                ? trialStarted
+                  ? tr("billing.proTrial.started")
+                  : tr("billing.arcCheckout.paymentConfirmed")
                 : payment === "waiting"
                   ? tr("billing.arcCheckout.confirmationIsTakingLonger")
                   : tr("billing.arcCheckout.confirmingYourPayment")}
             </h2>
             <p>
               {payment === "confirmed"
-                ? tr("billing.arcCheckout.yourVerifiedPaymentAndUpdatedAllowance")
+                ? trialStarted
+                  ? tr("billing.proTrial.startedDetail")
+                  : tr("billing.arcCheckout.yourVerifiedPaymentAndUpdatedAllowance")
                 : tr("billing.arcCheckout.weAreCheckingTheSavedPayment")}
             </p>
             <a
@@ -827,8 +876,15 @@ export function ArcCheckout({ email }: { email: string }) {
                         : tr("billing.arcCheckout.renewsMonthlyUntilCancelledCancelRenewal2")}
                   </p>
                 )}
-                {paid && plan && <p>{tr("billing.arcCheckout.planChangesTakeEffectAtYour")}</p>}
-                {!paid && plan && !connect && (
+                <ProTrialChoiceNote
+                  choice={trialChoice}
+                  plan={planName}
+                  price={pricePerPeriod}
+                  locale={locale}
+                  tr={tr}
+                  disabled={busy}
+                />
+                {!paid && plan && !connect && !trialChoice.on && (
                   <details className="arcCheckoutPromo">
                     <summary>{tr("billing.arcCheckout.haveAPromoCode")}</summary>
                     <label htmlFor="checkout-promo">{tr("billing.arcCheckout.promoCode")}</label>
@@ -845,7 +901,16 @@ export function ArcCheckout({ email }: { email: string }) {
                     </small>
                   </details>
                 )}
-                {scheduled ? (
+                {paid && plan ? (
+                  <PlanChangeSummary
+                    change={planChange}
+                    planLabel={planName}
+                    usd={usd}
+                    locale={locale}
+                    tr={tr}
+                    same={samePlan}
+                  />
+                ) : scheduled ? (
                   <div role="status">
                     <p>
                       {tr("billing.arcCheckout.planChangeScheduledFor") +
@@ -879,7 +944,9 @@ export function ArcCheckout({ email }: { email: string }) {
                       ? tr("billing.arcCheckout.preparingPayment")
                       : paid && plan
                         ? tr("billing.arcCheckout.confirmPlanChange")
-                        : tr("billing.arcCheckout.continueToPayment")}
+                        : trialChoice.on
+                          ? tr("billing.proTrial.continueToTrial")
+                          : tr("billing.arcCheckout.continueToPayment")}
                   </button>
                 )}
                 {!available && (

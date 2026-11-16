@@ -41,6 +41,7 @@ import "../../../styles/arc/chat/arc-chat-surface.css";
 import "../../../styles/arc/chat/arc-verification.css";
 import { billingRecovery } from "../../../../../../packages/protocol/src/billing-recovery.js";
 import { BillingRecoveryActions } from "../../billing/billing-recovery-actions.js";
+import { PRO_TRIAL_CHECKOUT_HREF } from "../../billing/arc-billing-client.js";
 
 type Props = {
   navigationOpen: boolean;
@@ -611,7 +612,9 @@ export function ArcNativeChat({
       </form>
       <p className="arcChatDisclaimer">
         {chat.service?.access.status === "eligible"
-          ? tr("arc.chat.arcNativeChat.startYourFreeTrialAboveTo")
+          ? chat.service.access.proTrial
+            ? tr("billing.proTrial.chatNote")
+            : tr("arc.chat.arcNativeChat.startYourFreeTrialAboveTo")
           : chat.service?.preview
             ? tr("arc.chat.arcNativeChat.interactivePreviewSimulatedRepliesNoReal")
             : tr("arc.chat.arcNativeChat.arcCarriesOutYourRequestAnd")}
@@ -643,7 +646,11 @@ export function ArcNativeChat({
             <small>{tr("arc.chat.arcNativeChat.connectUnlimitedKeepsRunningYourOwn")}</small>
           )}
           {access.status === "eligible" && (
-            <small>{tr("arc.chat.arcNativeChat.noCardNoModelApiKey")}</small>
+            <small>
+              {access.proTrial
+                ? tr("billing.proTrial.chatNote")
+                : tr("arc.chat.arcNativeChat.noCardNoModelApiKey")}
+            </small>
           )}
           {access.status === "expired" && (
             <small>
@@ -652,7 +659,12 @@ export function ArcNativeChat({
           )}
         </span>
       </div>
-      {access.status === "eligible" ? (
+      {access.status === "eligible" && access.proTrial ? (
+        <a className="arcRadiantCta" href={PRO_TRIAL_CHECKOUT_HREF}>
+          {tr("arc.chat.arcNativeChat.startFreeTrial")}
+          <Icon name="arrowUpRight" size={14} />
+        </a>
+      ) : access.status === "eligible" ? (
         <button
           className="arcRadiantCta"
           type="button"

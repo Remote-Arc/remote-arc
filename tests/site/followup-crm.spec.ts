@@ -364,6 +364,17 @@ test("Automated lifecycle emails show on the follow-up page and in each person's
   await preview.getByRole("button", { name: /Close preview|关闭预览/ }).click();
   await expect(preview).toHaveCount(0);
 
+  // The Pro trial reminder is transactional and points only to billing settings, where
+  // renewal is cancelled; the email itself offers no way to cancel or unsubscribe.
+  const proTrialReminder = panel
+    .locator("tbody tr")
+    .filter({ hasText: /Pro trial ending|Pro 试用首次扣费提醒/ });
+  await proTrialReminder.getByRole("button", { name: /Preview|预览/ }).click();
+  await expect(email.locator("h1")).toHaveText(/Your Pro trial ends soon|你的 Pro 试用即将结束/);
+  await expect(email.locator("a[href$='/settings?section=billing']").first()).toBeVisible();
+  await expect(email.locator("a[href*='unsubscribe']")).toHaveCount(0);
+  await preview.getByRole("button", { name: /Close preview|关闭预览/ }).click();
+
   // The welcome email adapts to setup progress, and each stage can be previewed.
   await welcome.getByRole("button", { name: /Preview|预览/ }).click();
   await expect(email.locator("a[href$='/install/cursor']").first()).toBeVisible();

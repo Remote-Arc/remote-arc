@@ -21,6 +21,7 @@ const KINDS: LifecycleKind[] = [
   "connect_trial_started",
   "connect_trial_ending",
   "plan_started",
+  "pro_trial_ending",
 ];
 // The sender gives up on queued emails older than this (STALE_MS in the relay).
 const STALE_HOURS = 72;
@@ -34,6 +35,7 @@ export const lifecycleKindLabel = (kind: LifecycleKind, tr: Translate) =>
     connect_trial_started: tr("admin.followups.followupLifecycle.connectTrialStarted"),
     connect_trial_ending: tr("admin.followups.followupLifecycle.connectTrialEnding"),
     plan_started: tr("admin.followups.followupLifecycle.paidPlanConfirmation"),
+    pro_trial_ending: tr("admin.followups.followupLifecycle.proTrialEnding"),
   })[kind] || kind;
 
 const statusLabel = (status: LifecycleStatus, tr: Translate) =>

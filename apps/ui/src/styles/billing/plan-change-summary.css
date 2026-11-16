@@ -1,0 +1,68 @@
+/* A paid account's plan change at checkout: today's amount and the agreement. */
+.planChange {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--rs-secondary);
+}
+
+.planChange p {
+  margin: 0;
+}
+
+.planChangeLines {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--rs-border);
+  border-radius: 10px;
+  background: var(--rs-bg);
+}
+
+.planChangeLines div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.planChangeLines dt,
+.planChangeLines dd {
+  margin: 0;
+}
+
+.planChangeLines dd {
+  color: var(--rs-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.planChangeLines .planChangeTotal {
+  padding-top: 8px;
+  border-top: 1px solid var(--rs-border);
+  color: var(--rs-text);
+  font-weight: 600;
+}
+
+.planChangeQuiet {
+  font-size: 12px;
+}
+
+.planChangeAgree {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  color: var(--rs-text);
+  cursor: pointer;
+}
+
+.planChangeAgree input {
+  margin-top: 3px;
+}
+
+.planChangeError {
+  color: var(--rs-danger, #dc2626);
+}

@@ -10,7 +10,8 @@ for (const [quota, heading] of [
   test(
     "Overview explains a used-up write cap with reads left (" + quota + ")",
     async ({ page }) => {
-      await page.goto("/dashboard/connect/overview?quota=" + quota);
+      // The one-off Connect trial, as it works while the card-backed trial is off.
+      await page.goto("/dashboard/connect/overview?protrial=off&quota=" + quota);
       const banner = page.locator(".usageConversion");
       await expect(banner.getByRole("heading", { level: 2 })).toHaveText(heading);
       await expect(banner.locator(".usageConversionWrites")).toContainText(/5,000 \/ 5,000/);

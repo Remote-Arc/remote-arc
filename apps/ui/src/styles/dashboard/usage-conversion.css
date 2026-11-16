@@ -229,3 +229,10 @@
     padding: 16px;
   }
 }
+
+/* The card-backed trial: a payment method is saved, and charged only if Pro is kept. */
+.usageConversion p.usageConversionNote {
+  margin-top: -4px;
+  font-size: 13px;
+  opacity: 0.8;
+}

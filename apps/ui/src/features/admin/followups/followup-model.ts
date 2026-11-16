@@ -64,7 +64,12 @@ export type Mail = {
   batch_recipient_status?: string | null;
 };
 export type LifecycleKind =
-  "welcome" | "setup_reminder" | "connect_trial_started" | "connect_trial_ending" | "plan_started";
+  | "welcome"
+  | "setup_reminder"
+  | "connect_trial_started"
+  | "connect_trial_ending"
+  | "plan_started"
+  | "pro_trial_ending";
 export type LifecycleStatus = "queued" | "sending" | "sent" | "failed" | "unknown" | "skipped";
 /** An automated email the product sent (or skipped) for one person. */
 export type LifecycleEmail = {

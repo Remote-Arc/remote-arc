@@ -12,6 +12,7 @@ import {
 import { WorkspaceLoading } from "../../../components/workspace-loading.js";
 import { billingRecovery } from "../../../../../../packages/protocol/src/billing-recovery.js";
 import { BillingRecoveryActions } from "../../billing/billing-recovery-actions.js";
+import { PRO_TRIAL_CHECKOUT_HREF } from "../../billing/arc-billing-client.js";
 
 type Tr = Translate;
 type RoomMessage = ChatMessage & {
@@ -655,7 +656,11 @@ export function ArcTeamChat({
                   {tr("arc.teams.arcTeamChat.stop")}
                 </button>
               )}
-              {service?.access.status === "eligible" ? (
+              {service?.access.status === "eligible" && service.access.proTrial ? (
+                <a className="addButton arcRadiantCta" href={PRO_TRIAL_CHECKOUT_HREF}>
+                  {tr("arc.teams.arcTeamChat.startTrial")}
+                </a>
+              ) : service?.access.status === "eligible" ? (
                 <button
                   type="button"
                   className="addButton arcRadiantCta"

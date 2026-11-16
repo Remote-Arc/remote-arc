@@ -44,6 +44,8 @@ export type ChatRun = {
 export type ArcAccess = {
   status: "eligible" | "active" | "expired" | "paid" | "excluded";
   canUse: boolean;
+  /** The card-backed Pro trial replaces the Arc trial: an eligible account starts it at checkout. */
+  proTrial?: boolean;
   funded?: boolean;
   trialDays?: number;
   trialCredits?: number;

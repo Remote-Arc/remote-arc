@@ -10,6 +10,8 @@ export type ElementsSummary = {
   total: string;
   cadence: string;
   recurringNote?: string;
+  /** Replaces "Pay <total>", as when a trial starts with nothing due. */
+  submitLabel?: string;
 };
 /** Remote Arc's own payment layout. Only the payment fields inside `fields` are
  * rendered by Stripe; summary, errors and the pay button are ours. */
@@ -77,7 +79,9 @@ export function ElementsShell({
         >
           {busy
             ? tr("billing.checkoutElementsShell.processingPayment")
-            : (submitLabel ?? tr("billing.checkoutElementsShell.pay") + summary.total)}
+            : (submitLabel ??
+              summary.submitLabel ??
+              tr("billing.checkoutElementsShell.pay") + summary.total)}
         </button>
         {footer ?? <small>{tr("billing.checkoutElementsShell.yourBankMayAskYouTo")}</small>}
       </form>

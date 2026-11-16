@@ -3,9 +3,21 @@ import { PRO_CHECKOUT_SLUG } from "@remotearc/protocol";
 import { useI18n } from "../../hooks/use-i18n.js";
 import type { MonthlyUsage } from "../../types/app-types.js";
 import { ConnectTrialButton } from "../billing/connect-trial-button.js";
+import { PRO_TRIAL_CHECKOUT_HREF, type ProTrial } from "../billing/arc-billing-client.js";
 import "../../styles/dashboard/usage-conversion.css";
 
 const DAY_MS = 86_400_000;
+
+/** Whether the banner shows for this usage: a Free account near or past its allowance. */
+export function usageBannerVisible(usage: MonthlyUsage | null | undefined) {
+  if (!usage || usage.unlimited || !usage.limit) return false;
+  const writes = usage.writes;
+  return Boolean(
+    usage.freeOverflow ||
+    usage.used / usage.limit >= 0.8 ||
+    (writes && writes.used / writes.limit >= 0.8),
+  );
+}
 
 export function UsageConversionBanner({
   usage,
@@ -13,8 +25,11 @@ export function UsageConversionBanner({
   pricingUrl,
   sectionRef,
   onTrialStarted,
+  proTrial,
 }: {
   usage: MonthlyUsage | null | undefined;
+  /** The card-backed trial, where it is offered; it replaces the one-off Connect trial. */
+  proTrial?: ProTrial;
   onManagePlan: () => void;
   pricingUrl: string;
   /** Reloads usage once the person starts the one-off trial, which never starts by itself. */
@@ -157,8 +172,26 @@ export function UsageConversionBanner({
         </span>
         <h2>{heading}</h2>
         <p>{body}</p>
+        {proTrial?.available && (
+          <p className="usageConversionNote">
+            {tr("dashboard.usageConversion.proTrialNote", {
+              days: proTrial.days,
+              credits: proTrial.credits.toLocaleString(locale === "zh" ? "zh-CN" : "en-US"),
+            })}
+          </p>
+        )}
         <div className="usageConversionActions">
-          {trialStartable ? (
+          {proTrial?.available ? (
+            <>
+              <a className="usageConversionPrimary" href={PRO_TRIAL_CHECKOUT_HREF}>
+                {tr("billing.proTrial.startLink", { days: proTrial.days })}{" "}
+                <span aria-hidden="true">→</span>
+              </a>
+              <button type="button" className="usageConversionLink" onClick={onManagePlan}>
+                {tr("dashboard.usageConversion.viewPlansUsage")}
+              </button>
+            </>
+          ) : trialStartable ? (
             <>
               <ConnectTrialButton
                 className="usageConversionPrimary"

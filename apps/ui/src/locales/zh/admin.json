@@ -830,6 +830,7 @@
     "admin.followups.followupLifecycle.columnQueued": "排队中",
     "admin.followups.followupLifecycle.columnSent": "已发送",
     "admin.followups.followupLifecycle.columnSkipped": "已跳过",
+    "admin.followups.followupLifecycle.proTrialEnding": "Pro 试用首次扣费提醒",
     "admin.followups.followupLifecycle.connectTrialEnding": "试用即将结束",
     "admin.followups.followupLifecycle.connectTrialStarted": "Connect 试用开始",
     "admin.followups.followupLifecycle.deliveryNoSender": "发件服务未配置",

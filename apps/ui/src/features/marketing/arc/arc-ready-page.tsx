@@ -22,7 +22,11 @@ export function ArcReadyPage({
           {catalog
             ? `${catalog.trial.days} ${tr("marketing.arc.arcReadyPage.days")} · ${catalog.trial.credits} Credits. `
             : ""}
-          {tr("marketing.arc.arcReadyPage.noCardOrModelApiKey")}
+          {tr(
+            catalog?.proTrial
+              ? "marketing.arc.arcReadyPage.proTrialNoModelApiKey"
+              : "marketing.arc.arcReadyPage.noCardOrModelApiKey",
+          )}
         </p>
       </header>
       <HomeConnectionScene clients={[]} arcAvailable initialMode="arc" />

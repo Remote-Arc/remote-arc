@@ -65,6 +65,12 @@ type State = {
   cancelled: boolean;
   pending: string | null;
   methodUpdated: boolean;
+  /** The card-backed trial is offered (STRIPE_PRO_TRIAL), as decided; a demo may turn it off. */
+  trialOffered?: boolean;
+  /** The subscription's billing period. */
+  interval?: "month" | "year";
+  /** When the started Pro trial ends. */
+  trialEndsAt?: string | null;
   orders: Record<
     string,
     {
@@ -72,9 +78,11 @@ type State = {
       interval?: "month" | "year";
       expiresAt?: string;
       status: "open" | "complete" | "expired";
+      trial?: boolean;
     }
   >;
 };
+const PREVIEW_TRIAL = { days: 7, credits: 300 };
 const json = (value: unknown, status = 200) =>
   Response.json(value, { status, headers: { "cache-control": "no-store" } });
 /** Local demo state only. No provider, authentication or production API calls. */
@@ -85,6 +93,8 @@ export function createBillingPreview(storage: Pick<Storage, "getItem" | "setItem
     cancelled: false,
     pending: null,
     methodUpdated: false,
+    // ?protrial=off shows checkout as it works while the card-backed trial is off.
+    trialOffered: entry.searchParams.get("protrial") !== "off",
     orders: {},
   };
   try {
@@ -100,6 +110,7 @@ export function createBillingPreview(storage: Pick<Storage, "getItem" | "setItem
   } catch {}
   if (entry.searchParams.get("demo") === "new")
     state = { ...state, planId: "free", cancelled: false, pending: null, orders: {} };
+  if (entry.searchParams.get("protrial") === "off") state = { ...state, trialOffered: false };
   const save = () => {
     try {
       storage.setItem(storageKey, JSON.stringify(state));
@@ -107,9 +118,38 @@ export function createBillingPreview(storage: Pick<Storage, "getItem" | "setItem
   };
   save();
   const period = () => new Date(Date.now() + 30 * 86400000).toISOString(),
-    plan = () => ARC_PLANS.find((p) => p.id === state.planId) || ARC_PLANS[0];
+    // The decided terms, as checkout shows them: Pro includes Arc with 500 Credits.
+    plan = () => previewBillingPlans.find((p) => p.id === state.planId) || previewBillingPlans[0]!;
   const plans = previewBillingPlans,
     topups = ARC_TOPUPS.map((p) => ({ ...p, versionId: "preview:" + p.id }));
+  // Like the Relay's proTrialState: offered, then once per account, for Free only.
+  const proTrial = () => {
+    const reason =
+      state.trialOffered === false
+        ? "not_offered"
+        : state.trialEndsAt
+          ? "used"
+          : plan().monthlyPriceCents
+            ? "subscribed"
+            : null;
+    return {
+      offered: state.trialOffered !== false,
+      available: reason === null,
+      reason,
+      ...PREVIEW_TRIAL,
+      trial: state.trialEndsAt
+        ? {
+            status: "trialing",
+            startedAt: new Date(
+              Date.parse(state.trialEndsAt) - PREVIEW_TRIAL.days * 86400000,
+            ).toISOString(),
+            endsAt: state.trialEndsAt,
+            cancelAtPeriodEnd: state.cancelled,
+            active: state.trialEndsAt > new Date().toISOString(),
+          }
+        : null,
+    };
+  };
   return {
     handle(url: URL, method: string, body: unknown): Response | null {
       if (!url.pathname.startsWith("/api/billing")) return null;
@@ -128,19 +168,30 @@ export function createBillingPreview(storage: Pick<Storage, "getItem" | "setItem
           subscriptionManagementEnabled: true,
           hasCustomer: true,
           plan: plan(),
+          // With the card-backed trial on, a Free account has no Arc trial: it starts the
+          // trial at checkout. With it off, the preview's Free account is in its Arc trial.
           access: {
-            status:
-              plan().id === CONNECT_UNLIMITED_PLAN_ID
-                ? "excluded"
-                : plan().monthlyPriceCents
-                  ? "paid"
-                  : "active",
-            canUse: plan().id !== CONNECT_UNLIMITED_PLAN_ID,
-            daysRemaining: 14,
+            status: plan().monthlyPriceCents
+              ? "paid"
+              : state.trialOffered === false
+                ? "active"
+                : "eligible",
+            canUse: Boolean(plan().monthlyPriceCents) || state.trialOffered === false,
+            daysRemaining: 7,
+            trialDays: PREVIEW_TRIAL.days,
+            trialCredits: PREVIEW_TRIAL.credits,
+            proTrial: state.trialOffered !== false,
             dailyUsedPercent: 0,
           },
           credits: {
-            available: plan().id === CONNECT_UNLIMITED_PLAN_ID ? 0 : plan().monthlyCredits || 200,
+            // A trial has the trial's Credits; a paid plan its monthly Credits.
+            available: state.trialEndsAt
+              ? PREVIEW_TRIAL.credits
+              : plan().monthlyPriceCents
+                ? plan().monthlyCredits
+                : state.trialOffered === false
+                  ? PREVIEW_TRIAL.credits
+                  : 0,
             pending: 0,
           },
           usage: {
@@ -150,7 +201,7 @@ export function createBillingPreview(storage: Pick<Storage, "getItem" | "setItem
             ...(plan().id === "free"
               ? {
                   afterAllowance: {
-                    next: "trial",
+                    next: state.trialOffered === false ? "trial" : "slow_lane",
                     trialDays: CONNECT_FREE_OVERFLOW.trialDays,
                     slowLaneCallsPerMinute: CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute,
                   },
@@ -169,11 +220,13 @@ export function createBillingPreview(storage: Pick<Storage, "getItem" | "setItem
             inputCreditsPer1000: m.inputMicrosPerMillion / 2000000,
             outputCreditsPer1000: m.outputMicrosPerMillion / 2000000,
           })),
+          proTrial: proTrial(),
           subscriptions: plan().monthlyPriceCents
             ? [
                 {
-                  status: "active",
-                  period_end: period(),
+                  status: state.trialEndsAt ? "trialing" : "active",
+                  period_end: state.trialEndsAt || period(),
+                  billing_interval: state.interval ?? "month",
                   cancel_at_period_end: Number(state.cancelled),
                   revision: state.revision,
                   pending_product_id: state.pending,
@@ -228,6 +281,13 @@ export function createBillingPreview(storage: Pick<Storage, "getItem" | "setItem
         if (![...plans, ...topups].some((p) => p.id === input.productId))
           return json({ error: "BILLING_INVALID_PRODUCT" }, 400);
         const interval = input.interval === "year" ? "year" : "month";
+        if (input.trial === true) {
+          if (![CONNECT_UNLIMITED_PLAN_ID, "arc-pro-v1"].includes(input.productId))
+            return json({ error: "BILLING_INVALID_REQUEST" }, 400);
+          const offer = proTrial();
+          if (!offer.available)
+            return json({ error: "PRO_TRIAL_UNAVAILABLE", reason: offer.reason }, 409);
+        }
         let order = Object.entries(state.orders).find(([, order]) => order.status === "open");
         if (
           order &&
@@ -263,6 +323,7 @@ export function createBillingPreview(storage: Pick<Storage, "getItem" | "setItem
             interval,
             expiresAt: new Date(Date.now() + 3600000).toISOString(),
             status: "open",
+            ...(input.trial === true ? { trial: true } : {}),
           };
           order = [id, state.orders[id]];
           save();
@@ -282,7 +343,12 @@ export function createBillingPreview(storage: Pick<Storage, "getItem" | "setItem
         if (!order || order.status === "expired")
           return json({ error: "BILLING_CHECKOUT_NOT_FOUND" }, 404);
         order.status = "complete";
-        if (plans.some((p) => p.id === order.productId)) state.planId = order.productId;
+        if (plans.some((p) => p.id === order.productId)) {
+          state.planId = order.productId;
+          state.interval = order.interval ?? "month";
+        }
+        if (order.trial)
+          state.trialEndsAt = new Date(Date.now() + PREVIEW_TRIAL.days * 86400000).toISOString();
         save();
         return json({ complete: true });
       }
@@ -301,13 +367,62 @@ export function createBillingPreview(storage: Pick<Storage, "getItem" | "setItem
         save();
         return json({ cancelAtPeriodEnd: state.cancelled, effectiveAt: period() });
       }
-      if (method === "POST" && path === "/plan/change") {
-        if (!plans.some((p) => p.id === input.productId && p.monthlyPriceCents > 0))
-          return json({ error: "BILLING_INVALID_PRODUCT" }, 400);
-        state.pending = input.productId;
+      if (method === "POST" && (path === "/plan/change" || path === "/plan/preview")) {
+        const target = plans.find((p) => p.id === input.productId && p.monthlyPriceCents > 0);
+        if (!target) return json({ error: "BILLING_INVALID_PRODUCT" }, 400);
+        const interval: "month" | "year" = input.interval === "year" ? "year" : "month",
+          cents = (
+            p: { monthlyPriceCents: number; yearlyPriceCents?: number | null },
+            i: string,
+          ) =>
+            i === "year" ? p.yearlyPriceCents || p.monthlyPriceCents * 12 : p.monthlyPriceCents,
+          priceCents = cents(target, interval),
+          held = state.interval ?? "month",
+          rank = (id: string) => ARC_PLANS.findIndex((p) => p.id === id);
+        // Like the Relay: a trial switches for nothing, an upgrade is charged now less the
+        // unused time (here 12 of 30 days), and anything else waits for the renewal.
+        const mode = state.trialEndsAt
+          ? "trial"
+          : rank(target.id) > rank(state.planId) && !(held === "year" && interval === "month")
+            ? "upgrade"
+            : "scheduled";
+        const creditCents = Math.round((cents(plan(), held) * 12) / 30);
+        if (path === "/plan/preview")
+          return json({
+            mode,
+            productId: target.id,
+            interval,
+            priceCents,
+            ...(mode === "trial" ? { effectiveAt: state.trialEndsAt } : {}),
+            ...(mode === "scheduled" ? { effectiveAt: period() } : {}),
+            ...(mode === "upgrade"
+              ? {
+                  creditCents,
+                  taxCents: 0,
+                  totalCents: priceCents - creditCents,
+                  prorationDate: Math.floor(Date.now() / 1000),
+                  renewsAt: new Date(
+                    Date.now() + (interval === "year" ? 365 : 30) * 86400000,
+                  ).toISOString(),
+                }
+              : {}),
+          });
+        if (mode === "scheduled") {
+          state.pending = input.productId;
+          state.revision++;
+          save();
+          return json({ scheduled: true, effectiveAt: period() });
+        }
+        state.planId = target.id;
+        state.interval = interval;
+        state.pending = null;
         state.revision++;
         save();
-        return json({ scheduled: true, effectiveAt: period() });
+        return json(
+          mode === "trial"
+            ? { changed: true, trial: true, productId: target.id, interval }
+            : { upgraded: true, productId: target.id, interval },
+        );
       }
       if (method === "POST" && path === "/payment-method/setup")
         return json({

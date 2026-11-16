@@ -35,6 +35,8 @@ export type PlatformCatalog = {
   plans: CatalogPlan[];
   topups: Array<{ id: string; priceCents: number; credits: number; versionId: string }>;
   trial: { days: number; credits: number };
+  /** The trial is the card-backed Pro trial (a payment method is saved at checkout). */
+  proTrial?: boolean;
 };
 let current: PlatformCatalog | null = null,
   pending: Promise<PlatformCatalog> | null = null,

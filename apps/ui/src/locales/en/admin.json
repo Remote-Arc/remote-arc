@@ -830,6 +830,7 @@
     "admin.followups.followupLifecycle.columnQueued": "Queued",
     "admin.followups.followupLifecycle.columnSent": "Sent",
     "admin.followups.followupLifecycle.columnSkipped": "Skipped",
+    "admin.followups.followupLifecycle.proTrialEnding": "Pro trial ending (before the first charge)",
     "admin.followups.followupLifecycle.connectTrialEnding": "Connect trial ending",
     "admin.followups.followupLifecycle.connectTrialStarted": "Connect trial started",
     "admin.followups.followupLifecycle.deliveryNoSender": "Sender not configured",

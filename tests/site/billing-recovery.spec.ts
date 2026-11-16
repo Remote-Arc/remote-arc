@@ -15,6 +15,8 @@ async function freeAccount(page: Page) {
         pending: null,
         methodUpdated: false,
         orders: {},
+        // These flows are about payment recovery; the card-backed trial is off.
+        trialOffered: false,
       }),
     );
   });
@@ -95,7 +97,7 @@ for (const code of [
 
 for (const code of ["BILLING_INVALID_PLAN_CHANGE", "BILLING_CHECKOUT_AWAITING_CONFIRMATION"])
   test("Checkout offers status recovery for " + code, async ({ page }, testInfo) => {
-    await page.goto("/checkout?demo=new");
+    await page.goto("/checkout?demo=new&protrial=off");
     await page.evaluate((code) => {
       const original = window.fetch;
       (window as any).__checkoutPosts = 0;
@@ -141,7 +143,7 @@ const previewOrders = (page: Page) =>
       ) as Array<{ interval?: string; status: string }>,
   );
 async function choosePro(page: Page) {
-  await page.goto("/checkout?demo=new");
+  await page.goto("/checkout?demo=new&protrial=off");
   await page
     .getByRole("group", { name: /Available offers|可用套餐/ })
     .getByRole("button", { name: /^Pro\b/ })

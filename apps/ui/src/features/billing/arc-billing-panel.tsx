@@ -9,6 +9,7 @@ import {
   checkoutHref,
   isConnectOnlyPlan,
   planIncludesArc,
+  PRO_TRIAL_CHECKOUT_HREF,
   transferSize,
   usageResetAt,
   type ArcBilling,
@@ -304,9 +305,30 @@ export function ArcBillingPanel() {
                 new Date(subscription.period_end).toLocaleDateString()}
             </p>
           )}
+          {data.proTrial?.trial?.active && (
+            <p>
+              {tr(
+                data.proTrial.trial.cancelAtPeriodEnd
+                  ? "billing.proTrial.panelCancelled"
+                  : "billing.proTrial.panelActive",
+                { date: new Date(data.proTrial.trial.endsAt).toLocaleDateString() },
+              )}
+            </p>
+          )}
         </div>
         <div className="raBillingActions">
-          <a className="raSettingsButton raSettingsButtonPrimary" href="/checkout">
+          {!paid && data.proTrial?.available && (
+            <a className="raSettingsButton raSettingsButtonPrimary" href={PRO_TRIAL_CHECKOUT_HREF}>
+              {tr("billing.proTrial.startLink", { days: data.proTrial.days })}
+            </a>
+          )}
+          <a
+            className={
+              "raSettingsButton" +
+              (!paid && data.proTrial?.available ? "" : " raSettingsButtonPrimary")
+            }
+            href="/checkout"
+          >
             {paid
               ? tr("billing.arcBillingPanel.changePlan")
               : tr("billing.arcBillingPanel.chooseAPlan")}

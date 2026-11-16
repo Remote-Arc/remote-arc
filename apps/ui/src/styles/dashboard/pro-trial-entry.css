@@ -1,0 +1,42 @@
+/* The Overview's entry to the card-backed trial, shown at any time to a Free account. */
+.proTrialEntry {
+  display: flex;
+  gap: 16px 24px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 20px;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background:
+    radial-gradient(60% 120% at 0% 0%, rgba(125, 211, 252, 0.12), transparent 60%),
+    radial-gradient(60% 120% at 100% 100%, rgba(167, 139, 250, 0.1), transparent 60%), var(--panel);
+}
+
+.proTrialEntry strong {
+  display: block;
+  font-size: 15px;
+}
+
+.proTrialEntry p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.proTrialEntry a {
+  flex: none;
+  text-decoration: none;
+}
+
+@media (max-width: 720px) {
+  .proTrialEntry {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .proTrialEntry a {
+    text-align: center;
+  }
+}

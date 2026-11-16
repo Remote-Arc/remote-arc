@@ -223,8 +223,9 @@ test("Documentation installation links preserve language and offer every client"
 });
 
 test("Checkout completes only a local simulated payment and survives refresh", async ({ page }) => {
-  // Pro and Max are sold; Plus is not offered once Pro includes Arc.
-  await page.goto("/checkout?product=arc-pro-v1");
+  // Pro and Max are sold; Plus is not offered once Pro includes Arc. A direct payment,
+  // as while the card-backed trial is off (pro-trial.spec.ts covers the trial).
+  await page.goto("/checkout?product=arc-pro-v1&protrial=off");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.locator(".arcCheckoutChoices button")).toHaveCount(2);
   await expect(page.locator('.arcCheckoutChoices button[aria-pressed="true"]')).toContainText(
@@ -245,7 +246,7 @@ test("Checkout completes only a local simulated payment and survives refresh", a
 });
 
 test("Pro checkout lists the decided terms, without Fleet or promo codes", async ({ page }) => {
-  await page.goto("/checkout?product=pro");
+  await page.goto("/checkout?product=pro&protrial=off");
   await expect(page.locator('.arcCheckoutChoices button[aria-pressed="true"]')).toContainText(
     "Pro",
   );

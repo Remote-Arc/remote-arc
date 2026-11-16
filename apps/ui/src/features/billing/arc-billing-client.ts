@@ -59,6 +59,23 @@ export type BillingDetails = {
   }[];
   hasMore: boolean;
 };
+/** The card-backed Pro trial: whether it can start, and the account's trial. */
+export type ProTrial = {
+  offered: boolean;
+  available: boolean;
+  reason: "not_offered" | "subscribed" | "used" | "paid_before" | "shared_computer" | null;
+  days: number;
+  credits: number;
+  trial: {
+    status: string;
+    startedAt: string;
+    endsAt: string;
+    cancelAtPeriodEnd: boolean;
+    active: boolean;
+  } | null;
+};
+/** Where the Dashboard starts the Pro trial. */
+export const PRO_TRIAL_CHECKOUT_HREF = "/checkout?product=pro&trial=1";
 export type ArcBilling = {
   embeddedCheckoutEnabled?: boolean;
   subscriptionManagementEnabled?: boolean;
@@ -87,6 +104,7 @@ export type ArcBilling = {
     inputCreditsPer1000: number;
     outputCreditsPer1000: number;
   }[];
+  proTrial?: ProTrial;
   subscriptions: {
     revision?: number;
     status: string;

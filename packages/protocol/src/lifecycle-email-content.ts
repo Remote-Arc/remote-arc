@@ -21,7 +21,12 @@ import {
  * account's locale, or English when it is unknown. Every dynamic value is
  * escaped; links are fixed product routes. */
 export type LifecycleKind =
-  "welcome" | "setup_reminder" | "connect_trial_started" | "connect_trial_ending" | "plan_started";
+  | "welcome"
+  | "setup_reminder"
+  | "connect_trial_started"
+  | "connect_trial_ending"
+  | "plan_started"
+  | "pro_trial_ending";
 
 export type LifecycleContent = {
   kind: LifecycleKind;
@@ -523,6 +528,61 @@ function copy(content: LifecycleContent): Copy {
         ],
         cta: checkout,
       };
+    case "pro_trial_ending": {
+      // Sent before the trial's first charge, for the plan and billing period the trial
+      // is on when it is sent. Cancelling happens only in the Dashboard's billing
+      // settings, so the email links there and nowhere else.
+      const name = content.plan?.label || "Pro",
+        cents = content.plan ? content.plan.cents : price,
+        yearly = content.plan?.interval === "year",
+        charge =
+          cents === null || cents === undefined
+            ? null
+            : yearly
+              ? tr(`${dollars(cents)}/year`, `${dollars(cents)}/年`)
+              : tr(`${dollars(cents)}/month`, `${dollars(cents)}/月`);
+      return {
+        subject: trialEnd
+          ? tr(`Your ${name} trial ends on ${trialEnd}`, `你的 ${name} 试用将于 ${trialEnd} 结束`)
+          : tr(`Your ${name} trial ends soon`, `你的 ${name} 试用即将结束`),
+        preheader: tr(
+          `${name} continues after the trial unless you cancel renewal in billing settings.`,
+          `除非你在账单设置中取消续费，试用结束后会继续使用 ${name}。`,
+        ),
+        eyebrow: tr(`${name} trial`, `${name} 试用`),
+        headline: tr(`Your ${name} trial ends soon`, `你的 ${name} 试用即将结束`),
+        intro: tr(
+          `When the trial ends${trialEnd ? ` on ${trialEnd} (UTC)` : ""}, ${name} continues${charge === null ? "" : ` at ${charge}`}, charged to the payment method you saved.`,
+          `试用${trialEnd ? `将于 ${trialEnd}（UTC）` : ""}结束，之后会继续使用 ${name}${charge === null ? "" : `，按 ${charge} 扣费`}，从你保存的付款方式扣款。`,
+        ),
+        hero: "trial-ending-hero.png",
+        paragraphs: [
+          tr(
+            `To keep ${name}, you do not need to do anything. To stop before the first charge, choose Cancel renewal in Settings → Plan & usage on your Remote Arc Dashboard before the trial ends: ${name} stays until then and you are not charged.`,
+            `如果要继续使用 ${name}，无需任何操作。如果不想被扣费，请在试用结束前到 Remote Arc Dashboard 的“设置 → 套餐与用量”选择“取消续费”：${name} 仍可用到试用结束，不会扣费。`,
+          ),
+        ],
+        sections: [
+          {
+            label: tr("After the trial", "试用结束后"),
+            type: "facts",
+            rows: [
+              { label: tr("Plan", "套餐"), value: name },
+              ...(charge === null ? [] : [{ label: tr("Price", "价格"), value: charge }]),
+              ...(trialEnd ? [{ label: tr("First charge", "首次扣费"), value: trialEnd }] : []),
+            ],
+          },
+          {
+            type: "paragraph",
+            text: tr(
+              "If you cancel, computers and routines beyond the Free plan pause when the trial ends; nothing is deleted, and they resume when you subscribe.",
+              "如果取消，试用结束后超出 Free 套餐的电脑和 routine 会暂停；不会删除任何内容，订阅后即可恢复。",
+            ),
+          },
+        ],
+        cta: { href: content.links.billing, label: tr("Open billing settings", "打开账单设置") },
+      };
+    }
     case "plan_started": {
       const plan = content.plan;
       if (!plan) throw Error("plan_details_required");

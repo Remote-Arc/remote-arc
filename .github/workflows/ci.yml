@@ -204,6 +204,7 @@ jobs:
         with:
           name: go-device-binaries
           path: work/go-device/*
+          retention-days: 3
       - name: Report this failure to the private pull request now
         if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
         uses: ./.github/actions/report-public-failure
@@ -284,6 +285,7 @@ jobs:
         with:
           name: agent-validation-${{ matrix.os }}
           path: work/benchmarks/*.json
+          retention-days: 7
       - name: Report this failure to the private pull request now
         if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
         uses: ./.github/actions/report-public-failure

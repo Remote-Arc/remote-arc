@@ -52,3 +52,4 @@ jobs:
         with:
           name: runtime-${{ matrix.os }}
           path: work/benchmarks/*.json
+          retention-days: 7

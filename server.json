@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Remote-Arc/remote-arc",
+  "title": "Remote Arc",
+  "description": "Connect ChatGPT, Claude, Codex and other AI clients to authorized apps and Windows, macOS and Linux computers using a hosted MCP server, with per-device permissions and no inbound ports or VPN.",
+  "websiteUrl": "https://remotearc.app",
+  "repository": {
+    "url": "https://github.com/Remote-Arc/remote-arc",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.remotearc.app/mcp"
+    }
+  ]
+}

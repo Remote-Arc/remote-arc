@@ -442,3 +442,8 @@
 .routineDetail .taskSavedStepRule {
   font-size: 12px;
 }
+.routinesEmptyActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

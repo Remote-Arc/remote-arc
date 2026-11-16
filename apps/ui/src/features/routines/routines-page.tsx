@@ -4,6 +4,7 @@ import { ProductIcon } from "../../components/product-icon.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import { useRoutines, type Routine, type RoutineGroup } from "../../hooks/routines/use-routines.js";
 import { useTaskDecision } from "../../hooks/tasks/use-task-decision.js";
+import { NewRoutineDialog } from "./new-routine-dialog.js";
 import { RoutineDetail } from "./routine-detail.js";
 import { RoutinesEmpty } from "./routines-empty.js";
 import { GROUP_LABELS, resultLabel, resultTone, scheduleLabel } from "./routine-labels.js";
@@ -50,7 +51,8 @@ export function RoutinesPage({
   const model = useRoutines({ arcAvailable, focus: selected });
   const decisions = useTaskDecision<{ id: string }>(() => model.reload());
   const [filter, setFilter] = useState<RoutineGroup | "all">("all"),
-    [query, setQuery] = useState("");
+    [query, setQuery] = useState(""),
+    [creating, setCreating] = useState(false);
   const routines = model.routines;
   useEffect(() => {
     const sync = () => setSelected(new URLSearchParams(location.search).get("task"));
@@ -92,17 +94,29 @@ export function RoutinesPage({
       ),
   );
   const current = routines?.find((routine) => routine.id === selected) || null;
-  const newRoutine = () => onChat(tr("routines.page.newRoutinePrompt"));
 
   return (
     <section className="routinesPage" data-view={current ? "detail" : "list"}>
+      {creating && (
+        <NewRoutineDialog
+          arcAvailable={arcAvailable}
+          onChat={onChat}
+          onConnectAI={onConnectAI}
+          onClose={() => setCreating(false)}
+        />
+      )}
       <header className="routinesHeader">
         <div>
           <span className="eyebrow">{tr("routines.page.eyebrow")}</span>
           <h1>{tr("routines.page.title")}</h1>
           <p>{tr("routines.page.description")}</p>
         </div>
-        <button type="button" className="routinePrimary" onClick={newRoutine}>
+        <button
+          type="button"
+          className="routinePrimary"
+          aria-haspopup="dialog"
+          onClick={() => setCreating(true)}
+        >
           <ProductIcon name="add" size={16} />
           {tr("routines.page.newRoutine")}
         </button>
@@ -128,7 +142,12 @@ export function RoutinesPage({
         <WorkspaceLoading label={tr("routines.page.loading")} variant="rows" />
       )}
       {routines && routines.length === 0 && (
-        <RoutinesEmpty onChat={onChat} onConnectAI={onConnectAI} arcAvailable={arcAvailable} />
+        <RoutinesEmpty
+          onChat={onChat}
+          onConnectAI={onConnectAI}
+          onNewRoutine={() => setCreating(true)}
+          arcAvailable={arcAvailable}
+        />
       )}
 
       {routines && routines.length > 0 && (

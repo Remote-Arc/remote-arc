@@ -1,37 +1,20 @@
 import { useI18n } from "../../hooks/use-i18n.js";
+import { ROUTINE_TEMPLATES } from "./routine-templates.js";
 
-const TEMPLATES = [
-  {
-    name: "routines.empty.priceWatch",
-    detail: "routines.empty.priceWatchDetail",
-    prompt: "routines.empty.priceWatchPrompt",
-  },
-  {
-    name: "routines.empty.nightlyTests",
-    detail: "routines.empty.nightlyTestsDetail",
-    prompt: "routines.empty.nightlyTestsPrompt",
-  },
-  {
-    name: "routines.empty.dataExport",
-    detail: "routines.empty.dataExportDetail",
-    prompt: "routines.empty.dataExportPrompt",
-  },
-  {
-    name: "routines.empty.hostCheck",
-    detail: "routines.empty.hostCheckDetail",
-    prompt: "routines.empty.hostCheckPrompt",
-  },
-] as const;
+// Every template but the blank one, which the "Start a conversation" button already is.
+const TEMPLATES = ROUTINE_TEMPLATES.filter((template) => template.id !== "general");
 
 /** No routines yet: the two ways to make one, and templates to start from. */
 export function RoutinesEmpty({
   arcAvailable,
   onChat,
   onConnectAI,
+  onNewRoutine,
 }: {
   arcAvailable: boolean;
   onChat: (prompt?: string) => void;
   onConnectAI: () => void;
+  onNewRoutine: () => void;
 }) {
   const { tr } = useI18n();
   return (
@@ -55,9 +38,14 @@ export function RoutinesEmpty({
           <span>{arcAvailable ? tr("routines.empty.wayTwo") : tr("routines.empty.wayOne")}</span>
           <h2>{tr("routines.empty.saveFromAiTitle")}</h2>
           <p>{tr("routines.empty.saveFromAiDetail")}</p>
-          <button type="button" onClick={onConnectAI}>
-            {tr("routines.empty.connectAi")}
-          </button>
+          <div className="routinesEmptyActions">
+            <button type="button" aria-haspopup="dialog" onClick={onNewRoutine}>
+              {tr("routines.empty.getPrompt")}
+            </button>
+            <button type="button" onClick={onConnectAI}>
+              {tr("routines.empty.connectAi")}
+            </button>
+          </div>
         </article>
       </div>
       {arcAvailable && (
@@ -65,7 +53,11 @@ export function RoutinesEmpty({
           <h2 id="routine-templates">{tr("routines.empty.templates")}</h2>
           <div className="routinesTemplates">
             {TEMPLATES.map((template) => (
-              <button type="button" key={template.name} onClick={() => onChat(tr(template.prompt))}>
+              <button
+                type="button"
+                key={template.id}
+                onClick={() => onChat(tr(template.arcPrompt))}
+              >
                 <strong>{tr(template.name)}</strong>
                 <small>{tr(template.detail)}</small>
               </button>

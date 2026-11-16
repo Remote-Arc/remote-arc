@@ -1,0 +1,49 @@
+/*
+ * One checkbox for every list where a person picks items. A filled rounded square
+ * with a tick when checked; the fill is the page's text color, so it is white in
+ * dark mode and near-black in light mode, and the tick is the opposite.
+ */
+.raCheckbox {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  display: inline-grid;
+  place-content: center;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 1.5px solid color-mix(in srgb, var(--text) 38%, transparent);
+  border-radius: 5px;
+  background: transparent center / 12px 12px no-repeat;
+  cursor: pointer;
+  transition:
+    background-color 0.14s ease,
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.raCheckbox:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--text) 70%, transparent);
+}
+
+.raCheckbox:checked {
+  border-color: var(--text);
+  background-color: var(--text);
+  /* Dark mode (the default): a dark tick on the white fill. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2 5 8.6l4.6-5' fill='none' stroke='%230b1220' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+:root[data-theme="light"] .raCheckbox:checked {
+  /* Light mode: a white tick on the dark fill. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2 5 8.6l4.6-5' fill='none' stroke='%23ffffff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.raCheckbox:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 22%, transparent);
+}
+
+.raCheckbox:disabled {
+  cursor: default;
+  opacity: 0.4;
+}

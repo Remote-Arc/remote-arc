@@ -172,14 +172,22 @@ test("during a trial the plan switches at once and nothing is charged", async ({
   await expect(change).toContainText(zh ? "试用已切换到 Max" : "Your trial is now on Max");
 });
 
-test("in dark mode, primary actions are white blending into light blue", async ({ page }, info) => {
+test("in dark mode, primary actions are plain white with dark text", async ({ page }, info) => {
   await account(page);
   await page.goto("/checkout?product=pro&trial=1");
   const continueButton = page.locator(".arcCheckoutSummary .arcCheckoutContinue");
   await expect(continueButton).toBeVisible();
-  const background = await continueButton.evaluate((el) => getComputedStyle(el).backgroundImage);
+  const style = await continueButton.evaluate((el) => {
+    const computed = getComputedStyle(el);
+    return {
+      image: computed.backgroundImage,
+      color: computed.backgroundColor,
+      ink: computed.color,
+    };
+  });
+  expect(style.image).toBe("none");
   if (info.project.metadata.theme === "dark") {
-    expect(background).toContain("linear-gradient");
-    expect(background).toContain("rgb(255, 255, 255)");
-  } else expect(background).toBe("none");
+    expect(style.color).toBe("rgb(255, 255, 255)");
+    expect(style.ink).toBe("rgb(11, 18, 32)");
+  }
 });

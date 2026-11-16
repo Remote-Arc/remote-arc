@@ -71,8 +71,15 @@ function ChannelCard({ channel, model }: { channel: NotificationChannel; model: 
         <div className="raSettingsRowControl">
           <button
             type="button"
-            className={"raSettingsButton" + (channel.enabled ? " raSettingsButtonPrimary" : "")}
-            aria-pressed={channel.enabled}
+            role="switch"
+            className="raSwitch"
+            aria-checked={channel.enabled}
+            aria-labelledby={"notify-" + kind}
+            title={
+              channel.enabled
+                ? tr("settings.notificationSettings.on")
+                : tr("settings.notificationSettings.off")
+            }
             disabled={busy || blocked || (kind === "webhook" && !channel.enabled && !url.trim())}
             onClick={() =>
               model.save(kind, {
@@ -80,11 +87,7 @@ function ChannelCard({ channel, model }: { channel: NotificationChannel; model: 
                 ...(kind === "webhook" && !channel.enabled ? { url: url.trim() } : {}),
               })
             }
-          >
-            {channel.enabled
-              ? tr("settings.notificationSettings.on")
-              : tr("settings.notificationSettings.off")}
-          </button>
+          />
         </div>
       </div>
 
@@ -137,6 +140,7 @@ function ChannelCard({ channel, model }: { channel: NotificationChannel; model: 
               <label key={event}>
                 <input
                   type="checkbox"
+                  className="raCheckbox"
                   checked={channel.events.includes(event)}
                   onChange={(change) => toggleEvent(event, change.target.checked)}
                 />

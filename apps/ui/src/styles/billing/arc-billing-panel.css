@@ -140,9 +140,11 @@
   margin: 12px 0;
 }
 .raBillingBalances strong small {
-  display: inline;
+  display: inline-block;
   font-size: 16px;
   letter-spacing: 0;
+  /* "/ Unlimited" moves to the next line as one piece instead of splitting. */
+  white-space: nowrap;
 }
 .raBillingBalances small {
   font-size: 14px;
@@ -230,7 +232,8 @@
   flex-wrap: wrap;
 }
 .raBillingBalances {
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  /* Four balances fit one row in the settings column instead of leaving one alone. */
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 .raBillingSummary.raSettingsSurface {
   padding: 24px;

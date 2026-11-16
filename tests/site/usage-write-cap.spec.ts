@@ -21,3 +21,13 @@ for (const [quota, heading] of [
       } else await expect(banner).toContainText(/trial|试用/);
     },
   );
+
+// Attention matches the banner: a used-up allowance is "used up", never "getting high".
+test("Attention says the allowance is used up, not getting high", async ({ page }) => {
+  await page.goto("/dashboard/connect/overview?quota=slow");
+  await expect(page.getByText(/^(Monthly allowance used up|本月额度已用完)$/)).toBeVisible();
+  await expect(page.getByText(/^(Usage is getting high|本月额度使用较高)$/)).toHaveCount(0);
+  await page.goto("/dashboard/connect/overview");
+  await expect(page.getByText(/^(Usage is getting high|本月额度使用较高)$/)).toBeVisible();
+  await expect(page.getByText(/^(Monthly allowance used up|本月额度已用完)$/)).toHaveCount(0);
+});

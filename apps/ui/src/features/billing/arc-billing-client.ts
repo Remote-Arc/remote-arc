@@ -258,8 +258,8 @@ export const checkoutHref = (id: string) =>
 export function modelFamilyList(families: readonly string[], tr: Translate) {
   if (families.length < 2) return families[0] ?? "";
   return (
-    families.slice(0, -1).join(tr("marketing.planDetails.familySeparator")) +
-    tr("marketing.planDetails.familyLastSeparator") +
+    families.slice(0, -1).join(tr("billing.arcBillingClient.familySeparator")) +
+    tr("billing.arcBillingClient.familyLastSeparator") +
     families[families.length - 1]
   );
 }

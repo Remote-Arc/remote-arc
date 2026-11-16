@@ -1,0 +1,14 @@
+/* The Remote MCP address wraps only after a slash, never inside a host name. */
+:root[data-theme] .appFrame .overviewStatusCard.endpoint code {
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-overflow: clip;
+}
+
+/* Small labels such as "Arguments not logged" stay on one line. */
+.appFrame .overviewActivityPanel .privacyPill,
+.appFrame .overviewStatusCard .privacyPill {
+  flex: none;
+  white-space: nowrap;
+}

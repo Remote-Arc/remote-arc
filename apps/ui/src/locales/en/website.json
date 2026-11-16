@@ -1449,8 +1449,6 @@
     "marketing.planDetails.hostedModels": "Arc hosted models",
     "marketing.planDetails.autoAndNamedModels": "Auto and named models",
     "marketing.planDetails.autoAndFamilies": "Auto and {families} models",
-    "marketing.planDetails.familySeparator": ", ",
-    "marketing.planDetails.familyLastSeparator": " and ",
     "marketing.planDetails.topUps": "Credit top-ups",
     "marketing.planDetails.topUpPrice": "{credits} Credits for US${price}",
     "marketing.planDetails.topUpsNeverExpire": "Optional. Top-up Credits do not expire.",

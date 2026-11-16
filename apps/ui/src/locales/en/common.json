@@ -325,6 +325,8 @@
     "billing.arcBillingClient.arcCreditsEveryMonth": "{credits} Arc Credits every month · Arc runs routines on your computers while you are away",
     "billing.arcBillingClient.bringYourOwnAiOrLetArc": "Bring your own ChatGPT, Claude or Codex, or let Arc run the AI · Auto and named models",
     "billing.arcBillingClient.bringYourOwnAiOrArcFamilies": "Bring your own ChatGPT, Claude or Codex, or let Arc run the AI · Auto and {families} models",
+    "billing.arcBillingClient.familySeparator": ", ",
+    "billing.arcBillingClient.familyLastSeparator": " and ",
     "billing.arcBillingClient.localTerminalFilesBrowserFleetAnd": "Local terminal, files, browser, Fleet and connected Apps",
     "billing.arcBillingClient.localTerminalFilesBrowserAndApps": "Local terminal, files, browser and connected Apps",
     "billing.arcBillingClient.thisBillingRequestCouldNotBe": "This billing request could not be completed. Check your current payment status before retrying, and keep the error reference if you need help.",

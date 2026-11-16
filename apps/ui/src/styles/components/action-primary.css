@@ -1,23 +1,21 @@
 /*
- * Primary actions in dark mode are white blending into a light blue, with dark text:
- * white stays the main tone and the blue ties the button to the brand. Every primary
- * button in dark mode takes its color from here; a new primary button class is added
- * to this list rather than given its own dark color. Light mode is unchanged. The
- * public site's own rules use !important, so these do too.
+ * Primary actions in dark mode are plain white with dark text. Every primary button
+ * in dark mode takes its color from here; a new primary button class is added to this
+ * list rather than given its own dark color. Light mode is unchanged. The public
+ * site's own rules use !important, so these do too.
  */
 :root {
-  --action-primary-from: #ffffff;
-  --action-primary-to: #cfe6ff;
-  --action-primary-hover-from: #ffffff;
-  --action-primary-hover-to: #e0efff;
+  --action-primary-bg: #ffffff;
+  --action-primary-hover-bg: #e9edf2;
   --action-primary-ink: #0b1220;
-  --action-primary-glow: rgba(147, 197, 253, 0.28);
+  --action-primary-glow: rgba(255, 255, 255, 0.12);
 }
 
 :root[data-theme="dark"]
   :is(
     .appFrame .arcRadiantCta,
     .appFrame .addButton,
+    .computerPlanLimit .computerPlanLimitPrimary,
     .raSettingsButtonPrimary,
     .usageConversionPrimary,
     .usageConversionActions a.usageConversionPrimary,
@@ -25,11 +23,7 @@
     .publicPage .primaryButton,
     .personaPlan
   ) {
-  background: linear-gradient(
-    100deg,
-    var(--action-primary-from) 45%,
-    var(--action-primary-to)
-  ) !important;
+  background: var(--action-primary-bg) !important;
   border-color: transparent !important;
   color: var(--action-primary-ink) !important;
   box-shadow: 0 6px 20px -12px var(--action-primary-glow) !important;
@@ -40,17 +34,14 @@
   :is(
     .appFrame .arcRadiantCta,
     .appFrame .addButton,
+    .computerPlanLimit .computerPlanLimitPrimary,
     .raSettingsButtonPrimary,
     .usageConversionPrimary,
     .appFrame.arcCheckoutFrame .arcElementsSubmit,
     .publicPage .primaryButton,
     .personaPlan
   ):is(:hover, :focus-visible):not(:disabled) {
-  background: linear-gradient(
-    100deg,
-    var(--action-primary-hover-from) 45%,
-    var(--action-primary-hover-to)
-  ) !important;
+  background: var(--action-primary-hover-bg) !important;
   color: var(--action-primary-ink) !important;
 }
 
@@ -58,6 +49,7 @@
   :is(
     .appFrame .arcRadiantCta,
     .appFrame .addButton,
+    .computerPlanLimit .computerPlanLimitPrimary,
     .raSettingsButtonPrimary,
     .appFrame.arcCheckoutFrame .arcElementsSubmit
   ):disabled {

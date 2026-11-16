@@ -1449,8 +1449,6 @@
     "marketing.planDetails.hostedModels": "Arc 托管模型",
     "marketing.planDetails.autoAndNamedModels": "Auto 与手动选择模型",
     "marketing.planDetails.autoAndFamilies": "Auto 与 {families} 模型",
-    "marketing.planDetails.familySeparator": "、",
-    "marketing.planDetails.familyLastSeparator": " 和 ",
     "marketing.planDetails.topUps": "Credits 充值",
     "marketing.planDetails.topUpPrice": "US${price} 购买 {credits} Credits",
     "marketing.planDetails.topUpsNeverExpire": "可选。充值的 Credits 不设到期日。",

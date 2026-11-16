@@ -352,6 +352,24 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       keep_awake_available: false,
     },
   ];
+  // ?computers=over previews a Free account with more computers than its plan allows:
+  // the Relay pauses the ones past the limit and the devices page offers a choice.
+  const overPlan = <T extends { platform?: string }>(list: T[]) => {
+    if (new URL(location.href).searchParams.get("computers") !== "over") return list;
+    const computers = list.filter((device) => device.platform !== "browser");
+    const extra = {
+      ...computers[computers.length - 1],
+      id: "preview-office-pc",
+      name: "Office PC",
+      hostname: "office-pc",
+    };
+    return [...list, extra].map((device, index) => ({
+      ...device,
+      plan_position: device.platform === "browser" ? null : index,
+      computer_limit: 2,
+      plan_paused: device.platform !== "browser" && index >= 2,
+    }));
+  };
 
   if (new URL(location.href).searchParams.get("device-signal") === "stale")
     for (const device of devices) {
@@ -994,8 +1012,8 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       return json({
         googleConfigured: true,
         mcpEndpoint,
-        devices: firstRun ? [] : devices,
-        totalDevices: firstRun ? 0 : devices.length,
+        devices: firstRun ? [] : overPlan(devices),
+        totalDevices: firstRun ? 0 : overPlan(devices).length,
         onlineDevices: firstRun ? 0 : 1,
         recentActivity: [
           {
@@ -1078,7 +1096,8 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
 
     if (url.pathname === "/api/security") {
       return json({
-        mcpPaused: false,
+        // ?mcp=paused previews the security center after the person paused AI access.
+        mcpPaused: new URL(location.href).searchParams.get("mcp") === "paused",
         grants: [
           {
             grantId: "preview-chatgpt-grant",
@@ -1387,7 +1406,7 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       return json(
         new URL(location.href).searchParams.get("demo") === "first-run"
           ? []
-          : [...devices, ...onboardingPreview.devices()],
+          : overPlan([...devices, ...onboardingPreview.devices()]),
       );
     if (url.pathname === "/api/automations")
       return json({

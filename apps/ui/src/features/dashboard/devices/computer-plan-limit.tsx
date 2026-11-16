@@ -37,7 +37,7 @@ export function ComputerPlanLimit({
             {tr("dashboard.devices.computerPlanLimit.chooseActive")}
           </button>
         )}
-        <a className="goldButton" href={checkoutHref}>
+        <a className="addButton computerPlanLimitPrimary" href={checkoutHref}>
           {tr("dashboard.devices.computerPlanLimit.getPro")}
         </a>
       </div>
@@ -59,6 +59,7 @@ export function ComputerPlanLimit({
                   <label className={full ? "disabled" : ""}>
                     <input
                       type="checkbox"
+                      className="raCheckbox"
                       checked={checked}
                       disabled={full || plan.saving}
                       onChange={() => plan.toggle(device.id)}
@@ -91,7 +92,7 @@ export function ComputerPlanLimit({
             </button>
             <button
               type="button"
-              className="goldButton"
+              className="addButton computerPlanLimitPrimary"
               disabled={plan.saving || plan.selected.length === 0}
               onClick={() => void plan.save()}
             >

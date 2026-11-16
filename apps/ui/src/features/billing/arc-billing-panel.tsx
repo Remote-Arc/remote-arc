@@ -696,30 +696,32 @@ export function ArcBillingPanel() {
           ))}
         </section>
       )}
-      <section className="raSettingsSurface raBillingNotice">
-        <h3>{tr("billing.arcBillingPanel.howModelsUseCredits")}</h3>
-        <p>{tr("billing.arcBillingPanel.creditsTrackRatedInputOutputReasoning")}</p>
-        <div className="raBillingTable">
-          <table>
-            <thead>
-              <tr>
-                <th>{tr("billing.arcBillingPanel.model")}</th>
-                <th>{tr("billing.arcBillingPanel.inputKTokens")}</th>
-                <th>{tr("billing.arcBillingPanel.outputKTokens")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.models.map((model) => (
-                <tr key={model.id}>
-                  <td>{model.label}</td>
-                  <td>{model.inputCreditsPer1000} Credits</td>
-                  <td>{model.outputCreditsPer1000} Credits</td>
+      {data.models.length > 0 && (
+        <section className="raSettingsSurface raBillingNotice">
+          <h3>{tr("billing.arcBillingPanel.howModelsUseCredits")}</h3>
+          <p>{tr("billing.arcBillingPanel.creditsTrackRatedInputOutputReasoning")}</p>
+          <div className="raBillingTable">
+            <table>
+              <thead>
+                <tr>
+                  <th>{tr("billing.arcBillingPanel.model")}</th>
+                  <th>{tr("billing.arcBillingPanel.inputKTokens")}</th>
+                  <th>{tr("billing.arcBillingPanel.outputKTokens")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </thead>
+              <tbody>
+                {data.models.map((model) => (
+                  <tr key={model.id}>
+                    <td>{model.label}</td>
+                    <td>{model.inputCreditsPer1000} Credits</td>
+                    <td>{model.outputCreditsPer1000} Credits</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

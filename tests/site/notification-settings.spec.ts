@@ -8,10 +8,13 @@ test("notification settings explain Slack linking, set up a signed webhook once 
 
   const slack = page.locator("[data-channel=slack]");
   await expect(slack).toContainText(/Link your Slack account first|请先关联 Slack 账号/);
-  await expect(slack.getByRole("button", { name: /^(Off|已关闭)$/ })).toBeDisabled();
+  const slackSwitch = slack.getByRole("switch", { name: /Slack/ });
+  await expect(slackSwitch).toHaveAttribute("aria-checked", "false");
+  await expect(slackSwitch).toBeDisabled();
 
   const webhook = page.locator("[data-channel=webhook]");
-  const turnOn = webhook.getByRole("button", { name: /^(Off|已关闭)$/ });
+  const turnOn = webhook.getByRole("switch", { name: /Webhook/ });
+  await expect(turnOn).toHaveAttribute("aria-checked", "false");
   await expect(turnOn).toBeDisabled();
   await webhook.getByLabel(/Webhook URL/).fill("http://hooks.example.com/arc");
   await webhook.getByRole("button", { name: /^(Save URL|保存 URL)$/ }).click();
@@ -22,7 +25,7 @@ test("notification settings explain Slack linking, set up a signed webhook once 
   await expect(secret).toContainText(/whsec_/);
   await secret.getByRole("button", { name: /I saved it|我已保存/ }).click();
   await expect(webhook.getByRole("status")).toHaveCount(0);
-  await expect(webhook.getByRole("button", { name: /^(On|已开启)$/ })).toBeVisible();
+  await expect(turnOn).toHaveAttribute("aria-checked", "true");
 
   const runFailed = webhook.getByRole("checkbox", {
     name: /Any routine run fails|任何一次运行失败/,

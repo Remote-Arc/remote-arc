@@ -44,7 +44,7 @@ export function SecurityView({
         </div>
         <div className="securityTopActions">
           <button
-            className={securityState?.mcpPaused ? "goldButton" : "dangerButton"}
+            className={securityState?.mcpPaused ? "addButton" : "dangerButton"}
             disabled={UI_PREVIEW || securityBusy || !securityState}
             onClick={() => void setMcpPaused(!securityState?.mcpPaused)}
           >

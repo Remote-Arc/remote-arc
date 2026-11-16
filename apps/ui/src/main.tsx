@@ -57,6 +57,9 @@ import "./styles/marketing/demo-page.css";
 import "./styles/connect-guide.css";
 import "./styles/auth/pairing.css";
 import "./styles/security/security-center.css";
+import "./styles/components/checkbox.css";
+import "./styles/components/switch.css";
+import "./styles/dashboard/overview-view.css";
 // Last, so dark mode's primary buttons share one color wherever they are styled.
 import "./styles/components/action-primary.css";
 import { MCP_ENDPOINT } from "./config/app-config.js";

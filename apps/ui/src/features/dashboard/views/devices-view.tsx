@@ -105,7 +105,7 @@ export function DevicesView({
             <div className="emptyIcon">⌁</div>
             <h3>{tr("dashboard.views.devicesView.noPairedComputers")}</h3>
             <p>{tr("dashboard.views.devicesView.windowsMacosAndLinuxAreSupported")}</p>
-            <button className="goldButton" onClick={() => setShowAdd(true)}>
+            <button className="addButton" onClick={() => setShowAdd(true)}>
               + {tr("dashboard.views.devicesView.addYourFirstDevice")}
             </button>
           </article>

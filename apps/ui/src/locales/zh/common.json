@@ -325,6 +325,8 @@
     "billing.arcBillingClient.arcCreditsEveryMonth": "每月 {credits} Arc Credits · 你不在时，Arc 在你的电脑上运行定时任务",
     "billing.arcBillingClient.bringYourOwnAiOrLetArc": "使用你自己的 ChatGPT、Claude 或 Codex，或让 Arc 运行 AI · 包含 Auto 与手动选择模型",
     "billing.arcBillingClient.bringYourOwnAiOrArcFamilies": "使用你自己的 ChatGPT、Claude 或 Codex，或让 Arc 运行 AI · 包含 Auto 与 {families} 模型",
+    "billing.arcBillingClient.familySeparator": "、",
+    "billing.arcBillingClient.familyLastSeparator": " 和 ",
     "billing.arcBillingClient.localTerminalFilesBrowserFleetAnd": "本地终端、文件、浏览器、Fleet 与已连接应用",
     "billing.arcBillingClient.localTerminalFilesBrowserAndApps": "本地终端、文件、浏览器与已连接应用",
     "billing.arcBillingClient.thisBillingRequestCouldNotBe": "支付请求未能完成。请先核对当前付款状态再重试，如需帮助请保留错误编号。",

@@ -1809,6 +1809,8 @@
     "dashboard.views.overviewView.unlimited": "Unlimited",
     "dashboard.views.overviewView.unlimitedConnectCalls": "Unlimited Connect calls",
     "dashboard.views.overviewView.usageIsGettingHigh": "Usage is getting high",
+    "dashboard.views.overviewView.usageUsedUp": "Monthly allowance used up",
+    "dashboard.views.overviewView.usageUsedUpDetail": "Full-speed calls are used up until the monthly reset. The banner above shows what still works and your options.",
     "dashboard.views.overviewView.whatRemoteArcDid": "What Remote Arc did",
     "dashboard.views.overviewView.yourConnectionsRecentWorkAndEverything": "Your connections, recent work and everything that needs your attention.",
     "dashboard.views.overviewView.yourTools": "Your tools",

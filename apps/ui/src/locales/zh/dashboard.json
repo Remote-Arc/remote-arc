@@ -1809,6 +1809,8 @@
     "dashboard.views.overviewView.unlimited": "无限",
     "dashboard.views.overviewView.unlimitedConnectCalls": "无限 Connect 调用",
     "dashboard.views.overviewView.usageIsGettingHigh": "本月额度使用较高",
+    "dashboard.views.overviewView.usageUsedUp": "本月额度已用完",
+    "dashboard.views.overviewView.usageUsedUpDetail": "在每月重置前，全速调用已用完。上方横幅说明了现在还能做什么，以及可选的方案。",
     "dashboard.views.overviewView.whatRemoteArcDid": "Remote Arc 最近做了什么",
     "dashboard.views.overviewView.yourConnectionsRecentWorkAndEverything": "连接状态、最近的工作，以及所有需要你关注的事。",
     "dashboard.views.overviewView.yourTools": "你的工具",

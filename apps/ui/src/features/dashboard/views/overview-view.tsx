@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { OverviewGreeting } from "../../../components/overview-greeting.js";
 import { ProductIcon } from "../../../components/product-icon.js";
 import { UsageConversionBanner, usageBannerVisible } from "../usage-conversion.js";
@@ -169,7 +170,18 @@ export function OverviewView({ m }: { m: DashboardModel }) {
             <span>Remote MCP</span>
             <span className="privacyPill">{tr("dashboard.views.overviewView.secure")}</span>
           </div>
-          <code>{mcpEndpoint}</code>
+          <code>
+            {mcpEndpoint.split("/").map((part, index) => (
+              <Fragment key={index}>
+                {index > 0 && (
+                  <>
+                    /<wbr />
+                  </>
+                )}
+                {part}
+              </Fragment>
+            ))}
+          </code>
           <div className="statusCardActions">
             <CopyButton value={mcpEndpoint} label={tr("dashboard.views.overviewView.copy")} />
             <button className="ghostButton" onClick={() => navigateTab("connect")}>
@@ -277,13 +289,22 @@ export function OverviewView({ m }: { m: DashboardModel }) {
               {usagePct >= 80 && (
                 <button onClick={() => navigateTab("settings")}>
                   <i className="attentionIcon warn">!</i>
-                  <div>
-                    <strong>{tr("dashboard.views.overviewView.usageIsGettingHigh")}</strong>
-                    <small>
-                      {Math.round(usagePct)}%{" "}
-                      {tr("dashboard.views.overviewView.ofYourMonthlyHostedAllowanceIs")}
-                    </small>
-                  </div>
+                  {/* Once the allowance is used up, say so: "getting high" would
+                      contradict the slow-lane or trial banner above. */}
+                  {usage?.limit && usage.used >= usage.limit ? (
+                    <div>
+                      <strong>{tr("dashboard.views.overviewView.usageUsedUp")}</strong>
+                      <small>{tr("dashboard.views.overviewView.usageUsedUpDetail")}</small>
+                    </div>
+                  ) : (
+                    <div>
+                      <strong>{tr("dashboard.views.overviewView.usageIsGettingHigh")}</strong>
+                      <small>
+                        {Math.round(usagePct)}%{" "}
+                        {tr("dashboard.views.overviewView.ofYourMonthlyHostedAllowanceIs")}
+                      </small>
+                    </div>
+                  )}
                 </button>
               )}
               {(status?.onlineDevices ?? 0) > 0 && !hasAttention && !automationLoadError && (

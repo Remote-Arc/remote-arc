@@ -38,8 +38,19 @@ export function createNotificationPreview() {
     });
   return {
     handle(url: URL, method: string, body: unknown): Response | null {
+      // ?plan=free previews a plan without notifications: both channels are locked.
       if (url.pathname === "/api/notifications" && method === "GET")
-        return reply({ events, channels });
+        return reply({
+          events,
+          channels:
+            new URL(location.href).searchParams.get("plan") === "free"
+              ? channels.map((channel) => ({
+                  ...channel,
+                  enabled: false,
+                  unavailable: "PLAN_UPGRADE_REQUIRED",
+                }))
+              : channels,
+        });
       const match = url.pathname.match(/^\/api\/notifications\/(slack|webhook)(\/test)?$/);
       if (!match) return null;
       const channel = channels.find((item) => item.kind === match[1])!;

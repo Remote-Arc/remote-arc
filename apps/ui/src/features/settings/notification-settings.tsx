@@ -6,6 +6,7 @@ import {
   type NotificationChannelKind,
   type NotificationEvent,
 } from "../../hooks/settings/use-notification-settings.js";
+import { NotificationUpgrade } from "./notification-upgrade.js";
 import "../../styles/settings/notification-settings.css";
 
 const CHANNEL_TEXT = {
@@ -200,6 +201,9 @@ export function NotificationSettings() {
   if (!model.settings) return <p>{tr("settings.notificationSettings.loading")}</p>;
   return (
     <div className="raSettingsSections">
+      {model.settings.channels.some(
+        (channel) => channel.unavailable === "PLAN_UPGRADE_REQUIRED",
+      ) && <NotificationUpgrade />}
       {model.settings.channels.map((channel) => (
         <ChannelCard key={channel.kind} channel={channel} model={model} />
       ))}

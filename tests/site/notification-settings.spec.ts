@@ -38,3 +38,20 @@ test("notification settings explain Slack linking, set up a signed webhook once 
   await webhook.getByRole("button", { name: /Send a test|发送测试/ }).click();
   await expect(webhook).toContainText(/Test sent|测试已发送/);
 });
+
+test("a plan without notifications shows what they do and one way to get Pro", async ({ page }) => {
+  await page.goto("/settings?section=notifications&plan=free");
+  const upgrade = page.locator(".notificationUpgrade");
+  await expect(upgrade).toBeVisible();
+  const action = upgrade.getByRole("link", { name: /Pro/ });
+  await expect(action).toHaveAttribute("href", /^\/checkout\?product=pro/);
+  for (const kind of ["slack", "webhook"]) {
+    const channel = page.locator(`[data-channel=${kind}]`);
+    await expect(channel.getByRole("switch")).toBeDisabled();
+    await expect(channel).toContainText(/Included with Pro and Max|Pro 和 Max 套餐包含此功能/);
+  }
+  // A plan that includes notifications shows no upgrade card.
+  await page.goto("/settings?section=notifications");
+  await expect(page.locator("[data-channel=webhook]")).toBeVisible();
+  await expect(page.locator(".notificationUpgrade")).toHaveCount(0);
+});

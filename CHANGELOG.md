@@ -2,10 +2,11 @@
 
 All notable changes to Remote Arc are documented here.
 
-## 0.7.3 - Unreleased
+## 0.7.3 - 2026-11-16
 
 ### Agent
 
+- A computer whose clock is wrong no longer refuses every call with `DEVICE_CALL_EXPIRED`. The Agent reads call deadlines against the Relay's time, so a clock that is minutes or hours off (for example a wrong time zone with automatic time turned off) still runs calls; a call past its deadline is still refused.
 - A file tool that fails because the path does not exist, access is denied or the path is the wrong kind now starts its error with `PATH_NOT_FOUND`, `FILE_PERMISSION_DENIED` or `PATH_TYPE_MISMATCH`, the same on macOS, Linux and Windows. The system's own message, path included, follows the code.
 - `start_process` with a working folder that does not exist, or that is a file, fails with `PATH_NOT_FOUND` or `PATH_TYPE_MISMATCH` naming that folder. Before, Windows reported "The directory name is invalid." and macOS and Linux reported the shell itself as missing.
 - `list_processes` that runs past its 15-second limit fails with `PROCESS_LIST_TIMEOUT` and returns promptly, instead of an empty "Could not list processes" after waiting longer. On Windows it suggests `details=false`, which is faster.
@@ -16,6 +17,15 @@ All notable changes to Remote Arc are documented here.
 - In admin service health, those path errors are no longer listed as problems to investigate, and a failed device tool call is counted once instead of once for the device and again for MCP.
 - Fixed messages from Browser Runner and the Remote Arc Browser extension, such as a page that changed since it was read, a tab that is no longer shared or a browser that did not start, are reported with their codes instead of an unrecognised tool error, including from released Agents and extensions.
 - In admin service health, a computer that went to sleep with no call waiting no longer counts as a computer that failed calls; a call that reaches a sleeping computer is still reported as offline or timed out. Stale page references, closed browser sessions and wrong browser tools are no longer listed as problems to investigate.
+
+### Website, Dashboard and billing
+
+- Free: after the 10,000 monthly calls, the slow lane keeps reads, process status, stopping processes and Undo available, and pauses file changes, commands and App actions until the reset. Routines stop before changing anything on a Free account past its allowance.
+- A 7-day trial of Pro or Max, monthly or yearly, with 300 Arc Credits, starts at checkout with a saved payment method and becomes the chosen plan unless it is cancelled in Billing settings. A reminder email is sent two days before the first charge.
+- Pro to Max takes effect at once, with Pro's unused time credited, after you confirm the amount. Downgrades and yearly to monthly take effect at the end of the paid period.
+- Slack and webhook notifications for routines: decisions waiting, automatic repairs, failed runs and notify steps. Plans without notifications show what they do and one way to Pro.
+- Pricing names the hosted model families that are live, says "data transfer" instead of "file transfer", and shows Free's write limit under its calls.
+- Dark mode primary buttons are plain white; checkboxes and switches are redrawn. The paused-computers card, the empty devices page and the paused-MCP resume button have real buttons.
 
 ## 0.7.2 - 2026-11-14
 

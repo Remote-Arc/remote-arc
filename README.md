@@ -75,7 +75,7 @@ A background Agent from 0.7.1 on can also be updated from Dashboard → Devices 
 <!-- native-install:start -->
 ### Native downloads and Homebrew
 
-Standalone 0.7.2 needs no Node.js or Go compiler. [Installation and upgrade guide](https://remotearc.app/downloads).
+Standalone 0.7.3 needs no Node.js or Go compiler. [Installation and upgrade guide](https://remotearc.app/downloads).
 
 On macOS or Linux (including WSL), install without Node.js:
 
@@ -87,14 +87,14 @@ The script verifies SHA256 and installs to ~/.local/bin without sudo. On a first
 
 | Platform | Download |
 | --- | --- |
-| macOS Apple Silicon | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-darwin-arm64) |
-| macOS Intel | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-darwin-amd64) |
-| Windows x64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-windows-amd64.exe) |
-| Windows ARM64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-windows-arm64.exe) |
-| Linux x64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-linux-amd64) |
-| Linux ARM64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/remotelink-v0.7.2-linux-arm64) |
+| macOS Apple Silicon | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.3/remotelink-v0.7.3-darwin-arm64) |
+| macOS Intel | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.3/remotelink-v0.7.3-darwin-amd64) |
+| Windows x64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.3/remotelink-v0.7.3-windows-amd64.exe) |
+| Windows ARM64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.3/remotelink-v0.7.3-windows-arm64.exe) |
+| Linux x64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.3/remotelink-v0.7.3-linux-amd64) |
+| Linux ARM64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.3/remotelink-v0.7.3-linux-arm64) |
 
-[SHA256SUMS](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.2/SHA256SUMS) · [Release notes](https://github.com/Remote-Arc/remote-arc/releases/tag/remotelink-v0.7.2)
+[SHA256SUMS](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.3/SHA256SUMS) · [Release notes](https://github.com/Remote-Arc/remote-arc/releases/tag/remotelink-v0.7.3)
 
 ```bash
 brew tap remote-arc/remote-arc https://github.com/Remote-Arc/remote-arc

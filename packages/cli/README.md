@@ -73,15 +73,16 @@ copy is required.
 <!-- latest-release:start -->
 ## Latest release
 
-**remotelink 0.7.2 — Source and releases**
+**remotelink 0.7.3 — Agent**
 
-Published 2026-11-14
+Published 2026-11-16
 
-- Remote Arc's client source is public at `github.com/Remote-Arc/remote-arc`, and releases are built and published from it, so npm provenance and GitHub Releases point at public commits. The cloud service is developed in a separate private repository.
-- A write, edit or Undo that cannot start before its call expires, for example behind a file lock held by antivirus or a sync client, is refused with `DEVICE_BUSY` and nothing changed, instead of timing out and possibly running later. A retrying AI client no longer writes twice or writes stale content.
-- Writes no longer read every Undo record first, so they stay fast on computers with a long Undo history.
-- A page opened before a release reloads once instead of going blank when it needs a file the release removed, for example on "Update payment method".
-- When a subscription renewal charge fails, the plan stays active for 7 days while Stripe retries, and a later successful charge keeps the original renewal date.
+- A computer whose clock is wrong no longer refuses every call with `DEVICE_CALL_EXPIRED`. The Agent reads call deadlines against the Relay's time, so a clock that is minutes or hours off (for example a wrong time zone with automatic time turned off) still runs calls; a call past its deadline is still refused.
+- A file tool that fails because the path does not exist, access is denied or the path is the wrong kind now starts its error with `PATH_NOT_FOUND`, `FILE_PERMISSION_DENIED` or `PATH_TYPE_MISMATCH`, the same on macOS, Linux and Windows. The system's own message, path included, follows the code.
+- `start_process` with a working folder that does not exist, or that is a file, fails with `PATH_NOT_FOUND` or `PATH_TYPE_MISMATCH` naming that folder. Before, Windows reported "The directory name is invalid." and macOS and Linux reported the shell itself as missing.
+- `list_processes` that runs past its 15-second limit fails with `PROCESS_LIST_TIMEOUT` and returns promptly, instead of an empty "Could not list processes" after waiting longer. On Windows it suggests `details=false`, which is faster.
+- Missing, denied or wrong-kind paths from the Agent are reported to the AI client with those fixed codes, including from Agents before 0.7.3, instead of an unrecognised tool error.
+- In admin service health, those path errors are no longer listed as problems to investigate, and a failed device tool call is counted once instead of once for the device and again for MCP.
 
 See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/Remote-Arc/remote-arc/blob/master/CHANGELOG.md).
 <!-- latest-release:end -->

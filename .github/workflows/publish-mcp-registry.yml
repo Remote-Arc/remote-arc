@@ -1,0 +1,31 @@
+name: Publish Remote Arc to MCP Registry
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - server.json
+      - .github/workflows/publish-mcp-registry.yml
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install publisher
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+      - name: Validate metadata
+        run: ./mcp-publisher validate server.json
+      - name: Authenticate to official registry using GitHub OIDC
+        run: ./mcp-publisher login github-oidc
+      - name: Publish metadata
+        run: ./mcp-publisher publish server.json

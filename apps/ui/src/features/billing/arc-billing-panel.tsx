@@ -1,3 +1,4 @@
+import { ConnectTrialButton } from "./connect-trial-button.js";
 import type { Translate } from "../../locales/locale-catalog.js";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useI18n } from "../../hooks/use-i18n.js";
@@ -540,6 +541,21 @@ export function ArcBillingPanel() {
             <small>{tr("billing.arcBillingPanel.resets") + resetText}</small>
           )}
           {overflowText && <small>{overflowText}</small>}
+          {overflow && !overflow.trial && overflow.trialAvailable && (
+            <ConnectTrialButton
+              className="raSettingsButton"
+              trialDays={overflow.trialDays}
+              onStarted={() => setRevision((value) => value + 1)}
+            />
+          )}
+          {data.usage.writes && (
+            <small>
+              {tr("billing.arcBillingPanel.writeCallsThisMonth", {
+                used: data.usage.writes.used.toLocaleString(),
+                limit: data.usage.writes.limit.toLocaleString(),
+              })}
+            </small>
+          )}
         </div>
         {data.transfer && (
           <div className="raSettingsSurface">

@@ -22,6 +22,7 @@ export const PUBLISHED_PLAN_LABELS: Readonly<Record<string, string>> = {
  */
 const PREVIEW_PLAN_TERMS: Readonly<Record<string, Record<string, unknown>>> = {
   free: {
+    connectWriteCalls: 5000,
     routines: 1,
     connectionLimit: 2,
     notifications: false,

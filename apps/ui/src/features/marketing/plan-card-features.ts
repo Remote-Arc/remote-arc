@@ -51,7 +51,13 @@ export function planCardFeatures(plan: CatalogPlan, catalog: PlatformCatalog, tr
     (catalog.connectFreeCalls === null
       ? tr("marketing.arcPublicPricing.unlimited")
       : catalog.connectFreeCalls.toLocaleString()) +
-      tr("marketing.arcPublicPricing.connectCallsMonth"),
+      tr("marketing.arcPublicPricing.connectCallsMonth") +
+      // A write cap is stated with the calls it sits within, never left out.
+      (plan.connectWriteCalls
+        ? tr("marketing.arcPublicPricing.ofWhichWrites", {
+            writes: plan.connectWriteCalls.toLocaleString(),
+          })
+        : ""),
     tr("marketing.arcPublicPricing.runOutAOneTimeDay", {
       trialDays: CONNECT_FREE_OVERFLOW.trialDays,
       slowLaneCallsPerMinute: CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute,

@@ -8,6 +8,8 @@ export type CatalogPlan = {
   yearlyPriceCents?: number | null;
   monthlyCredits: number;
   connectToolCalls: number | null;
+  /** The most calls that change something, within connectToolCalls; absent means no cap. */
+  connectWriteCalls?: number | null;
   concurrentRuns: number;
   maxSeconds: number;
   deviceLimit: number | null;

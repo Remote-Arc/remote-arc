@@ -75,6 +75,8 @@ export type ArcBilling = {
     limit: number | null;
     freeOverflow?: FreeOverflow;
     afterAllowance?: AfterAllowance;
+    /** Present only where the plan caps the calls that change something. */
+    writes?: { used: number; limit: number; remaining: number };
   };
   transfer?: { used: number; limit: number | null };
   plans: BillingPlan[];

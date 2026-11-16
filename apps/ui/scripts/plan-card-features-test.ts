@@ -126,6 +126,17 @@ assert.equal(
   planCardFeatures({ ...max, connectToolCalls: 50000 }, catalog, en)[0],
   "50,000 Connect calls / month",
 );
+// A Free write cap is stated in the calls line, and only where the plan sets one.
+assert.equal(
+  planCardFeatures({ ...free, connectWriteCalls: 5000 }, catalog, en)[0],
+  "10,000 Connect calls / month · of which up to 5,000 change files, run commands or act in Apps",
+);
+assert.equal(
+  planCardFeatures({ ...free, connectWriteCalls: 5000 }, catalog, zh)[0],
+  "10,000 次 Connect 调用 / 月，其中改文件、执行命令和应用操作最多 5,000 次",
+);
+assert.equal(planCardFeatures(free, catalog, en)[0], "10,000 Connect calls / month");
+
 // Free and a Pro without Arc keep their own lists, without Credits.
 assert.ok(!planCardFeatures(free, catalog, en).some((row) => row.includes("Credits")));
 assert.ok(

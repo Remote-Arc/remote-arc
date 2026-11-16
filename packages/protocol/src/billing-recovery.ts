@@ -54,8 +54,8 @@ const rules: readonly [readonly string[], BillingRecovery][] = [
     ["SLOW_LANE_READ_ONLY"],
     recovery(
       [
-        "This month’s Free Connect calls are used up. Until the monthly reset, the slow lane runs only read tools; changing files, running commands and App actions are paused. Choose Pro to keep your agents working.",
-        "本月 Free Connect 调用额度已用完。月度重置前，慢速通道只运行读取类工具；修改文件、执行命令和应用操作会暂停。选择 Pro 可让你的 agent 继续工作。",
+        "This month’s Free calls that change files, run commands or act in Apps are used up. Until the monthly reset, only read tools run; changing files, running commands and App actions are paused. Choose Pro to keep your agents working.",
+        "本月 Free 的修改类调用（改文件、执行命令和应用操作）已用完。月度重置前只运行读取类工具，修改文件、执行命令和应用操作会暂停。选择 Pro 可让你的 agent 继续工作。",
       ],
       [plans, billing],
       "later",

@@ -247,7 +247,10 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
       current
         ? [CONNECT_UNLIMITED_PLAN_ID, "arc-pro-v1"].includes(current.id)
           ? { yearlyPriceCents: null, ...switches, ...current }
-          : { ...switches, ...current }
+          : current.id === "free"
+            ? // Free may cap writes within its calls; blank means no cap.
+              { connectWriteCalls: null, ...switches, ...current }
+            : { ...switches, ...current }
         : null,
     );
     setDraft(null);
@@ -320,6 +323,7 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
       credits: "Credits",
       days: tr("admin.payments.adminPayments.trialDays"),
       connectToolCalls: tr("admin.payments.adminPayments.monthlyConnectCallsBlankUnlimited"),
+      connectWriteCalls: tr("admin.payments.adminPayments.monthlyWriteCallsBlankNoCap"),
       deviceLimit: tr("admin.payments.adminPayments.computersBlankUnlimited"),
       connectionLimit: tr("admin.payments.adminPayments.appConnections"),
       concurrentRuns: tr("admin.payments.adminPayments.concurrentRuns"),
@@ -600,6 +604,7 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
                       "credits",
                       "days",
                       "connectToolCalls",
+                      "connectWriteCalls",
                     ].includes(k),
                   )
                   .map((key) => (
@@ -618,7 +623,9 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
                           setEditing({
                             ...editing,
                             [key]:
-                              (key === "connectToolCalls" || key === "yearlyPriceCents") &&
+                              (key === "connectToolCalls" ||
+                                key === "connectWriteCalls" ||
+                                key === "yearlyPriceCents") &&
                               e.target.value === ""
                                 ? null
                                 : Math.round(
@@ -645,6 +652,7 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
                           "credits",
                           "days",
                           "connectToolCalls",
+                          "connectWriteCalls",
                         ].includes(k),
                     )
                     .map((key) => (

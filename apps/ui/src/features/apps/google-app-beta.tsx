@@ -218,6 +218,9 @@ export function GoogleBetaApplication({
                 : tr("apps.googleAppBeta.accessHasNotBeenOpenedContact")}
           </p>
           <p>{state.request.googleEmail}</p>
+          {state.request.status === "pending" && (
+            <p className="googleBetaPriority">{tr("apps.googleAppBeta.paidFirst")}</p>
+          )}
           <a href="mailto:support@remotearc.app">support@remotearc.app</a>
         </>
       ) : (
@@ -229,6 +232,10 @@ export function GoogleBetaApplication({
           }}
         >
           <p>{tr("apps.googleAppBeta.requestAccessBelowConnectYourGoogle")}</p>
+          <p className="googleBetaPriority">
+            {tr("apps.googleAppBeta.paidFirst")}{" "}
+            <a href="/settings?section=billing">{tr("apps.googleAppBeta.seePlans")} →</a>
+          </p>
           <label>
             {tr("apps.googleAppBeta.googleAccountEmail")}
             <input

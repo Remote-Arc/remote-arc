@@ -173,6 +173,8 @@ export type MonthlyUsage = {
   unlimited: boolean;
   freeOverflow?: FreeOverflow;
   afterAllowance?: AfterAllowance;
+  /** Present only where the plan caps the calls that change something. */
+  writes?: { used: number; limit: number; remaining: number };
 };
 export type ProductStatus = {
   googleConfigured: boolean;

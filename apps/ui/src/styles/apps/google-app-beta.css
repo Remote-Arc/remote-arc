@@ -243,3 +243,13 @@
     font-size: 12px;
   }
 }
+
+/* Google Testing places go to paying accounts first; the form says so up front. */
+.googleBetaPriority {
+  padding: 10px 12px;
+  border-left: 3px solid currentColor;
+  border-radius: 4px;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  font-size: 14px;
+  line-height: 1.5;
+}

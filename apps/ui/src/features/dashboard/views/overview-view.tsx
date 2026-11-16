@@ -29,6 +29,7 @@ export function OverviewView({ m }: { m: DashboardModel }) {
     locale,
     mcpEndpoint,
     navigateTab,
+    refreshAll,
     refreshAutomations,
     setShowAdd,
     status,
@@ -87,6 +88,7 @@ export function OverviewView({ m }: { m: DashboardModel }) {
           sectionRef={layout.refs.banner}
           usage={usage}
           pricingUrl={MARKETING_ORIGIN + (locale === "zh" ? "/zh/pricing" : "/pricing")}
+          onTrialStarted={refreshAll}
           onManagePlan={() => {
             navigateTab("settings");
             const target = new URL(location.href);

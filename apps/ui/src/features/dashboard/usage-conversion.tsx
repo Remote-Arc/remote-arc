@@ -2,6 +2,7 @@ import React from "react";
 import { PRO_CHECKOUT_SLUG } from "@remotearc/protocol";
 import { useI18n } from "../../hooks/use-i18n.js";
 import type { MonthlyUsage } from "../../types/app-types.js";
+import { ConnectTrialButton } from "../billing/connect-trial-button.js";
 import "../../styles/dashboard/usage-conversion.css";
 
 const DAY_MS = 86_400_000;
@@ -11,10 +12,13 @@ export function UsageConversionBanner({
   onManagePlan,
   pricingUrl,
   sectionRef,
+  onTrialStarted,
 }: {
   usage: MonthlyUsage | null | undefined;
   onManagePlan: () => void;
   pricingUrl: string;
+  /** Reloads usage once the person starts the one-off trial, which never starts by itself. */
+  onTrialStarted?: () => unknown;
   /** Lets the Overview measure the banner for its loading placeholder. */
   sectionRef?: React.Ref<HTMLElement>;
 }) {
@@ -23,7 +27,9 @@ export function UsageConversionBanner({
     // A Free account below its allowance: calls continue past it, so say how.
     after = overflow ? undefined : usage?.afterAllowance;
   if (!usage || usage.unlimited || !usage.limit) return null;
-  if (!overflow && usage.used / usage.limit < 0.8) return null;
+  const writes = usage.writes,
+    writesRatio = writes ? Math.min(1, writes.used / writes.limit) : 0;
+  if (!overflow && usage.used / usage.limit < 0.8 && writesRatio < 0.8) return null;
   const ratio = Math.min(1, usage.used / usage.limit),
     ended = ratio >= 1;
   const remaining = Math.max(0, usage.limit - usage.used);
@@ -44,6 +50,11 @@ export function UsageConversionBanner({
     slowLane = Boolean(
       overflow && ((trial && !trial.active) || (!trial && overflow.trialAvailable === false)),
     );
+  // Writes used up while reads remain: commands and edits pause, reads keep going.
+  const writesOut = Boolean(writes && !writes.remaining && !ended && !onTrial),
+    writesPaused = writesOut && slowLane,
+    writesNextTrial = writesOut && !slowLane && overflow?.trialAvailable === true;
+  const trialStartable = Boolean(overflow && !trial && overflow.trialAvailable && onTrialStarted);
   const trialEnd = trial ? formatDate(new Date(trial.endsAt)) : "";
   const daysLeft = trial
     ? Math.max(0, Math.ceil((Date.parse(trial.endsAt) - Date.now()) / DAY_MS))
@@ -59,9 +70,11 @@ export function UsageConversionBanner({
 
   const kicker = onTrial
     ? tr("dashboard.usageConversion.connectUnlimitedTrial")
-    : slowLane
-      ? tr("dashboard.usageConversion.connectSlowLane")
-      : tr("dashboard.usageConversion.connectMonthlyAllowance");
+    : writesOut
+      ? tr("dashboard.usageConversion.connectWriteCalls")
+      : slowLane
+        ? tr("dashboard.usageConversion.connectSlowLane")
+        : tr("dashboard.usageConversion.connectMonthlyAllowance");
   const heading = onTrial
     ? daysLeft <= 2
       ? tr("dashboard.usageConversion.yourFullSpeedTrialEndsIn", {
@@ -69,51 +82,67 @@ export function UsageConversionBanner({
           days: daysLeft === 1 ? "day" : "days",
         })
       : tr("dashboard.usageConversion.yourAgentsAreOnADay", { trialDays })
-    : slowLane
-      ? tr("dashboard.usageConversion.yourAgentsAreInTheSlow")
-      : ended
-        ? overflow
-          ? tr("dashboard.usageConversion.yourFreeCallsAreUsedUp")
-          : tr("dashboard.usageConversion.yourMonthlyCallsAreUsedUp")
-        : after
-          ? tr("dashboard.usageConversion.yourFullSpeedCallsAreRunningLow")
-          : tr("dashboard.usageConversion.youReGettingCloseToYour");
+    : writesPaused
+      ? tr("dashboard.usageConversion.editsAndCommandsArePaused")
+      : writesNextTrial
+        ? tr("dashboard.usageConversion.yourFreeWritesAreUsedUp")
+        : slowLane
+          ? tr("dashboard.usageConversion.yourAgentsAreInTheSlow")
+          : ended
+            ? overflow
+              ? tr("dashboard.usageConversion.yourFreeCallsAreUsedUp")
+              : tr("dashboard.usageConversion.yourMonthlyCallsAreUsedUp")
+            : writesRatio >= 0.8 && usage.used / usage.limit < 0.8
+              ? tr("dashboard.usageConversion.yourFreeWritesAreRunningLow")
+              : after
+                ? tr("dashboard.usageConversion.yourFullSpeedCallsAreRunningLow")
+                : tr("dashboard.usageConversion.youReGettingCloseToYour");
   const body = onTrial
     ? tr("dashboard.usageConversion.thisMonthSFreeCallsRan", { trialEnd, perMinute, resetText })
-    : slowLane
-      ? overflow?.trialUnavailableReason === "shared_computer"
-        ? tr("dashboard.usageConversion.sharedComputerSlowLane", {
-            trialDays,
-            perMinute,
-            resetText,
-          })
-        : tr("dashboard.usageConversion.callsStillWorkPacedAtA", { perMinute, resetText })
-      : ended && overflow
-        ? tr("dashboard.usageConversion.yourNextCallStartsAFree", { trialDays })
-        : ended
-          ? tr("dashboard.usageConversion.newMeteredConnectCallsPauseUntil")
-          : after
-            ? tr(
-                after.next === "trial"
-                  ? "dashboard.usageConversion.afterYourFreeCallsATrial"
-                  : after.trialUnavailableReason === "shared_computer"
-                    ? "dashboard.usageConversion.afterYourFreeCallsSharedComputer"
-                    : "dashboard.usageConversion.afterYourFreeCallsTheSlowLane",
-                { limit: usage.limit.toLocaleString(), trialDays, perMinute, resetText },
-              )
-            : tr("dashboard.usageConversion.yourExistingConnectionsStayPairedPlan");
-  const status = onTrial
-    ? tr("dashboard.usageConversion.ofFullSpeedLeft", {
-        daysLeft,
-        days: daysLeft === 1 ? "day" : "days",
-      })
-    : slowLane
-      ? tr("dashboard.usageConversion.slowLaneCallsThisMonth", {
-          slowLaneCallsThisMonth: overflow!.slowLaneCallsThisMonth.toLocaleString(),
+    : writesPaused
+      ? tr("dashboard.usageConversion.readsStillWork", {
+          writes: writes!.limit.toLocaleString(),
+          remaining: remaining.toLocaleString(),
+          resetText,
         })
-      : ended
-        ? tr("dashboard.usageConversion.noFreeCallsRemaining")
-        : remaining.toLocaleString() + " " + tr("dashboard.usageConversion.callsRemaining");
+      : writesNextTrial
+        ? tr("dashboard.usageConversion.yourNextEditStartsAFree", { trialDays })
+        : slowLane
+          ? overflow?.trialUnavailableReason === "shared_computer"
+            ? tr("dashboard.usageConversion.sharedComputerSlowLane", {
+                trialDays,
+                perMinute,
+                resetText,
+              })
+            : tr("dashboard.usageConversion.callsStillWorkPacedAtA", { perMinute, resetText })
+          : ended && overflow
+            ? tr("dashboard.usageConversion.yourNextCallStartsAFree", { trialDays })
+            : ended
+              ? tr("dashboard.usageConversion.newMeteredConnectCallsPauseUntil")
+              : after
+                ? tr(
+                    after.next === "trial"
+                      ? "dashboard.usageConversion.afterYourFreeCallsATrial"
+                      : after.trialUnavailableReason === "shared_computer"
+                        ? "dashboard.usageConversion.afterYourFreeCallsSharedComputer"
+                        : "dashboard.usageConversion.afterYourFreeCallsTheSlowLane",
+                    { limit: usage.limit.toLocaleString(), trialDays, perMinute, resetText },
+                  )
+                : tr("dashboard.usageConversion.yourExistingConnectionsStayPairedPlan");
+  const status = writesOut
+    ? tr("dashboard.usageConversion.readCallsRemaining", { remaining: remaining.toLocaleString() })
+    : onTrial
+      ? tr("dashboard.usageConversion.ofFullSpeedLeft", {
+          daysLeft,
+          days: daysLeft === 1 ? "day" : "days",
+        })
+      : slowLane
+        ? tr("dashboard.usageConversion.slowLaneCallsThisMonth", {
+            slowLaneCallsThisMonth: overflow!.slowLaneCallsThisMonth.toLocaleString(),
+          })
+        : ended
+          ? tr("dashboard.usageConversion.noFreeCallsRemaining")
+          : remaining.toLocaleString() + " " + tr("dashboard.usageConversion.callsRemaining");
 
   return (
     <section
@@ -129,7 +158,18 @@ export function UsageConversionBanner({
         <h2>{heading}</h2>
         <p>{body}</p>
         <div className="usageConversionActions">
-          {overflow || after ? (
+          {trialStartable ? (
+            <>
+              <ConnectTrialButton
+                className="usageConversionPrimary"
+                trialDays={trialDays}
+                onStarted={onTrialStarted!}
+              />
+              <a className="usageConversionLink" href={checkoutHref}>
+                {tr("dashboard.usageConversion.keepFullSpeed")} <span aria-hidden="true">→</span>
+              </a>
+            </>
+          ) : overflow || after ? (
             <>
               <a className="usageConversionPrimary" href={checkoutHref}>
                 {tr("dashboard.usageConversion.keepFullSpeed")} <span aria-hidden="true">→</span>
@@ -169,6 +209,26 @@ export function UsageConversionBanner({
         >
           <i style={{ width: ratio * 100 + "%" }} />
         </div>
+        {writes && (
+          <div className="usageConversionWrites">
+            <span>
+              {tr("dashboard.usageConversion.writeCalls", {
+                used: writes.used.toLocaleString(),
+                limit: writes.limit.toLocaleString(),
+              })}
+            </span>
+            <div
+              className="usageConversionTrack"
+              role="progressbar"
+              aria-label={tr("dashboard.usageConversion.writeCallsUsed")}
+              aria-valuemin={0}
+              aria-valuemax={writes.limit}
+              aria-valuenow={Math.min(writes.used, writes.limit)}
+            >
+              <i style={{ width: writesRatio * 100 + "%" }} />
+            </div>
+          </div>
+        )}
         <div className="usageConversionPanelBottom">
           <span>{status}</span>
           <span>

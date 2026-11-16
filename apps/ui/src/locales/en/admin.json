@@ -1106,6 +1106,7 @@
     "admin.payments.adminPayments.modelCostThisMonth": "Model cost this month",
     "admin.payments.adminPayments.month": " / month",
     "admin.payments.adminPayments.monthlyConnectCallsBlankUnlimited": "Monthly Connect calls · blank = unlimited",
+    "admin.payments.adminPayments.monthlyWriteCallsBlankNoCap": "Calls that change something per month (blank: no cap)",
     "admin.payments.adminPayments.monthlyCredits": "Monthly Credits",
     "admin.payments.adminPayments.monthlyPriceUsd": "Monthly price · USD",
     "admin.payments.adminPayments.monthlySubscriptionValue": "Monthly subscription value",

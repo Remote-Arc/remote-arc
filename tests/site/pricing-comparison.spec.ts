@@ -31,6 +31,7 @@ for (const variant of ["", "?pricing=bundled"])
         deviceLimit: number | null;
         connectToolCalls: number | null;
         connectionLimit?: number;
+        connectWriteCalls?: number | null;
       }[];
       const shown = await page
         .locator(".pricingPlans--saas .planHeader > span:first-child")
@@ -46,6 +47,24 @@ for (const variant of ["", "?pricing=bundled"])
             plan.deviceLimit.toLocaleString(zh ? "zh-CN" : "en-US"),
           );
       }
+      // A write cap is stated beside the calls it sits within.
+      const free = plans.find((item) => item.label === "Free")!;
+      if (free.connectWriteCalls)
+        await expect(
+          table
+            .getByRole("row")
+            .filter({
+              has: page.getByRole("rowheader", {
+                name: zh ? "Connect 调用" : "Connect calls",
+                exact: true,
+              }),
+            })
+            .locator('td[data-label="Free"]'),
+        ).toContainText(
+          zh
+            ? `修改类最多 ${free.connectWriteCalls.toLocaleString("zh-CN")} 次`
+            : `up to ${free.connectWriteCalls.toLocaleString("en-US")} that change things`,
+        );
       // Apps show how many accounts each plan connects, and routine use is its own row.
       const appsRow = table.getByRole("row").filter({
         has: page.getByRole("rowheader", {

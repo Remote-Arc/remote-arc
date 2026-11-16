@@ -1106,6 +1106,7 @@
     "admin.payments.adminPayments.modelCostThisMonth": "本月模型成本（估算）",
     "admin.payments.adminPayments.month": " / 月",
     "admin.payments.adminPayments.monthlyConnectCallsBlankUnlimited": "月度 Connect 调用 · 留空表示无限",
+    "admin.payments.adminPayments.monthlyWriteCallsBlankNoCap": "每月修改类调用上限（留空为不限）",
     "admin.payments.adminPayments.monthlyCredits": "月度 Credits",
     "admin.payments.adminPayments.monthlyPriceUsd": "月费 · 美元",
     "admin.payments.adminPayments.monthlySubscriptionValue": "订阅月收入（标价）",

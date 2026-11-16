@@ -166,6 +166,18 @@
   background: linear-gradient(90deg, #3ebfbe, #168aa4);
   transition: width 0.3s;
 }
+/* Plans that cap writes show them under the whole allowance. */
+.usageConversionWrites {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.usageConversionWrites .usageConversionTrack {
+  height: 5px;
+}
 .usageConversionPanelBottom {
   margin-top: 12px;
   font-size: 11px;

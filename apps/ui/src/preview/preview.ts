@@ -14,10 +14,16 @@ import { previewActivationUsers } from "./activation-preview.js";
 
 export const UI_PREVIEW = import.meta.env.VITE_UI_PREVIEW === "1";
 
-/** ?quota=full|trial|slow|slow-next shows the Connect allowance states of a Free
- * account; without it, one near its allowance with the trial still to come. */
-function previewUsage(quota: string | null) {
+/** ?quota=full|trial|slow|slow-next|writes|writes-next|shared shows the Connect allowance
+ * states of a Free account; without it, one near its allowance with the trial still
+ * to come. writes: its write cap is used up with reads left, after (writes) or
+ * before (writes-next) its trial. */
+// Set when the preview's Start trial button is used; the trial never starts by itself.
+let previewTrialStarted = false;
+function previewUsage(requested: string | null) {
   const month = new Date().toISOString().slice(0, 7);
+  const startable = requested === "full" || requested === "writes-next";
+  const quota = previewTrialStarted && startable ? "trial" : requested;
   const base = { month, limit: 10000, unlimited: false };
   const overflow = (trial: { startedAt: string; endsAt: string; active: boolean } | null) => ({
     trialDays: CONNECT_FREE_OVERFLOW.trialDays,
@@ -49,6 +55,33 @@ function previewUsage(quota: string | null) {
       }),
     };
   if (quota === "full") return { ...base, used: 10000, remaining: 0, freeOverflow: overflow(null) };
+  if (quota === "shared")
+    return {
+      ...base,
+      used: 10000,
+      remaining: 0,
+      freeOverflow: {
+        ...overflow(null),
+        trialAvailable: false,
+        trialUnavailableReason: "shared_computer" as const,
+      },
+    };
+  if (quota === "writes" || quota === "writes-next")
+    return {
+      ...base,
+      used: 6200,
+      remaining: 3800,
+      writes: { used: 5000, limit: 5000, remaining: 0 },
+      freeOverflow: overflow(
+        quota === "writes"
+          ? {
+              startedAt: new Date(Date.now() - 9 * 86_400_000).toISOString(),
+              endsAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+              active: false,
+            }
+          : null,
+      ),
+    };
   return {
     ...base,
     used: 8700,
@@ -710,6 +743,20 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
             : "device_unreachable",
         executionConfirmed: false,
       });
+    // Starting the Connect trial: allowed where the preview's usage offers it.
+    if (url.pathname === "/api/usage/connect-trial") {
+      const quota = new URL(location.href).searchParams.get("quota");
+      if (quota !== "full" && quota !== "writes-next")
+        return json(
+          {
+            error: "CONNECT_TRIAL_UNAVAILABLE",
+            reason: quota === "shared" ? "shared_computer" : "not_needed",
+          },
+          409,
+        );
+      previewTrialStarted = true;
+      return json({ usage: previewUsage(quota) });
+    }
     if (method !== "GET") {
       return json(
         { error: "PR Preview is read-only. This action is not connected to production." },

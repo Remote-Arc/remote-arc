@@ -42,7 +42,11 @@ export function PlanComparison({
       cell: (p) =>
         p.connectToolCalls === null
           ? unlimited
-          : tr("marketing.planComparison.callsPerMonth", { calls: count(p.connectToolCalls) }),
+          : tr("marketing.planComparison.callsPerMonth", { calls: count(p.connectToolCalls) }) +
+            (p.connectWriteCalls
+              ? " · " +
+                tr("marketing.planComparison.writesUpTo", { writes: count(p.connectWriteCalls) })
+              : ""),
     },
     {
       key: "marketing.planComparison.afterTheAllowance",

@@ -499,6 +499,10 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 	// after resume, otherwise the first buffered call can look fresh.
 	var lastPeerSignal atomic.Int64
 	lastPeerSignal.Store(a.wallNow().UnixMilli())
+	// How far this computer's clock is ahead of the Relay's, in milliseconds,
+	// from the Relay's latest clock message on this connection.
+	var relayOffset atomic.Int64
+	var relayClockKnown atomic.Bool
 	if e := send(a.hello(ctx)); e != nil {
 		return e
 	}
@@ -633,10 +637,22 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 			SessionID string `json:"session_id"`
 			Action    string `json:"action"`
 			JPEG      *bool  `json:"jpeg"`
+			Now       int64  `json:"now"`
 		}
 		if json.Unmarshal(data, &control) == nil && control.Type == "runner_view" {
 			if a.Browser != nil && (control.Action == "watch" || control.Action == "stop") {
 				a.Browser.ViewHeartbeatMode(control.SessionID, control.Action == "watch", control.JPEG == nil || *control.JPEG)
+			}
+			continue
+		}
+		if control.Type == "clock" {
+			// The Relay answers each hello with its own time. Deadlines are read
+			// against it, so a computer clock that is minutes or hours off (a
+			// wrong time zone with automatic time turned off) cannot make every
+			// call look expired.
+			if control.Now > 0 {
+				relayOffset.Store(a.wallNow().UnixMilli() - control.Now)
+				relayClockKnown.Store(true)
 			}
 			continue
 		}
@@ -657,6 +673,9 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 		var call protocol.Call
 		if json.Unmarshal(data, &call) != nil || call.Type != "call" || call.ID == "" || call.Tool == "" || len(call.ID) > 256 || len(call.Tool) > 100 {
 			continue
+		}
+		if relayClockKnown.Load() {
+			call.ExpiresAt = localDeadline(call.ExpiresAt, relayOffset.Load())
 		}
 		select {
 		case slots <- struct{}{}:
@@ -699,6 +718,16 @@ func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {
 			}
 		}(call)
 	}
+}
+
+// localDeadline moves a Relay deadline onto this computer's clock. An older
+// Relay sends no clock message, and its deadline is then read as it is.
+func localDeadline(expiresAt string, offsetMillis int64) string {
+	deadline, err := time.Parse(time.RFC3339Nano, expiresAt)
+	if expiresAt == "" || err != nil {
+		return expiresAt
+	}
+	return deadline.Add(time.Duration(offsetMillis) * time.Millisecond).UTC().Format(time.RFC3339Nano)
 }
 
 // Never log request arguments or returned file contents. These may contain secrets.

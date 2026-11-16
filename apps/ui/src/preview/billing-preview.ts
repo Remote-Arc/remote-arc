@@ -220,6 +220,7 @@ export function createBillingPreview(storage: Pick<Storage, "getItem" | "setItem
             inputCreditsPer1000: m.inputMicrosPerMillion / 2000000,
             outputCreditsPer1000: m.outputMicrosPerMillion / 2000000,
           })),
+          hostedModelFamilies: ["GPT", "Claude"],
           proTrial: proTrial(),
           subscriptions: plan().monthlyPriceCents
             ? [

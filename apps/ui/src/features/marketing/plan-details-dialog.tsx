@@ -3,7 +3,7 @@ import { CONNECT_FREE_OVERFLOW, FREE_BINARY_BYTES_PER_MONTH } from "@remotearc/p
 import { useI18n } from "../../hooks/use-i18n.js";
 import type { CatalogPlan, PlatformCatalog } from "../../hooks/use-platform-catalog.js";
 import type { Translate } from "../../locales/locale-catalog.js";
-import { planIncludesArc, transferSize } from "../billing/arc-billing-client.js";
+import { modelFamilyList, planIncludesArc, transferSize } from "../billing/arc-billing-client.js";
 import { approxTaskCount } from "./plan-copy.js";
 import "../../styles/marketing/plan-details.css";
 
@@ -47,6 +47,19 @@ export function planDetailSections(
           }
         : {}),
     },
+    // A write cap is listed right under the calls it sits within.
+    ...(plan.connectWriteCalls
+      ? [
+          {
+            key: "write-calls",
+            label: tr("marketing.planDetails.writeCalls"),
+            value: tr("marketing.planDetails.upToPerMonth", {
+              value: count(plan.connectWriteCalls),
+            }),
+            note: tr("marketing.planDetails.writeCallsNote"),
+          },
+        ]
+      : []),
     {
       key: "credits",
       label: tr("marketing.planDetails.arcCredits"),
@@ -61,7 +74,13 @@ export function planDetailSections(
     {
       key: "models",
       label: tr("marketing.planDetails.hostedModels"),
-      value: plan.allHostedModels ? tr("marketing.planDetails.autoAndNamedModels") : notIncluded,
+      value: !plan.allHostedModels
+        ? notIncluded
+        : catalog.hostedModelFamilies?.length
+          ? tr("marketing.planDetails.autoAndFamilies", {
+              families: modelFamilyList(catalog.hostedModelFamilies, tr),
+            })
+          : tr("marketing.planDetails.autoAndNamedModels"),
     },
   ];
   if (arc && topup)

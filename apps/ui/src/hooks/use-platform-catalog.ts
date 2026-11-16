@@ -37,6 +37,8 @@ export type PlatformCatalog = {
   trial: { days: number; credits: number };
   /** The trial is the card-backed Pro trial (a payment method is saved at checkout). */
   proTrial?: boolean;
+  /** Model families Arc runs named models from now, such as "GPT" and "Claude". */
+  hostedModelFamilies?: string[];
 };
 let current: PlatformCatalog | null = null,
   pending: Promise<PlatformCatalog> | null = null,

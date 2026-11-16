@@ -86,7 +86,7 @@ already runs Go tests on Windows, Linux and macOS in CI. These fixtures do not
 certify every installed client version or prove a cross-agent continuation.
 
 Review this step before adding transcript previews or a handoff package. See
-the alignment with roadmap #252 and research gate #253 (private repository `Remote-Arc/remote-arc-docs`, `docs/agent-continuity-next-steps.md`).
+the alignment with roadmap #252 and research gate #253 (private `docs/business/agent-continuity-next-steps.md`).
 
 ## Interface references
 

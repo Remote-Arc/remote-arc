@@ -104,6 +104,8 @@ export type ArcBilling = {
     inputCreditsPer1000: number;
     outputCreditsPer1000: number;
   }[];
+  /** Model families Arc runs named models from now, such as "GPT" and "Claude". */
+  hostedModelFamilies?: string[];
   proTrial?: ProTrial;
   subscriptions: {
     revision?: number;
@@ -251,9 +253,22 @@ export const checkoutProductSlug = (id: string) =>
   id === CONNECT_UNLIMITED_PLAN_ID ? PRO_CHECKOUT_SLUG : id;
 export const checkoutHref = (id: string) =>
   "/checkout?product=" + encodeURIComponent(checkoutProductSlug(id));
+/** "GPT", "GPT and Claude", "GPT, Claude and Gemini": the hosted model families as
+ * the relay reports them, so a family appears without a UI change once it goes live. */
+export function modelFamilyList(families: readonly string[], tr: Translate) {
+  if (families.length < 2) return families[0] ?? "";
+  return (
+    families.slice(0, -1).join(tr("marketing.planDetails.familySeparator")) +
+    tr("marketing.planDetails.familyLastSeparator") +
+    families[families.length - 1]
+  );
+}
+
 export function connectPlanFeatures(
   tr: Translate,
   plan?: { monthlyCredits?: number; deviceLimit?: number | null; fleetRun?: boolean },
+  /** Model families Arc runs now, as the relay reports them. */
+  families: readonly string[] = [],
 ) {
   const registrationsPerDay = CONNECT_FAIR_USE.computerRegistrationsPerDay;
   if (planIncludesArc(plan))
@@ -273,7 +288,11 @@ export function connectPlanFeatures(
       plan!.fleetRun === false
         ? tr("billing.arcBillingClient.localTerminalFilesBrowserAndApps")
         : tr("billing.arcBillingClient.localTerminalFilesBrowserFleetAnd"),
-      tr("billing.arcBillingClient.bringYourOwnAiOrLetArc"),
+      families.length
+        ? tr("billing.arcBillingClient.bringYourOwnAiOrArcFamilies", {
+            families: modelFamilyList(families, tr),
+          })
+        : tr("billing.arcBillingClient.bringYourOwnAiOrLetArc"),
     ];
   return [
     tr("billing.arcBillingClient.yourAgentsAtFullSpeedAll"),

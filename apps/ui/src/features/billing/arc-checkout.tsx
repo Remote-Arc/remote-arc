@@ -816,7 +816,7 @@ export function ArcCheckout({ email }: { email: string }) {
                 )}
                 {plan && connect && (
                   <ul className="arcCheckoutFeatures">
-                    {connectPlanFeatures(tr, plan).map((item) => (
+                    {connectPlanFeatures(tr, plan, data?.hostedModelFamilies).map((item) => (
                       <li key={item}>{item}</li>
                     ))}
                   </ul>

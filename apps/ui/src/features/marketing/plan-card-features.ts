@@ -1,13 +1,31 @@
 import { CONNECT_FREE_OVERFLOW } from "@remotearc/protocol";
 import type { CatalogPlan, PlatformCatalog } from "../../hooks/use-platform-catalog.js";
 import type { Translate } from "../../locales/locale-catalog.js";
-import { isConnectOnlyPlan, planIncludesArc } from "../billing/arc-billing-client.js";
+import {
+  isConnectOnlyPlan,
+  modelFamilyList,
+  planIncludesArc,
+} from "../billing/arc-billing-client.js";
 import { approxTaskCount } from "./plan-copy.js";
+
+/** One checklist line, with an optional note in small print under it. */
+export type PlanFeature = { text: string; note?: string };
+const line = (text: string): PlanFeature => ({ text });
+
+/** What Arc runs, naming the model families the relay reports as live. */
+function hostedAiLine(catalog: PlatformCatalog, tr: Translate) {
+  const families = catalog.hostedModelFamilies ?? [];
+  return families.length
+    ? tr("marketing.arcPublicPricing.yourAiOrArcWithFamilies", {
+        families: modelFamilyList(families, tr),
+      })
+    : tr("marketing.arcPublicPricing.yourAiOrArcAutoAndNamed");
+}
 
 /** Every plan with Arc lists the same terms in the same order, so Pro and Max can
  * be compared line by line: what never stops first, then routines, then the
  * capacity terms, with Credits after them. */
-function arcPlanFeatures(plan: CatalogPlan, tr: Translate) {
+function arcPlanFeatures(plan: CatalogPlan, catalog: PlatformCatalog, tr: Translate) {
   const count = (value: number) => value.toLocaleString();
   return [
     plan.connectToolCalls === null
@@ -33,37 +51,48 @@ function arcPlanFeatures(plan: CatalogPlan, tr: Translate) {
     plan.fleetRun === false
       ? tr("marketing.arcPublicPricing.terminalFilesBrowserAndConnectedApps")
       : tr("marketing.arcPublicPricing.terminalFilesBrowserFleetAndConnected"),
-    tr("marketing.arcPublicPricing.yourAiOrArcAutoAndNamed"),
-  ];
+    hostedAiLine(catalog, tr),
+  ].map(line);
 }
 
 /** The checklist on one public pricing card, read from the live catalog. */
-export function planCardFeatures(plan: CatalogPlan, catalog: PlatformCatalog, tr: Translate) {
-  if (planIncludesArc(plan)) return arcPlanFeatures(plan, tr);
+export function planCardFeatures(
+  plan: CatalogPlan,
+  catalog: PlatformCatalog,
+  tr: Translate,
+): PlanFeature[] {
+  if (planIncludesArc(plan)) return arcPlanFeatures(plan, catalog, tr);
   if (isConnectOnlyPlan(plan))
     return [
       tr("marketing.arcPublicPricing.yourAgentsAtFullSpeedAll"),
       tr("marketing.arcPublicPricing.unlimitedComputersAndFileTransfer"),
       tr("marketing.arcPublicPricing.terminalFilesBrowserFleetAndConnected"),
       tr("marketing.arcPublicPricing.worksWithYourOwnChatgptClaude"),
-    ];
+    ].map(line);
   return [
-    (catalog.connectFreeCalls === null
-      ? tr("marketing.arcPublicPricing.unlimited")
-      : catalog.connectFreeCalls.toLocaleString()) +
-      tr("marketing.arcPublicPricing.connectCallsMonth") +
-      // A write cap is stated with the calls it sits within, never left out.
-      (plan.connectWriteCalls
-        ? tr("marketing.arcPublicPricing.ofWhichWrites", {
-            writes: plan.connectWriteCalls.toLocaleString(),
-          })
-        : ""),
-    tr("marketing.arcPublicPricing.runOutAOneTimeDay", {
-      trialDays: CONNECT_FREE_OVERFLOW.trialDays,
-      slowLaneCallsPerMinute: CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute,
-    }),
-    tr("marketing.arcPublicPricing.upToComputers"),
-    tr("marketing.arcPublicPricing.gbFileTransferMonth"),
-    tr("marketing.arcPublicPricing.devicePermissionsAndLocalUndo"),
+    {
+      text:
+        (catalog.connectFreeCalls === null
+          ? tr("marketing.arcPublicPricing.unlimited")
+          : catalog.connectFreeCalls.toLocaleString()) +
+        tr("marketing.arcPublicPricing.connectCallsMonth"),
+      // A write cap is stated under the calls it sits within, never left out.
+      ...(plan.connectWriteCalls
+        ? {
+            note: tr("marketing.arcPublicPricing.writeCapNote", {
+              writes: plan.connectWriteCalls.toLocaleString(),
+            }),
+          }
+        : {}),
+    },
+    ...[
+      tr("marketing.arcPublicPricing.runOutAOneTimeDay", {
+        trialDays: CONNECT_FREE_OVERFLOW.trialDays,
+        slowLaneCallsPerMinute: CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute,
+      }),
+      tr("marketing.arcPublicPricing.upToComputers"),
+      tr("marketing.arcPublicPricing.gbFileTransferMonth"),
+      tr("marketing.arcPublicPricing.devicePermissionsAndLocalUndo"),
+    ].map(line),
   ];
 }

@@ -23,8 +23,7 @@
     .usageConversionActions a.usageConversionPrimary,
     .appFrame.arcCheckoutFrame .arcElementsSubmit,
     .publicPage .primaryButton,
-    .personaPlan,
-    .useCaseHeroJump
+    .personaPlan
   ) {
   background: linear-gradient(
     100deg,
@@ -45,8 +44,7 @@
     .usageConversionPrimary,
     .appFrame.arcCheckoutFrame .arcElementsSubmit,
     .publicPage .primaryButton,
-    .personaPlan,
-    .useCaseHeroJump
+    .personaPlan
   ):is(:hover, :focus-visible):not(:disabled) {
   background: linear-gradient(
     100deg,

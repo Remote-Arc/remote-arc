@@ -784,6 +784,11 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
         trial: { days: 7, credits: 300 },
         // ?trial=pro previews the site once the card-backed Pro trial is on.
         proTrial: new URLSearchParams(location.search).get("trial") === "pro",
+        // The families the relay names once both providers are live; ?models=gpt shows GPT only.
+        hostedModelFamilies:
+          new URLSearchParams(location.search).get("models") === "gpt"
+            ? ["GPT"]
+            : ["GPT", "Claude"],
       });
     }
     if (url.pathname === "/api/arc/employees") return json({ employees: previewEmployees });

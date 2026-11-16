@@ -178,9 +178,12 @@ export function ArcPublicPricing({
                     <p className="planDescription">{tr(planDescriptionKey(p))}</p>
                     <ul className="planIncluded">
                       {planCardFeatures(p, catalog, tr).map((item) => (
-                        <li key={item}>
+                        <li key={item.text}>
                           <span aria-hidden="true">✓</span>
-                          {item}
+                          <span className="planIncludedText">
+                            {item.text}
+                            {item.note && <small className="planIncludedNote">{item.note}</small>}
+                          </span>
                         </li>
                       ))}
                     </ul>

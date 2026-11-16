@@ -141,9 +141,16 @@
   font-size: 16px;
   line-height: 1.55;
 }
-.planIncluded li > span {
+.planIncluded li > span[aria-hidden] {
   font-weight: 800;
   color: var(--text);
+}
+.planIncludedNote {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--pricing-muted);
 }
 .planCard > .primaryButton,
 .planCard > .ghostButton,

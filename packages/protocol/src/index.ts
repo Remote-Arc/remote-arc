@@ -353,6 +353,10 @@ export type AgentCallMessage = {
   policy?: DeviceExecutionPolicy;
 };
 
+/** Sent in reply to each Agent hello: the Relay's time, in Unix milliseconds. The
+ * Agent reads call deadlines against it instead of its own clock. */
+export type RelayClockMessage = { type: "clock"; now: number };
+
 export type AgentResultMessage = {
   type: "result";
   id: string;

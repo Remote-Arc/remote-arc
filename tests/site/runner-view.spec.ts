@@ -24,6 +24,59 @@ test("browser handoff has a simple live view and safe completion on desktop and 
   ).toHaveCount(0);
 });
 
+test("browser task status backs off while unavailable and resumes normal polling on recovery", async ({
+  page,
+}, testInfo) => {
+  const zh = testInfo.project.metadata.language === "zh";
+  await page.clock.install({ time: new Date("2026-11-17T00:00:00Z") });
+  await page.goto("/dashboard/browser/preview-mac/sample-application?demo=runner");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    zh ? "有一步需要你来完成" : "A quick step needs you",
+  );
+  await page.clock.pauseAt(new Date("2026-11-17T00:02:00Z"));
+  await page.evaluate(() => {
+    const previous = window.fetch;
+    let reads = 0;
+    document.documentElement.dataset.runnerStatusReads = "0";
+    window.fetch = (input, init) => {
+      const url = new URL(
+        typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
+        location.origin,
+      );
+      if (!url.pathname.startsWith("/api/runner/session/")) return previous(input, init);
+      document.documentElement.dataset.runnerStatusReads = String(++reads);
+      return Promise.resolve(
+        Response.json(
+          reads <= 2
+            ? { error: "DEVICE_UNAVAILABLE" }
+            : { state: "needs_user", browser_running: true },
+          { status: reads <= 2 ? 503 : 200 },
+        ),
+      );
+    };
+  });
+  const count = () =>
+    page.evaluate(() => Number(document.documentElement.dataset.runnerStatusReads));
+  await page.clock.runFor(10_000);
+  await expect.poll(count).toBe(1);
+  await page.clock.runFor(10_000);
+  expect(await count()).toBe(1);
+  await page.clock.runFor(10_000);
+  await expect.poll(count).toBe(2);
+  await page.clock.runFor(20_000);
+  expect(await count()).toBe(2);
+  await page.clock.runFor(20_000);
+  await expect.poll(count).toBe(3);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    zh ? "有一步需要你来完成" : "A quick step needs you",
+  );
+  await expect(
+    page.getByRole("region", { name: zh ? "任务浏览器实时画面" : "Task browser live view" }),
+  ).toBeVisible();
+  await page.clock.runFor(10_000);
+  await expect.poll(count).toBe(4);
+});
+
 for (const missing of [false, true]) {
   test(`ended browser ${missing ? "checkpoint is missing" : "is closed"} instead of showing a broken live view`, async ({
     page,

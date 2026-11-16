@@ -67,6 +67,7 @@
       ["node", "--import", "tsx", "scripts/product-pwa-test.ts"],
       ["node", "--import", "tsx", "scripts/live-updates-test.ts"],
       ["node", "--import", "tsx", "scripts/runner-attention-live-test.tsx"],
+      ["node", "--import", "tsx", "scripts/runner-poll-test.tsx"],
       ["pnpm", "test:runner-video"]
     ],
     "test:background-recovery": [

@@ -1,3 +1,4 @@
+import { useRunnerPoll } from "../../hooks/use-runner-poll.js";
 import { useRunnerAttention, type Attention } from "../../hooks/use-runner-attention.js";
 import { requestJSON, RunnerRequestError } from "./runner-requests.js";
 import React, { useEffect, useRef, useState } from "react";
@@ -397,33 +398,27 @@ export function DeviceBrowserSessions({ deviceId }: { deviceId: string }) {
   >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
-  useEffect(() => {
-    if (!expanded) return;
-    let stopped = false;
-    let timer: ReturnType<typeof setTimeout>;
-    async function refresh() {
+  useRunnerPoll(
+    async (signal) => {
       setLoading(true);
       try {
-        const data = await requestJSON(`/api/runner/sessions/${encodeURIComponent(deviceId)}`);
-        if (!stopped) {
+        const data = await requestJSON(`/api/runner/sessions/${encodeURIComponent(deviceId)}`, {
+          signal,
+        });
+        if (!signal.aborted) {
           setSessions(Array.isArray(data.sessions) ? data.sessions : []);
           setError(false);
         }
-      } catch {
-        if (!stopped) setError(true);
+      } catch (error) {
+        if (!signal.aborted) setError(true);
+        throw error;
       } finally {
-        if (!stopped) {
-          setLoading(false);
-          timer = setTimeout(refresh, 10000);
-        }
+        if (!signal.aborted) setLoading(false);
       }
-    }
-    void refresh();
-    return () => {
-      stopped = true;
-      clearTimeout(timer);
-    };
-  }, [deviceId, expanded]);
+    },
+    deviceId,
+    expanded,
+  );
   return (
     <details
       className="deviceBrowserSessions"
@@ -479,38 +474,33 @@ export function RunnerView({
   const [status, setStatus] = useState<Status | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   useEffect(() => {
-    let disposed = false;
-    let timer: ReturnType<typeof setTimeout>;
     setStatus(null);
     setUnavailable(false);
-    const load = async () => {
+  }, [deviceId, sessionId]);
+  useRunnerPoll(
+    async (signal) => {
       try {
         const value = await requestJSON(
           `/api/runner/session/${encodeURIComponent(deviceId)}/${encodeURIComponent(sessionId)}`,
+          { signal },
         );
-        if (!disposed) {
+        if (!signal.aborted) {
           setStatus(value);
           setUnavailable(false);
         }
       } catch (error) {
-        if (!disposed) {
-          if (error instanceof RunnerRequestError && error.code === "SESSION_NOT_FOUND") {
-            setStatus({ state: "closed", browser_running: false });
-            setUnavailable(false);
-          } else {
-            setUnavailable(true);
-          }
+        if (signal.aborted) return;
+        if (error instanceof RunnerRequestError && error.code === "SESSION_NOT_FOUND") {
+          setStatus({ state: "closed", browser_running: false });
+          setUnavailable(false);
+          throw error; // Back off, but keep discovering an explicitly restarted task.
         }
-      } finally {
-        if (!disposed) timer = setTimeout(load, 10000);
+        setUnavailable(true);
+        throw error;
       }
-    };
-    void load();
-    return () => {
-      disposed = true;
-      clearTimeout(timer);
-    };
-  }, [deviceId, sessionId]);
+    },
+    deviceId + "/" + sessionId,
+  );
   return (
     <main className="runnerView">
       <header className="runnerViewHeader">

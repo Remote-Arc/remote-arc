@@ -13,6 +13,9 @@ export const useCaseSlugs = [
   "home-lab",
   "browser-research",
   "remote-support",
+  "remote-rescue",
+  "server-troubleshooting",
+  "travel-access",
   "presentation-deck",
   "spreadsheet-report",
   "desktop-automation",
@@ -419,6 +422,63 @@ export const ARC_USE_CASES: Record<UseCaseSlug, ArcCase> = {
     boundary: copy(
       "Diagnosis does not grant repair authority. Tool and path restrictions still apply, and revoking access does not undo earlier changes.",
       "诊断不增加修复权限，工具和路径边界继续适用；撤销访问不会撤销已发生修改。",
+    ),
+  },
+  "remote-rescue": {
+    kind: "direct",
+    intro: copy(
+      "Something breaks while you are away? Diagnose your already-connected computer from an AI chat before choosing a recovery step.",
+      "人不在电脑旁却突然出问题？从 AI 对话里检查已连接电脑，再决定如何处理。",
+    ),
+    prompt: copy(
+      "My paired computer is having trouble while I am away. Identify the exact online device, inspect relevant processes and recent logs with read-only tools first, and explain what is failing with evidence. Propose the smallest recovery step, but do not stop processes, restart the machine, change services or edit files without my approval. Verify any authorized action and report any remaining uncertainty.",
+      "我出门后，已配对的电脑突然出了问题。先确认准确的在线设备，使用只读工具检查相关进程和近期日志，用证据解释故障。提出影响最小的恢复方案，但未经我批准，不终止进程、不重启电脑、不改服务或文件。获批操作后核验结果，并说明仍不确定的部分。",
+    ),
+    requires: copy(
+      "A powered-on paired computer, connected Agent and authorized diagnostic tools.",
+      "电脑已开机且配对、Agent 在线，并已授权所需诊断工具。",
+    ),
+    boundary: copy(
+      "Remote Arc cannot wake a powered-off or unreachable computer. Diagnosis is not permission to restart, and this is not a full remote-desktop stream.",
+      "Remote Arc 无法唤醒已关机或不可达的电脑。诊断不代表获得重启授权，也不提供完整远程桌面画面。",
+    ),
+  },
+  "server-troubleshooting": {
+    kind: "direct",
+    intro: copy(
+      "Investigate a 5xx error or failing service on a connected server using real process, resource and log evidence.",
+      "服务器报 5xx 或服务异常时，直接用真实进程、资源与日志证据排查。",
+    ),
+    prompt: copy(
+      "Troubleshoot the failing service on my paired Linux server. Confirm the host and incident time, inspect relevant process/service status, disk and memory pressure, deployment version and bounded recent logs. Correlate evidence with the reported error before naming a cause. Start read-only; ask before restarting services, changing configuration or deploying. After any approved fix, recheck the service and report observed results.",
+      "排查我已配对 Linux 服务器上的故障服务。确认主机与故障时间，检查相关进程或服务状态、磁盘与内存压力、部署版本及限定范围内的近期日志。先将证据与报错对齐，再判断原因。默认只读；重启服务、改配置或部署前先获批准。获批修复后复查服务并报告实测结果。",
+    ),
+    requires: copy(
+      "An online paired server and permission to read relevant service state, logs and diagnostic commands.",
+      "在线且已配对的服务器，以及读取相关服务状态、日志和诊断命令的权限。",
+    ),
+    boundary: copy(
+      "An offline host cannot be diagnosed through its Agent. Terminal commands use the server account's real permissions; never assume an incident was resolved without a fresh check.",
+      "服务器离线时无法通过 Agent 诊断。终端命令使用服务器账号的真实权限；未经重新检查，不能宣称故障已恢复。",
+    ),
+  },
+  "travel-access": {
+    kind: "direct",
+    intro: copy(
+      "On a trip, use your existing AI chat to reach approved files and commands on a computer you left online.",
+      "旅行在外，也能从常用 AI 对话访问留在家中或办公室的在线电脑及获授权文件。",
+    ),
+    prompt: copy(
+      "I am travelling and need something from my paired home computer. Check which device is online, locate the report in the folder I specify, read only what is needed and summarize the verified contents. If I request a new export, use only the approved workspace and confirm the resulting file. Do not browse unrelated private folders, share files or run modifying commands without permission. If the computer is asleep or offline, say so.",
+      "我正在旅行，需要从已配对的家中电脑取些资料。先检查设备是否在线，在我指定的文件夹查找报告，只读取必要内容并据实摘要。如需生成新导出文件，仅在获授权工作目录操作，并核对实际文件。未经允许，不查看无关私人目录、不分享文件、不执行修改命令。电脑休眠或离线时如实说明。",
+    ),
+    requires: copy(
+      "The remote computer must be on, paired and connected; file or terminal permissions are scoped to what you choose.",
+      "远端电脑须开机、已配对且在线；文件或终端权限由你按需授权。",
+    ),
+    boundary: copy(
+      "This is AI access to approved tools and files, not live screen sharing, unattended wake-on-LAN or a promise that an offline device can be reached.",
+      "这通过 AI 访问获授权工具和文件，不是实时屏幕共享，也不保证远程唤醒或连接离线设备。",
     ),
   },
   "job-applications": {

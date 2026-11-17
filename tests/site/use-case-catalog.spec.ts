@@ -75,6 +75,53 @@ test("Media Intelligence, Manim and Blender open localized detail pages in Arc a
       );
     }
 });
+test("remote rescue, server troubleshooting and travel access have working bilingual detail pages", async ({
+  page,
+}, info) => {
+  const language = info.project.metadata.language === "zh" ? "zh" : "en",
+    prefix = language === "zh" ? "/zh" : "";
+  const workflows = [
+    {
+      slug: "remote-rescue",
+      title:
+        language === "zh" ? "不在电脑旁，也能远程救急" : "Rescue your computer while you're away",
+    },
+    {
+      slug: "server-troubleshooting",
+      title: language === "zh" ? "在聊天里排查服务器故障" : "Troubleshoot a server from chat",
+    },
+    {
+      slug: "travel-access",
+      title:
+        language === "zh"
+          ? "旅行在外，访问家中的电脑"
+          : "Access your home computer while travelling",
+    },
+  ] as const;
+
+  await page.goto(prefix + "/use-cases");
+  for (const { slug } of workflows)
+    await expect(page.locator(`.useCaseRow[href^="${prefix}/use-cases/${slug}?"]`)).toHaveCount(1);
+
+  for (const { slug, title } of workflows) {
+    for (const mode of ["connect", "arc"] as const) {
+      await page.goto(`${prefix}/use-cases/${slug}?mode=${mode}`);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
+      await expect(page.locator(".casePrompt")).not.toBeEmpty();
+      const image = page.locator(".caseHeroArt img");
+      await expect(image).toHaveJSProperty("complete", true);
+      expect(
+        await image.evaluate((element: HTMLImageElement) => element.naturalWidth),
+        slug + " has a real illustration",
+      ).toBeGreaterThan(0);
+      if (mode === "arc")
+        await expect(page.locator(".casePrompt")).toContainText(
+          ARC_USE_CASES[slug].prompt[language],
+        );
+    }
+  }
+});
+
 test("legacy gallery bookmark resolves to the video creation detail", async ({ page }, info) => {
   const zh = info.project.metadata.language === "zh",
     prefix = zh ? "/zh" : "";

@@ -60,6 +60,9 @@ export function UseCaseCatalog() {
     "home-lab",
     "browser-research",
     "remote-support",
+    "remote-rescue",
+    "server-troubleshooting",
+    "travel-access",
   ];
   const needle = query.trim().toLocaleLowerCase();
   const all = cases(tr).filter((item) => mode === "connect" || !item.connectOnly);

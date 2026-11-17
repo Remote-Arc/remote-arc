@@ -134,5 +134,17 @@
   "video-analysis": {
     "kind": "research",
     "label": "REPORT"
+  },
+  "remote-rescue": {
+    "kind": "inspect",
+    "label": "RESCUE"
+  },
+  "server-troubleshooting": {
+    "kind": "server",
+    "label": "SERVER"
+  },
+  "travel-access": {
+    "kind": "devices",
+    "label": "TRAVEL"
   }
 }

@@ -11,13 +11,8 @@
   justify-content: space-between;
   gap: 16px;
 }
-.routinesHeader h1 {
-  margin: 4px 0 6px;
-}
-.routinesHeader p {
-  margin: 0;
-  max-width: 720px;
-  color: var(--muted);
+:root[data-theme] .appFrame[data-workspace] .routinesPage .routinesHeader {
+  margin-bottom: 0;
 }
 
 /* Buttons: global rules strip button borders with !important, so outlines are inset shadows. */

@@ -311,7 +311,7 @@ function renderDialog(arcAvailable: boolean, language: "en" | "zh" = "en") {
   });
   const dialogs = () => renderer.root.findAll((node: any) => node.type === "dialog");
   assert.equal(dialogs().length, 0);
-  const header = renderer.root.find((node: any) => node.props.className === "routinesHeader");
+  const header = renderer.root.findByType("header");
   await act(async () => byText(header, "button", en("routines.page.newRoutine")).props.onClick());
   assert.equal(dialogs().length, 1, "New routine opens the dialog");
   assert.deepEqual(chats, [], "New routine no longer goes straight to Arc");

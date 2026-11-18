@@ -9,6 +9,9 @@ type Trial = {
   started_at: string;
   expires_at: string;
   status: string;
+  trial_type: "stripe" | "legacy";
+  plan_label: string | null;
+  cancel_at_period_end: number;
   grantedCredits: number;
   spentCredits: number;
   reservedCredits: number;
@@ -174,8 +177,20 @@ export function AdminTrials({ preview = false }: { preview?: boolean }) {
                     <td>
                       <strong>{user.name || user.email}</strong>
                       <small>{user.email}</small>
+                      <small>
+                        {user.trial_type === "stripe"
+                          ? user.plan_label
+                            ? tr("admin.payments.adminTrials.planTrial", { plan: user.plan_label })
+                            : tr("admin.payments.adminTrials.cardBackedTrial")
+                          : tr("admin.payments.adminTrials.legacyArcTrial")}
+                      </small>
                     </td>
-                    <td>{labels[user.status] || user.status}</td>
+                    <td>
+                      {labels[user.status] || user.status}
+                      {user.status === "active" && user.cancel_at_period_end === 1 && (
+                        <small>{tr("admin.payments.adminTrials.endsWithoutRenewal")}</small>
+                      )}
+                    </td>
                     <td>
                       {date(user.started_at)}
                       <small>

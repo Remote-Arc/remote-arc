@@ -164,3 +164,65 @@ test("A failed action keeps the routine as it was and says why", async ({ page }
   await expect(detail.getByRole("alert")).toContainText("Simulated update failure");
   await expect(detail.getByRole("button", { name: /^(Pause|暂停)$/ })).toBeVisible();
 });
+
+test("Routines uses the same heading styles as Devices", async ({ page }) => {
+  const headerStyles = () =>
+    page.locator("main").evaluate((main) => {
+      const properties = ["color", "font-size", "font-weight", "letter-spacing", "line-height"];
+      const read = (element: Element) => {
+        const style = getComputedStyle(element);
+        return properties.map((property) => style.getPropertyValue(property));
+      };
+      const heading = main.querySelector("h1")!;
+      return [read(heading), read(heading.nextElementSibling!)];
+    });
+  for (const workspace of ["connect", "agent"]) {
+    await page.goto(`/dashboard/${workspace}/devices`);
+    await expect(page.locator("main h1")).toBeVisible();
+    const expected = await headerStyles();
+    await page.goto(`/dashboard/${workspace}/tasks`);
+    const title = page.getByRole("heading", { level: 1, name: /^(Routines|例程)$/ });
+    await expect(title).toBeVisible();
+    await expect.poll(headerStyles).toEqual(expected);
+    const create = page.getByRole("button", { name: /^(New routine|新建例程)$/ }).first();
+    await expect(create).toBeVisible();
+  }
+});
+
+test("Dashboard headings stay in place when switching tabs", async ({ page }) => {
+  await page.goto("/dashboard/connect/devices");
+  const heading = page.locator(".dashboardMain h1");
+  const readPosition = () =>
+    heading.evaluate((title) => {
+      const subtitle = title.nextElementSibling;
+      return {
+        title: title.getBoundingClientRect().top,
+        subtitle: subtitle?.matches("p") ? subtitle.getBoundingClientRect().top : null,
+      };
+    });
+  await expect(heading).toBeVisible();
+  const baseline = await readPosition();
+  const openTab = async (tab: string) => {
+    const button =
+      tab === "settings"
+        ? page.getByRole("button", { name: /^(Settings|设置)$/ })
+        : page.locator(`[data-dashboard-tab="${tab}"]:visible`);
+    await button.first().click();
+    await expect(page.locator(".appFrame")).toHaveAttribute("data-active-tab", tab);
+    await expect(heading).toBeVisible();
+  };
+
+  for (const tab of ["automations", "apps", "connect", "settings", "overview", "devices"]) {
+    await openTab(tab);
+    await expect.poll(readPosition).toEqual(baseline);
+  }
+
+  await page.locator(".dashboardMain").evaluate((main) => {
+    main.style.minHeight = "200vh";
+    window.scrollTo({ top: 160, behavior: "instant" });
+  });
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await openTab("automations");
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect.poll(readPosition).toEqual(baseline);
+});

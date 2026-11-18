@@ -1286,7 +1286,7 @@ export function AppsManager({
   const availableCount = snapshot?.apps.filter((app) => app.configured).length || 0;
   return (
     <div className="appsManager">
-      <header className="appsManagerHeader">
+      <header className="overviewTopbar appsManagerHeader">
         <div>
           <span className="eyebrow">{tr("apps.appsManager.yourAiSToolkit")}</span>
           <h1>{tr("apps.appsManager.apps")}</h1>

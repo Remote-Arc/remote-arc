@@ -105,7 +105,7 @@ export function RoutinesPage({
           onClose={() => setCreating(false)}
         />
       )}
-      <header className="routinesHeader">
+      <header className="overviewTopbar routinesHeader">
         <div>
           <span className="eyebrow">{tr("routines.page.eyebrow")}</span>
           <h1>{tr("routines.page.title")}</h1>

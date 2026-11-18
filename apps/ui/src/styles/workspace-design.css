@@ -297,6 +297,21 @@
   margin-bottom: 22px;
   border-bottom: 1px solid var(--dash-line);
 }
+:root[data-theme]
+  .appFrame[data-workspace]
+  :is(.overviewTopbar, .pageHeader, .securityTopbar)
+  > div:first-child {
+  align-self: start;
+  min-width: 0;
+}
+:root[data-theme]
+  .appFrame[data-workspace]
+  :is(.overviewTopbar, .pageHeader, .securityTopbar)
+  > div:first-child
+  > .eyebrow {
+  display: block;
+  line-height: 18px;
+}
 :root[data-theme] .appFrame[data-workspace] :is(.overviewTopbar, .pageHeader, .securityTopbar) h1 {
   font-size: 30px !important;
   line-height: 1.2;
@@ -306,6 +321,7 @@
   margin: 8px 0;
 }
 :root[data-theme] .appFrame[data-workspace] :is(.overviewTopbar, .pageHeader, .securityTopbar) p {
+  margin: 0;
   font-size: 16px;
   line-height: 1.6;
   color: var(--dash-muted);

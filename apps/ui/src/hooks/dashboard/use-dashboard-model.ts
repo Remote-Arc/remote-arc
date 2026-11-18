@@ -179,6 +179,7 @@ export function useDashboardModel({
     const path = DASHBOARD_PATHS[tab];
     if (location.pathname !== path) {
       history.pushState({}, "", path);
+      window.scrollTo({ top: 0, behavior: "instant" });
       recordProductView();
     }
     setActive(tab);

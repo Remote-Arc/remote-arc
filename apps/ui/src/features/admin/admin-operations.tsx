@@ -103,8 +103,8 @@ type OperationsData = {
     users: number | null;
     devices: number | null;
     online: number | null;
+    /** Estimated from the table's row ids: deleted rows in between are counted. */
     auditRows: number | null;
-    auditLast7d: number | null;
     monthlyCalls: number | null;
   };
   unavailable?: OperationsSection[];

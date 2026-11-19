@@ -11,6 +11,7 @@ import {
   type LifecycleEmail,
   type LifecycleKind,
   type LifecyclePreview,
+  type RetiredLifecycleKind,
   type LifecycleStatus,
   type LifecycleSummary,
 } from "./followup-model.js";
@@ -18,23 +19,25 @@ import {
 const KINDS: LifecycleKind[] = [
   "welcome",
   "setup_reminder",
-  "connect_trial_started",
-  "connect_trial_ending",
+  "free_allowance_used",
+  "pro_trial_started",
   "plan_started",
-  "pro_trial_ending",
 ];
 // The sender gives up on queued emails older than this (STALE_MS in the relay).
 const STALE_HOURS = 72;
 // Queued longer than this while sending is on usually means the shared budget is used up.
 const SLOW_QUEUE_MINUTES = 30;
 
-export const lifecycleKindLabel = (kind: LifecycleKind, tr: Translate) =>
+export const lifecycleKindLabel = (kind: LifecycleKind | RetiredLifecycleKind, tr: Translate) =>
   ({
     welcome: tr("admin.followups.followupLifecycle.welcomeAfterSignUp"),
     setup_reminder: tr("admin.followups.followupLifecycle.setupReminder"),
+    free_allowance_used: tr("admin.followups.followupLifecycle.freeAllowanceUsed"),
+    pro_trial_started: tr("admin.followups.followupLifecycle.proTrialStarted"),
+    plan_started: tr("admin.followups.followupLifecycle.paidPlanConfirmation"),
+    // Retired: they appear only in a person's history.
     connect_trial_started: tr("admin.followups.followupLifecycle.connectTrialStarted"),
     connect_trial_ending: tr("admin.followups.followupLifecycle.connectTrialEnding"),
-    plan_started: tr("admin.followups.followupLifecycle.paidPlanConfirmation"),
     pro_trial_ending: tr("admin.followups.followupLifecycle.proTrialEnding"),
   })[kind] || kind;
 
@@ -56,6 +59,8 @@ const reasonLabel = (code: string, tr: Translate) =>
     ALREADY_PAID: tr("admin.followups.followupLifecycle.reasonAlreadyPaid"),
     TRIAL_ENDED: tr("admin.followups.followupLifecycle.reasonTrialEnded"),
     SETUP_COMPLETE: tr("admin.followups.followupLifecycle.reasonSetupComplete"),
+    CANCELLED: tr("admin.followups.followupLifecycle.reasonCancelled"),
+    RETIRED: tr("admin.followups.followupLifecycle.reasonRetired"),
     PROVIDER_TIMEOUT: tr("admin.followups.followupLifecycle.reasonProviderTimeout"),
   })[code] || code;
 

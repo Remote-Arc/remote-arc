@@ -611,10 +611,9 @@ export function createFollowupPreview(storage: Pick<Storage, "getItem" | "setIte
         const kinds = [
           "welcome",
           "setup_reminder",
-          "connect_trial_started",
-          "connect_trial_ending",
+          "free_allowance_used",
+          "pro_trial_started",
           "plan_started",
-          "pro_trial_ending",
         ];
         if (
           !kinds.includes(kind) ||
@@ -628,10 +627,11 @@ export function createFollowupPreview(storage: Pick<Storage, "getItem" | "setIte
           locale,
           ...(setupPreviewsFor(kind).length ? { setup: WELCOME_PREVIEW_SETUPS[setup] } : {}),
           freeCalls: 10000,
-          trialDays: CONNECT_FREE_OVERFLOW.trialDays,
           slowLaneCallsPerMinute: CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute,
           unlimitedCents: 1900,
-          trialEndsAt: days(kind === "connect_trial_started" ? CONNECT_FREE_OVERFLOW.trialDays : 1),
+          trialEndsAt: days(7),
+          proTrial: { days: 7, credits: 300 },
+          allowanceResetsAt: days(12),
           plan: {
             id: CONNECT_UNLIMITED_PLAN_ID,
             label: "Pro",
@@ -645,7 +645,7 @@ export function createFollowupPreview(storage: Pick<Storage, "getItem" | "setIte
             checkout: "https://agent.remotearc.app/checkout?product=pro",
             billing: "https://agent.remotearc.app/settings?section=billing",
             unsubscribe:
-              kind === "plan_started" || kind === "pro_trial_ending"
+              kind === "plan_started" || kind === "pro_trial_started"
                 ? null
                 : "https://remotearc.app/email/follow-up/unsubscribe?token=preview",
           },

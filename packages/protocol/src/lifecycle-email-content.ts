@@ -21,22 +21,21 @@ import {
  * account's locale, or English when it is unknown. Every dynamic value is
  * escaped; links are fixed product routes. */
 export type LifecycleKind =
-  | "welcome"
-  | "setup_reminder"
-  | "connect_trial_started"
-  | "connect_trial_ending"
-  | "plan_started"
-  | "pro_trial_ending";
+  "welcome" | "setup_reminder" | "pro_trial_started" | "free_allowance_used" | "plan_started";
 
 export type LifecycleContent = {
   kind: LifecycleKind;
   locale: "en" | "zh";
   freeCalls: number | null;
-  trialDays: number;
   slowLaneCallsPerMinute: number;
   /** The paid plan's monthly price (Pro, product id connect-unlimited-v1), when the catalog has one. */
   unlimitedCents: number | null;
   trialEndsAt?: string;
+  /** Pro trial started: the trial's own terms. Welcome and Free allowance used: the
+   * trial this account can start now, absent when it cannot. */
+  proTrial?: { days: number; credits: number };
+  /** Free allowance used: when this month's allowance comes back. */
+  allowanceResetsAt?: string;
   plan?: {
     id: string;
     label: string;
@@ -127,7 +126,7 @@ type Copy = {
 function copy(content: LifecycleContent): Copy {
   const zh = content.locale === "zh",
     tr = (en: string, cn: string) => (zh ? cn : en);
-  const { trialDays, slowLaneCallsPerMinute: perMinute } = content;
+  const { slowLaneCallsPerMinute: perMinute } = content;
   const calls = content.freeCalls === null ? null : content.freeCalls.toLocaleString("en-US");
   const price = content.unlimitedCents;
   const date = (iso: string) => {
@@ -301,9 +300,18 @@ function copy(content: LifecycleContent): Copy {
                   )
                 : "") +
               tr(
-                `If you run out, your agents keep going: a ${trialDays}-day unlimited Connect trial starts automatically (once per account), then calls continue at ${perMinute} per minute until the monthly reset.`,
-                `用完也不会断：会自动开启 ${trialDays} 天无限调用试用（每个账号仅一次），之后以每分钟 ${perMinute} 次继续，直到月度重置。`,
-              ),
+                `If you run out, tools that only read keep working at ${perMinute} calls a minute until the monthly reset; calls that change files, run commands or act in an App pause.`,
+                `用完后，只读取的工具会以每分钟 ${perMinute} 次继续运行，直到月度重置；修改文件、运行命令或在应用中操作的调用会暂停。`,
+              ) +
+              (content.proTrial
+                ? tr(
+                    ` To stay at full speed, try Pro free for ${content.proTrial.days} days.`,
+                    `想一直保持全速，可以免费试用 Pro ${content.proTrial.days} 天。`,
+                  )
+                : tr(
+                    " Pro keeps your agents at full speed all month.",
+                    "Pro 可让你的 agent 整月保持全速。",
+                  )),
           },
           {
             type: "timeline",
@@ -320,14 +328,9 @@ function copy(content: LifecycleContent): Copy {
               {
                 label: tr("If you run out", "用完后"),
                 value: tr(
-                  `${trialDays} days unlimited, once per account`,
-                  `${trialDays} 天无限调用，每个账号一次`,
+                  `Read-only, ${perMinute} calls a minute`,
+                  `仅读取，每分钟 ${perMinute} 次`,
                 ),
-                state: "next",
-              },
-              {
-                label: tr("Then", "之后"),
-                value: tr(`${perMinute} calls a minute`, `每分钟 ${perMinute} 次`),
                 state: "next",
               },
               {
@@ -409,27 +412,44 @@ function copy(content: LifecycleContent): Copy {
         cta: next,
       };
     }
-    case "connect_trial_started":
+    case "pro_trial_started": {
+      // Sent when a card-backed trial starts, for the plan and billing period it is
+      // on when sent. It is the only email before the first charge, so it says when
+      // that charge comes and how to cancel, which happens only in billing settings.
+      const name = content.plan?.label || "Pro",
+        cents = content.plan ? content.plan.cents : price,
+        yearly = content.plan?.interval === "year",
+        credits = content.proTrial?.credits ?? 0,
+        charge =
+          cents === null || cents === undefined
+            ? null
+            : yearly
+              ? tr(`${dollars(cents)}/year`, `${dollars(cents)}/年`)
+              : tr(`${dollars(cents)}/month`, `${dollars(cents)}/月`);
       return {
-        subject: tr(
-          `Your ${trialDays}-day unlimited Connect trial has started`,
-          `你的 ${trialDays} 天无限调用试用已开启`,
-        ),
-        preheader: tr(
-          "You used this month’s free calls. Your agents keep running at full speed.",
-          "本月免费调用已用完，你的 agent 会继续全速运行。",
-        ),
-        eyebrow: tr(`${trialDays}-day trial`, `${trialDays} 天试用`),
-        headline: tr("Your agents keep running at full speed", "你的 agent 会继续全速运行"),
-        intro: tr(
-          `No call cap for the next ${trialDays} days.`,
-          `接下来 ${trialDays} 天，调用不限次数。`,
-        ),
+        subject: tr(`Your ${name} trial has started`, `你的 ${name} 试用已开始`),
+        preheader: trialEnd
+          ? tr(
+              `Nothing is charged before ${trialEnd}. Cancel any time before then in billing settings.`,
+              `${trialEnd} 前不会扣费，在此之前可随时在账单设置中取消。`,
+            )
+          : tr(
+              "Nothing is charged during the trial. Cancel any time in billing settings.",
+              "试用期间不会扣费，可随时在账单设置中取消。",
+            ),
+        eyebrow: tr(`${name} trial`, `${name} 试用`),
+        headline: tr(`${name} is on: your trial has started`, `${name} 已开通，试用已开始`),
+        intro: trialEnd
+          ? tr(
+              `Your trial runs until ${trialEnd} (UTC), with nothing charged until then.`,
+              `试用至 ${trialEnd}（UTC），在此之前不会扣费。`,
+            )
+          : tr("Nothing is charged during the trial.", "试用期间不会扣费。"),
         hero: "trial-started-hero.png",
         paragraphs: [
           tr(
-            `You used this month’s free Connect calls, so instead of stopping your work we started your one-time ${trialDays}-day unlimited Connect trial. There is no call cap until it ends.`,
-            `你已用完本月的免费 Connect 调用。为了不打断你的工作，我们为你开启了一次性的 ${trialDays} 天无限调用试用，试用期间不限调用次数。`,
+            `Your agents now run at full speed: no monthly Connect call cap and no slow lane.${credits > 0 ? ` ${credits.toLocaleString("en")} Arc Credits are yours to use during the trial.` : ""}`,
+            `你的 agent 现在可以全速运行：不限每月 Connect 调用次数，也没有慢速通道。${credits > 0 ? `试用期间另有 ${credits.toLocaleString("en")} Arc Credits 可用。` : ""}`,
           ),
         ],
         sections: [
@@ -437,55 +457,76 @@ function copy(content: LifecycleContent): Copy {
             label: tr("What happens next", "接下来会怎样"),
             type: "timeline",
             stages: [
-              { label: tr("Free calls", "免费额度"), value: tr("Used", "已用完"), state: "done" },
               {
-                label: tr("Unlimited trial", "无限调用试用"),
-                value: trialEnd
-                  ? tr(`Until ${trialEnd}`, `至 ${trialEnd}`)
-                  : tr(`${trialDays} days`, `${trialDays} 天`),
+                label: tr("Today", "今天"),
+                value: tr("Trial started", "试用开始"),
                 state: "current",
               },
-              { label: tr("After the trial", "试用结束后"), value: slowLane, state: "next" },
               {
-                label: tr("Monthly reset", "月度重置"),
-                value: tr("Free calls back", "免费额度恢复"),
+                label: trialEnd ?? tr("Trial ends", "试用结束"),
+                value:
+                  charge === null
+                    ? tr("First charge", "首次扣费")
+                    : tr(`First charge: ${charge}`, `首次扣费：${charge}`),
+                state: "next",
+              },
+              {
+                label: tr("Then", "之后"),
+                value: yearly
+                  ? tr("Renews every year", "每年自动续费")
+                  : tr("Renews every month", "每月自动续费"),
                 state: "next",
               },
             ],
           },
           {
+            label: tr("Your trial", "试用详情"),
+            type: "facts",
+            rows: [
+              { label: tr("Plan", "套餐"), value: name },
+              ...(charge === null ? [] : [{ label: tr("Price", "价格"), value: charge }]),
+              ...(trialEnd ? [{ label: tr("First charge", "首次扣费"), value: trialEnd }] : []),
+            ],
+          },
+          {
             type: "paragraph",
             text: tr(
-              "After that, Free continues in the slow lane until your allowance resets. Pro keeps your agents at full speed all month.",
-              "试用结束后，Free 会进入慢速通道，直到额度重置。Pro 可让你的 agent 整月保持全速。",
+              `To keep ${name}, you do not need to do anything: the payment method you saved is charged when the trial ends. To stop before the first charge, choose Cancel renewal in Settings → Plan & usage before the trial ends. ${name} stays until then and you are not charged; computers and routines beyond the Free plan then pause, and nothing is deleted.`,
+              `如果要继续使用 ${name}，无需任何操作：试用结束时会从你保存的付款方式扣款。如果不想被扣费，请在试用结束前到“设置 → 套餐与用量”选择“取消续费”：${name} 仍可用到试用结束，不会扣费；之后超出 Free 套餐的电脑和 routine 会暂停，不会删除任何内容。`,
             ),
           },
-          ...(proPrice
-            ? [{ type: "facts" as const, rows: [{ label: "Pro", value: proPrice }] }]
-            : []),
         ],
-        cta: checkout,
+        cta: { href: content.links.billing, label: tr("View plan & usage", "查看套餐与用量") },
       };
-    case "connect_trial_ending":
+    }
+    case "free_allowance_used": {
+      // Sent once a month, when a Free account uses the last call of its allowance.
+      // Past it, reads continue in the slow lane and calls that change something pause.
+      const trial = content.proTrial,
+        reset = content.allowanceResetsAt ? date(content.allowanceResetsAt) : null;
       return {
-        subject: tr("Your full-speed trial ends soon", "你的全速试用即将结束"),
-        preheader: tr(
-          "Keep your agents at full speed after the trial.",
-          "试用结束后，也可以让你的 agent 保持全速。",
-        ),
-        eyebrow: tr("Trial ending", "试用即将结束"),
-        headline: tr("Your full-speed trial ends soon", "你的全速试用即将结束"),
-        intro: trialEnd
+        subject: tr("You have used this month’s Free calls", "本月 Free 调用额度已用完"),
+        preheader: trial
           ? tr(
-              `Your unlimited trial ends on ${trialEnd} (UTC).`,
-              `你的无限调用试用将于 ${trialEnd}（UTC）结束。`,
+              `Start a ${trial.days}-day Pro trial to keep your agents at full speed.`,
+              `开始 ${trial.days} 天 Pro 试用，让你的 agent 继续全速运行。`,
             )
-          : tr("Your unlimited trial ends soon.", "你的无限调用试用即将结束。"),
+          : tr(
+              "Choose Pro to keep your agents at full speed.",
+              "升级 Pro，让你的 agent 继续全速运行。",
+            ),
+        eyebrow: tr("Allowance used", "额度已用完"),
+        headline: calls
+          ? tr(`All ${calls} Free calls are used`, `本月 ${calls} 次免费调用已用完`)
+          : tr("This month’s Free calls are used", "本月免费调用已用完"),
+        intro: reset
+          ? tr(`Your allowance comes back on ${reset} (UTC).`, `你的额度将于 ${reset}（UTC）恢复。`)
+          : tr("Your allowance comes back at the monthly reset.", "你的额度将在月度重置后恢复。"),
         hero: "trial-ending-hero.png",
         paragraphs: [
           tr(
-            `After the trial, Free goes back to its monthly allowance. Once that is used, calls keep working in the slow lane at ${perMinute} per minute until the monthly reset.`,
-            `试用结束后，Free 会回到每月额度；额度用完后，调用会以每分钟 ${perMinute} 次的慢速通道继续，直到月度重置。`,
+            `Until the reset, tools that only read keep working in the slow lane at ${perMinute} calls a minute. Calls that change files, run commands or act in an App pause.`,
+            `在月度重置前，只读取的工具会以每分钟 ${perMinute} 次的慢速通道继续运行；修改文件、运行命令或在应用中操作的调用会暂停。`,
           ),
         ],
         sections: [
@@ -497,22 +538,22 @@ function copy(content: LifecycleContent): Copy {
                 name: "Free",
                 price: "US$0",
                 items: [
-                  calls
-                    ? tr(`${calls} calls a month`, `每月 ${calls} 次调用`)
-                    : tr("Monthly allowance", "每月额度"),
-                  tr(`Then: ${slowLane}`, `之后：${slowLane}`),
+                  slowLane,
+                  tr("Read-only tools until the reset", "重置前只能使用读取类工具"),
                   tr("Back to full speed at the monthly reset", "月度重置后恢复"),
                 ],
               },
               {
                 name: "Pro",
                 price: proPrice ?? tr("Full speed all month", "整月全速"),
-                badge: tr("Recommended", "推荐"),
+                badge: trial
+                  ? tr(`${trial.days}-day free trial`, `${trial.days} 天免费试用`)
+                  : tr("Recommended", "推荐"),
                 highlight: true,
                 items: [
                   tr("No call cap", "不限调用次数"),
                   tr("No slow lane", "没有慢速通道"),
-                  tr("Full speed all month", "整月保持全速"),
+                  tr("Change files, run commands and use Apps", "可修改文件、运行命令和使用应用"),
                   tr("Cancel any time", "随时可以取消"),
                 ],
               },
@@ -520,67 +561,23 @@ function copy(content: LifecycleContent): Copy {
           },
           {
             type: "paragraph",
-            text: tr(
-              "Choose Pro to keep your agents at full speed, with no call cap and no slow lane.",
-              "选择 Pro，让你的 agent 保持全速：不限调用次数，也没有慢速通道。",
-            ),
+            text: trial
+              ? tr(
+                  `Try Pro free for ${trial.days} days: save a payment method to start, nothing is charged during the trial, and you can cancel any time before it ends.`,
+                  `Pro 可免费试用 ${trial.days} 天：绑定付款方式即可开始，试用期间不扣费，结束前可随时取消。`,
+                )
+              : tr(
+                  "Choose Pro to keep your agents at full speed, with no call cap and no slow lane.",
+                  "选择 Pro，让你的 agent 保持全速：不限调用次数，也没有慢速通道。",
+                ),
           },
         ],
-        cta: checkout,
-      };
-    case "pro_trial_ending": {
-      // Sent before the trial's first charge, for the plan and billing period the trial
-      // is on when it is sent. Cancelling happens only in the Dashboard's billing
-      // settings, so the email links there and nowhere else.
-      const name = content.plan?.label || "Pro",
-        cents = content.plan ? content.plan.cents : price,
-        yearly = content.plan?.interval === "year",
-        charge =
-          cents === null || cents === undefined
-            ? null
-            : yearly
-              ? tr(`${dollars(cents)}/year`, `${dollars(cents)}/年`)
-              : tr(`${dollars(cents)}/month`, `${dollars(cents)}/月`);
-      return {
-        subject: trialEnd
-          ? tr(`Your ${name} trial ends on ${trialEnd}`, `你的 ${name} 试用将于 ${trialEnd} 结束`)
-          : tr(`Your ${name} trial ends soon`, `你的 ${name} 试用即将结束`),
-        preheader: tr(
-          `${name} continues after the trial unless you cancel renewal in billing settings.`,
-          `除非你在账单设置中取消续费，试用结束后会继续使用 ${name}。`,
-        ),
-        eyebrow: tr(`${name} trial`, `${name} 试用`),
-        headline: tr(`Your ${name} trial ends soon`, `你的 ${name} 试用即将结束`),
-        intro: tr(
-          `When the trial ends${trialEnd ? ` on ${trialEnd} (UTC)` : ""}, ${name} continues${charge === null ? "" : ` at ${charge}`}, charged to the payment method you saved.`,
-          `试用${trialEnd ? `将于 ${trialEnd}（UTC）` : ""}结束，之后会继续使用 ${name}${charge === null ? "" : `，按 ${charge} 扣费`}，从你保存的付款方式扣款。`,
-        ),
-        hero: "trial-ending-hero.png",
-        paragraphs: [
-          tr(
-            `To keep ${name}, you do not need to do anything. To stop before the first charge, choose Cancel renewal in Settings → Plan & usage on your Remote Arc Dashboard before the trial ends: ${name} stays until then and you are not charged.`,
-            `如果要继续使用 ${name}，无需任何操作。如果不想被扣费，请在试用结束前到 Remote Arc Dashboard 的“设置 → 套餐与用量”选择“取消续费”：${name} 仍可用到试用结束，不会扣费。`,
-          ),
-        ],
-        sections: [
-          {
-            label: tr("After the trial", "试用结束后"),
-            type: "facts",
-            rows: [
-              { label: tr("Plan", "套餐"), value: name },
-              ...(charge === null ? [] : [{ label: tr("Price", "价格"), value: charge }]),
-              ...(trialEnd ? [{ label: tr("First charge", "首次扣费"), value: trialEnd }] : []),
-            ],
-          },
-          {
-            type: "paragraph",
-            text: tr(
-              "If you cancel, computers and routines beyond the Free plan pause when the trial ends; nothing is deleted, and they resume when you subscribe.",
-              "如果取消，试用结束后超出 Free 套餐的电脑和 routine 会暂停；不会删除任何内容，订阅后即可恢复。",
-            ),
-          },
-        ],
-        cta: { href: content.links.billing, label: tr("Open billing settings", "打开账单设置") },
+        cta: trial
+          ? {
+              href: content.links.checkout,
+              label: tr(`Start ${trial.days}-day free trial`, `开始 ${trial.days} 天免费试用`),
+            }
+          : checkout,
       };
     }
     case "plan_started": {

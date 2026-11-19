@@ -290,7 +290,7 @@ async function withLifecycleData(page: import("@playwright/test").Page) {
           recent: [
             { kind: "welcome", status: "sent", count: 4 },
             { kind: "welcome", status: "queued", count: 3 },
-            { kind: "connect_trial_ending", status: "failed", count: 1 },
+            { kind: "free_allowance_used", status: "failed", count: 1 },
           ],
         };
         if (value.emailBudget)
@@ -338,39 +338,47 @@ test("Automated lifecycle emails show on the follow-up page and in each person's
   );
   const welcome = panel.locator("tbody tr").filter({ hasText: /Welcome after sign-up|注册欢迎/ });
   await expect(welcome.locator("td")).toHaveText(["4", "3", "0", "0", /^(Preview|预览)$/]);
-  const ending = panel.locator("tbody tr").filter({ hasText: /Connect trial ending|试用即将结束/ });
-  await expect(ending.locator("td[data-attention]")).toHaveText("1");
+  const allowance = panel
+    .locator("tbody tr")
+    .filter({ hasText: /Free allowance used|Free 额度用满/ });
+  await expect(allowance.locator("td[data-attention]")).toHaveText("1");
+  // Retired emails are no longer listed.
+  await expect(panel.locator("tbody tr")).toHaveCount(5);
+  await expect(panel.locator("tbody")).not.toContainText(/Connect trial|首次扣费提醒/);
   await expect(panel).toContainText(/4 automated emails went out|发出 4 封自动邮件/);
 
   // Each automated email can be reviewed in both languages without sending anything.
-  await ending.getByRole("button", { name: /Preview|预览/ }).click();
+  await allowance.getByRole("button", { name: /Preview|预览/ }).click();
   const preview = panel.locator(".followupLifecyclePreview");
   await expect(preview.locator(".followupLifecyclePreviewSubject")).toContainText(
-    /你的全速试用即将结束|Your full-speed trial ends soon/,
+    /本月 Free 调用额度已用完|You have used this month’s Free calls/,
   );
   const email = preview.frameLocator("iframe");
   await expect(email.locator("h1")).toHaveText(
-    /你的全速试用即将结束|Your full-speed trial ends soon/,
+    /本月 10,000 次免费调用已用完|All 10,000 Free calls are used/,
   );
   await expect(email.locator("img[src*='/email-art/trial-ending-hero.png']")).toHaveCount(1);
   await preview
     .getByRole("button", { name: /^(English|中文)$/ })
     .last()
     .click();
-  await expect(email.locator("h1")).toHaveText("Your full-speed trial ends soon");
-  await expect(email.locator("body")).toContainText("Recommended");
+  await expect(email.locator("h1")).toHaveText("All 10,000 Free calls are used");
+  await expect(email.locator("body")).toContainText("Start 7-day free trial");
   await preview.getByRole("button", { name: /^(Chinese|中文)$/ }).click();
-  await expect(email.locator("h1")).toHaveText("你的全速试用即将结束");
+  await expect(email.locator("h1")).toHaveText("本月 10,000 次免费调用已用完");
   await preview.getByRole("button", { name: /Close preview|关闭预览/ }).click();
   await expect(preview).toHaveCount(0);
 
-  // The Pro trial reminder is transactional and points only to billing settings, where
+  // The Pro trial confirmation is transactional and points only to billing settings, where
   // renewal is cancelled; the email itself offers no way to cancel or unsubscribe.
-  const proTrialReminder = panel
+  const proTrialStarted = panel
     .locator("tbody tr")
-    .filter({ hasText: /Pro trial ending|Pro 试用首次扣费提醒/ });
-  await proTrialReminder.getByRole("button", { name: /Preview|预览/ }).click();
-  await expect(email.locator("h1")).toHaveText(/Your Pro trial ends soon|你的 Pro 试用即将结束/);
+    .filter({ hasText: /Pro trial started|Pro 试用开始/ });
+  await proTrialStarted.getByRole("button", { name: /Preview|预览/ }).click();
+  await expect(email.locator("h1")).toHaveText(
+    /Pro is on: your trial has started|Pro 已开通，试用已开始/,
+  );
+  await expect(email.locator("body")).toContainText(/First charge|首次扣费/);
   await expect(email.locator("a[href$='/settings?section=billing']").first()).toBeVisible();
   await expect(email.locator("a[href*='unsubscribe']")).toHaveCount(0);
   await preview.getByRole("button", { name: /Close preview|关闭预览/ }).click();
@@ -409,6 +417,10 @@ test("Automated lifecycle emails show on the follow-up page and in each person's
   await expect(history.locator("article").first()).toContainText(/Sent|已发送/);
   await expect(history.locator("article").nth(1)).toContainText(
     /unsubscribed from follow-up email|用户已退订跟进邮件/,
+  );
+  // A retired kind keeps a readable name in history.
+  await expect(history.locator("article").nth(1)).toContainText(
+    /Connect trial ending \(retired\)|试用即将结束（已停用）/,
   );
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))

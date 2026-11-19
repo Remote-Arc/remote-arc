@@ -57,6 +57,8 @@ const PreviewElements =
         })),
       )
     : null;
+/** Why a submitted payment did not go through, as recorded in product events. */
+type PaymentFailure = "PAYMENT_DECLINED" | "PAYMENT_DETAILS_INVALID" | "PAYMENT_CONFIRM_FAILED";
 export function StripeEmbeddedCheckout(props: CheckoutProps) {
   return PreviewCheckout ? (
     <Suspense fallback={null}>
@@ -402,16 +404,29 @@ function LiveElementsCheckout({ session, locale, tr, onComplete, summary }: Elem
     lock.current = true;
     setBusy(true);
     setError("");
+    // Only a bounded category is recorded: never the message, decline code or card details.
+    const failed = (errorCode: PaymentFailure) =>
+      trackProductEvent("billing.payment.failed_client", {
+        entityId: session.sessionId,
+        errorCode,
+      });
+    trackProductEvent("billing.payment.submitted_client", { entityId: session.sessionId });
     try {
       // Cards finish here; 3D Secure opens Stripe's own dialog, redirect methods return via return_url.
       const result = await confirm();
       if (result.type === "error") {
+        // paymentFailed: Stripe tried the payment method and it was declined or not
+        // authenticated. Otherwise the details were rejected before anything was tried.
+        failed(
+          result.error.code === "paymentFailed" ? "PAYMENT_DECLINED" : "PAYMENT_DETAILS_INVALID",
+        );
         if (live.current)
           setError(result.error.message || tr("billing.stripeEmbedded.thePaymentDidNotGoThrough"));
         return;
       }
       if (live.current) completed.current();
     } catch {
+      failed("PAYMENT_CONFIRM_FAILED");
       if (live.current) setError(tr("billing.stripeEmbedded.thePaymentDidNotGoThrough"));
     } finally {
       lock.current = false;

@@ -8,6 +8,8 @@ type EventName =
   | "billing.checkout.continued"
   | "billing.payment.mounted"
   | "billing.payment.load_failed"
+  | "billing.payment.submitted_client"
+  | "billing.payment.failed_client"
   | "billing.payment.completed_client"
   | "billing.confirmation.waiting"
   | "billing.confirmation.displayed"

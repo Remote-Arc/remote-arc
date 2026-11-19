@@ -64,17 +64,15 @@ export type Mail = {
   batch_recipient_status?: string | null;
 };
 export type LifecycleKind =
-  | "welcome"
-  | "setup_reminder"
-  | "connect_trial_started"
-  | "connect_trial_ending"
-  | "plan_started"
-  | "pro_trial_ending";
+  "welcome" | "setup_reminder" | "free_allowance_used" | "pro_trial_started" | "plan_started";
+/** Kinds that are no longer sent but still appear in a person's history. */
+export type RetiredLifecycleKind =
+  "connect_trial_started" | "connect_trial_ending" | "pro_trial_ending";
 export type LifecycleStatus = "queued" | "sending" | "sent" | "failed" | "unknown" | "skipped";
 /** An automated email the product sent (or skipped) for one person. */
 export type LifecycleEmail = {
   id: string;
-  kind: LifecycleKind;
+  kind: LifecycleKind | RetiredLifecycleKind;
   status: LifecycleStatus;
   error_code: string | null;
   created_at: string;

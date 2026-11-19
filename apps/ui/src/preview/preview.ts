@@ -1263,7 +1263,6 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
           devices: 8,
           online: 2,
           auditRows: 33200,
-          auditLast7d: 10470,
           monthlyCalls: 6750,
         },
         limits: { free: 10000, plus: 10000 },

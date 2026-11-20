@@ -3,17 +3,24 @@ import { useI18n } from "../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../lib/marketing-paths.js";
 import "../styles/components/install-commands.css";
 
-/** The install commands the site offers, npx first. */
+/**
+ * The install commands the site offers. The shell installer comes first: it needs
+ * no Node.js, while npx fails for anyone without Node.js 20 (and is the choice on
+ * Windows, where `curl | sh` does not run).
+ */
 export const INSTALL_METHODS = [
-  { id: "npx", label: "npx", command: "npx remotelink@latest" },
   { id: "curl", label: "curl", command: "curl -fsSL https://remotearc.app/install.sh | sh" },
+  { id: "npx", label: "npx", command: "npx remotelink@latest" },
 ] as const;
 export type InstallMethodId = (typeof INSTALL_METHODS)[number]["id"];
+export const installCommand = (id: InstallMethodId) =>
+  INSTALL_METHODS.find((method) => method.id === id)!.command;
+const HASHES: Record<InstallMethodId, string> = { curl: "#shell-install", npx: "#npx-install" };
 
 export function InstallCommands({
   downloadHref,
   followHash = false,
-  defaultMethod = "npx",
+  defaultMethod = "curl",
 }: { downloadHref?: string; followHash?: boolean; defaultMethod?: InstallMethodId } = {}) {
   const { tr, locale } = useI18n();
   const id = useId();
@@ -40,7 +47,7 @@ export function InstallCommands({
     clearTimeout(reset.current);
     setSelected(index);
     if (followHash) {
-      const hash = index === 1 ? "#shell-install" : "#npx-install";
+      const hash = HASHES[INSTALL_METHODS[index]!.id];
       if (window.location.hash !== hash)
         window.history.replaceState(window.history.state, "", hash);
     }
@@ -50,8 +57,8 @@ export function InstallCommands({
   useEffect(() => {
     if (!followHash) return;
     const syncMethod = () => {
-      if (window.location.hash === "#shell-install") select(1);
-      else if (window.location.hash === "#npx-install") select(0);
+      const index = INSTALL_METHODS.findIndex((item) => HASHES[item.id] === window.location.hash);
+      if (index >= 0) select(index);
     };
     syncMethod();
     window.addEventListener("hashchange", syncMethod);

@@ -43,7 +43,8 @@ export const EMAIL_AI_CLIENTS = [
   { slug: "cursor", name: "Cursor" },
 ] as const;
 
-/** Commands that install the Agent. install.sh starts it after a first install. */
+/** Commands that install the Agent, the shell installer first: it needs no Node.js
+ * and starts the Agent after a first install. npx is for Windows or Node.js 20+. */
 export const AGENT_INSTALL_COMMANDS = {
   npx: "npx remotelink@latest",
   script: "curl -fsSL https://remotearc.app/install.sh | sh",

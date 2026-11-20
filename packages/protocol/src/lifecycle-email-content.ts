@@ -203,14 +203,17 @@ function copy(content: LifecycleContent): Copy {
         ),
         icon: art("icon-computer.png"),
         commands: [
+          // install.sh needs no Node.js and starts the Agent after a first install.
           {
-            label: tr("Any computer with Node.js", "已安装 Node.js 的电脑"),
-            command: AGENT_INSTALL_COMMANDS.npx,
-          },
-          // install.sh starts the Agent itself after a first install at a terminal.
-          {
-            label: tr("macOS / Linux, no Node.js", "macOS / Linux，无需 Node.js"),
+            label: tr("macOS, Linux or WSL, no Node.js", "macOS、Linux 或 WSL，无需 Node.js"),
             command: AGENT_INSTALL_COMMANDS.script,
+          },
+          {
+            label: tr(
+              "Windows, or any computer with Node.js 20+",
+              "Windows，或已安装 Node.js 20+ 的电脑",
+            ),
+            command: AGENT_INSTALL_COMMANDS.npx,
           },
         ],
         link: {

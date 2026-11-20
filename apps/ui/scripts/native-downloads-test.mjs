@@ -41,7 +41,7 @@ try {
     for (const icon of ["macos", "windows", "linux"])
       assert(html.includes("/platform-brands/" + icon + ".svg"));
     assert.match(html, /class="nativeShellChoice" href="#shell-install"/);
-    assert.match(html, /npx remotelink@latest/);
+    assert.match(html, /curl -fsSL https:\/\/remotearc\.app\/install\.sh \| sh/);
     assert.doesNotMatch(html, /ChatGPT|Type chmod \+x|输入 chmod \+x/);
     // Checksums come from Remote Arc's release mirror for the current Agent;
     // release notes stay on the website. Nothing links the GitHub repository

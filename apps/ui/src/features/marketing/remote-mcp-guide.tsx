@@ -1,4 +1,5 @@
 import React from "react";
+import { installCommand } from "../../components/install-commands.js";
 import { useI18n } from "../../hooks/use-i18n.js";
 import { LandingArchitectureDiagram, LandingInteractiveDemo } from "./home/landing-content.js";
 import "../../styles/marketing/remote-mcp-guide.css";
@@ -230,7 +231,7 @@ export function RemoteMcpGuide() {
                 <p>{tr(step.body)}</p>
                 {step.id === "pair" && (
                   <div className="rmgCommand">
-                    <code>npx remotelink</code>
+                    <code>{installCommand("curl")}</code>
                     <a href="/install/chatgpt">
                       {tr("marketing.remoteMcpGuide.viewPairingInstructions")} ↗
                     </a>

@@ -48,7 +48,9 @@ test("Home ends on one closing call to action with the install command", async (
     /\/dashboard\/connect\/overview$/,
   );
   await expect(closing.locator('a[href="/connect-ai"]')).toHaveCount(1);
-  await expect(closing.locator(".installCommands code")).toHaveText("npx remotelink@latest");
+  await expect(closing.locator(".installCommands code")).toHaveText(
+    "curl -fsSL https://remotearc.app/install.sh | sh",
+  );
   // The duplicate platform and security sections are gone from the home page.
   await expect(page.locator(".landingSetup, .homeSecurityIntro")).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

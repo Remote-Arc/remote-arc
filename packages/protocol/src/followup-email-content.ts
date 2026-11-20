@@ -81,13 +81,17 @@ export function followupPresentation(
             ),
             icon: art("icon-computer.png"),
             commands: [
+              // install.sh needs no Node.js and starts the Agent after a first install.
               {
-                label: tr("Any computer with Node.js", "已安装 Node.js 的电脑"),
-                command: AGENT_INSTALL_COMMANDS.npx,
+                label: tr("macOS, Linux or WSL, no Node.js", "macOS、Linux 或 WSL，无需 Node.js"),
+                command: AGENT_INSTALL_COMMANDS.script,
               },
               {
-                label: tr("macOS / Linux, no Node.js", "macOS / Linux，无需 Node.js"),
-                command: AGENT_INSTALL_COMMANDS.script,
+                label: tr(
+                  "Windows, or any computer with Node.js 20+",
+                  "Windows，或已安装 Node.js 20+ 的电脑",
+                ),
+                command: AGENT_INSTALL_COMMANDS.npx,
               },
             ],
             link: {

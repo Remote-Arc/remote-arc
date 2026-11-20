@@ -17,7 +17,8 @@ test("The hero headline connects your AI to your apps and computers, with no pro
   await expect(page.locator(".homeHero").getByRole("tab", { name: /^(Connect|Arc)$/ })).toHaveCount(
     0,
   );
-  await expect(page.locator(".homeHero").getByRole("tab")).toHaveText(["npx", "curl"]);
+  // The installer that needs no Node.js is offered first.
+  await expect(page.locator(".homeHero").getByRole("tab")).toHaveText(["curl", "npx"]);
   // Visitors without an AI of their own are offered Arc, under the install command.
   await expect(page.locator(".homeHero a.heroArcAction")).toHaveAttribute(
     "href",

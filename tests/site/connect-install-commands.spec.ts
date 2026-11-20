@@ -5,25 +5,21 @@ test("Connect homepage offers the install command in the hero and every method a
 }, info) => {
   const zh = info.project.metadata.language === "zh";
   await page.goto(zh ? "/zh" : "/");
-  // The hero offers npx first and switches to curl.
+  // The hero offers the no-Node.js installer first and switches to npx.
   const heroCommand = page.locator(".homeHero .heroCommand");
-  await expect(heroCommand.locator("code")).toHaveText("$ npx remotelink@latest");
-  await heroCommand.getByRole("tab", { name: "curl" }).click();
-  await expect(heroCommand.getByRole("tab", { name: "curl" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
   await expect(heroCommand.locator("code")).toHaveText(
     "$ curl -fsSL https://remotearc.app/install.sh | sh",
   );
+  await heroCommand.getByRole("tab", { name: "npx" }).click();
+  await expect(heroCommand.getByRole("tab", { name: "npx" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(heroCommand.locator("code")).toHaveText("$ npx remotelink@latest");
   const commands = page.locator(".homeClosing .installCommands");
   await commands.scrollIntoViewIfNeeded();
   await expect(commands).toBeVisible();
-  await expect(commands.locator("code")).toHaveText("npx remotelink@latest");
-  const npx = commands.getByRole("tab", { name: /npx/ });
-  await npx.focus();
-  await page.keyboard.press("ArrowRight");
-  await expect(commands.getByRole("tab", { name: /curl/ })).toBeFocused();
+  // The closing card also starts on the installer that needs no Node.js.
   await expect(commands.locator("code")).toHaveText(
     "curl -fsSL https://remotearc.app/install.sh | sh",
   );
@@ -31,6 +27,11 @@ test("Connect homepage offers the install command in the hero and every method a
     zh ? "首次安装后会直接启动 Agent" : "On a first install the Agent starts right away",
   );
   await expect(commands).toContainText(zh ? "无需 Node.js" : "No Node.js");
+  const curl = commands.getByRole("tab", { name: /curl/ });
+  await curl.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(commands.getByRole("tab", { name: /npx/ })).toBeFocused();
+  await expect(commands.locator("code")).toHaveText("npx remotelink@latest");
   await commands.locator("code").click();
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth))

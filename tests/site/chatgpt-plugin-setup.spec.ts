@@ -43,7 +43,9 @@ test("Published ChatGPT setup links installation, local pairing and a read-only 
     zh ? "不会在电脑上自动安装程序" : "does not install anything on your computer",
   );
   await expect(setup).toContainText(zh ? "相同的 Remote Arc 账号" : "same Remote Arc account");
-  await expect(setup.locator(".installCommands code")).toHaveText("npx remotelink@latest");
+  await expect(setup.locator(".installCommands code")).toHaveText(
+    "curl -fsSL https://remotearc.app/install.sh | sh",
+  );
   await expect(setup.getByRole("link", { name: /No Node.js|没有 Node.js/ })).toHaveAttribute(
     "href",
     zh ? "/zh/downloads" : "/downloads",

@@ -10,7 +10,9 @@ test("Native download cards use the stable channel and show platform-specific he
   );
   await expect(page.locator(".nativeDownloadCard")).toHaveCount(3);
   await expect(page.locator(".nativeInstallQuick")).toBeVisible();
-  await expect(page.locator(".nativeInstallQuick code")).toHaveText("npx remotelink@latest");
+  await expect(page.locator(".nativeInstallQuick code")).toHaveText(
+    "curl -fsSL https://remotearc.app/install.sh | sh",
+  );
   const commandsBottom = await page
     .locator(".nativeInstallQuick")
     .evaluate((node) => node.getBoundingClientRect().bottom);

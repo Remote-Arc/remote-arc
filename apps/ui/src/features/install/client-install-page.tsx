@@ -4,12 +4,18 @@ import { useEffect, useState } from "react";
 import { useI18n } from "../../hooks/use-i18n.js";
 import { CopyButton, LogoMark, PublicLayout, aiClients } from "../../components/public-layout.js";
 import { type User } from "../../types/app-types.js";
+import { installCommand } from "../../components/install-commands.js";
+import { localizedWebsiteHref } from "../../lib/marketing-paths.js";
 import {
   CLAUDE_CONNECTORS_URL,
   GEMINI_CONNECTORS_URL,
   MCP_ENDPOINT,
   cursorMcpInstallUrl,
 } from "../../config/app-config.js";
+
+// The shell installer needs no Node.js; npx is the alternative on Windows or with Node.js 20+.
+const SHELL_INSTALL = installCommand("curl"),
+  NPX_INSTALL = "npx remotelink";
 
 export type InstallClientSlug = "chatgpt" | "claude" | "gemini" | "cursor";
 type InstallDemoConfig = {
@@ -222,7 +228,7 @@ function InstallTypewriterDemo({ config }: { config: InstallDemoConfig }) {
   );
 }
 export function ClientInstallPage({ slug, user }: { slug: InstallClientSlug; user?: User | null }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const config =
     slug === "chatgpt"
       ? {
@@ -238,7 +244,7 @@ export function ClientInstallPage({ slug, user }: { slug: InstallClientSlug; use
             {
               title: tr("install.clientInstallPage.pairYourComputer"),
               body: tr("install.clientInstallPage.runThisOnceOnTheWindows"),
-              code: "npx remotelink",
+              code: SHELL_INSTALL,
             },
             {
               title: tr("install.clientInstallPage.connectTheRemoteArcPlugin"),
@@ -284,7 +290,7 @@ export function ClientInstallPage({ slug, user }: { slug: InstallClientSlug; use
               {
                 title: tr("install.clientInstallPage.pairYourComputer"),
                 body: tr("install.clientInstallPage.installTheRemoteArcAgentOn"),
-                code: "npx remotelink",
+                code: SHELL_INSTALL,
               },
               {
                 title: tr("install.clientInstallPage.addACustomConnector"),
@@ -329,7 +335,7 @@ export function ClientInstallPage({ slug, user }: { slug: InstallClientSlug; use
                 {
                   title: tr("install.clientInstallPage.pairYourComputer2"),
                   body: tr("install.clientInstallPage.runRemoteArcOnTheComputer"),
-                  code: "npx remotelink",
+                  code: SHELL_INSTALL,
                 },
                 {
                   title: tr("install.clientInstallPage.createACustomMcpConnector"),
@@ -372,7 +378,7 @@ export function ClientInstallPage({ slug, user }: { slug: InstallClientSlug; use
                 {
                   title: tr("install.clientInstallPage.pairYourComputer"),
                   body: tr("install.clientInstallPage.runRemoteArcOnTheMachine"),
-                  code: "npx remotelink",
+                  code: SHELL_INSTALL,
                 },
                 {
                   title: tr("install.clientInstallPage.addRemoteArcAsAnMcp"),
@@ -475,21 +481,22 @@ export function ClientInstallPage({ slug, user }: { slug: InstallClientSlug; use
               <div className="installPrimaryCommand compactCommand">
                 <span>{tr("install.clientInstallPage.runOnYourComputer")}</span>
                 <div className="installHeroCommand">
-                  <code>npx remotelink</code>
-                  <CopyButton value="npx remotelink" />
+                  <code>{SHELL_INSTALL}</code>
+                  <CopyButton value={SHELL_INSTALL} />
                 </div>
-                <small>
-                  {tr("install.clientInstallPage.pairsYourComputerThroughBrowserApproval")}
-                </small>
+                <small>{tr("install.clientInstallPage.startsTheAgentAfterAFirstInstall")}</small>
                 <details className="shellInstallAlternative">
-                  <summary>
-                    {tr("install.clientInstallPage.macosLinuxInstallWithoutNodeJs")}
-                  </summary>
+                  <summary>{tr("install.clientInstallPage.windowsOrNodeUseNpx")}</summary>
                   <div className="docsCodeLine">
-                    <code>curl -fsSL https://remotearc.app/install.sh | sh</code>
-                    <CopyButton value="curl -fsSL https://remotearc.app/install.sh | sh" />
+                    <code>{NPX_INSTALL}</code>
+                    <CopyButton value={NPX_INSTALL} />
                   </div>
-                  <small>{tr("install.clientInstallPage.startsTheAgentAfterAFirstInstall")}</small>
+                  <small>
+                    {tr("install.clientInstallPage.pairsYourComputerThroughBrowserApproval")}{" "}
+                    <a href={localizedWebsiteHref("/downloads", locale) + "#native-downloads"}>
+                      {tr("install.clientInstallPage.windowsInstaller")}
+                    </a>
+                  </small>
                 </details>
               </div>
               <div className="installQuickStartMcp">
@@ -574,11 +581,11 @@ export function ClientInstallPage({ slug, user }: { slug: InstallClientSlug; use
                         <h3>{tr("install.clientInstallPage.runRemoteArcOnTheComputer2")}</h3>
                         <p>{tr("install.clientInstallPage.theCliCreatesAShortLived")}</p>
                         <div className="docsCodeLine">
-                          <code>npx remotelink</code>
-                          <CopyButton value="npx remotelink" />
+                          <code>{SHELL_INSTALL}</code>
+                          <CopyButton value={SHELL_INSTALL} />
                         </div>
                         <p className="installAgentVersionNote">
-                          {tr("install.clientInstallPage.toExplicitlyFetchTheLatestPublished")}
+                          {tr("install.clientInstallPage.npxAlternative")}
                         </p>
                       </div>
                     </li>

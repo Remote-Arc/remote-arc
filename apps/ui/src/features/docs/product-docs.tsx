@@ -6,6 +6,7 @@ import { useI18n } from "../../hooks/use-i18n.js";
 import { ArchitectureDeepDive } from "./architecture-deep-dive.js";
 import { BrowserModes } from "./browser-modes.js";
 import { DevicePairingGuide } from "./device-pairing-guide.js";
+import { installCommand } from "../../components/install-commands.js";
 import "../../styles/public-docs.css";
 
 const endpoint = "https://mcp.remotearc.app/mcp";
@@ -153,9 +154,10 @@ export function Documentation({
             <section id="docs-start">
               <h2>{tr("docs.productDocs.setUpTheComputerAndThe")}</h2>
               <p>{tr("docs.productDocs.onTheWindowsMacosOrLinux")}</p>
-              <Code>npx remotelink@latest</Code>
               <p>{tr("docs.productDocs.withoutNodeJsOnMacosOr")}</p>
-              <Code>curl -fsSL https://remotearc.app/install.sh | sh</Code>
+              <Code>{installCommand("curl")}</Code>
+              <p>{tr("docs.productDocs.withNodeJsOrOnWindows")}</p>
+              <Code>{installCommand("npx")}</Code>
               <p>{tr("docs.productDocs.theInstallerVerifiesSha256AndInstalls")}</p>
               <p>
                 <a href={localizedWebsiteHref("/downloads", locale)}>

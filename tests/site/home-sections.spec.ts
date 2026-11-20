@@ -107,7 +107,9 @@ test("Ask in chat plays seven requests, the notes choose them, and Get Remote Ar
   await expect(menu.locator('a[href*="/install/"]')).toHaveCount(4);
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
-  await expect(section.locator(".homeUseCasesGet code")).toHaveText("npx remotelink@latest");
+  await expect(section.locator(".homeUseCasesGet code")).toHaveText(
+    "curl -fsSL https://remotearc.app/install.sh | sh",
+  );
 });
 
 // The website is dark only: no theme switch, whatever was saved before.

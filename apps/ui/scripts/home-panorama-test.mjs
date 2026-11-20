@@ -166,7 +166,11 @@ try {
     );
     assert.match(hero, /<em>/, "The second half of the headline is set apart");
     assert.match(hero, /href="https:\/\/mcp.remotearc.app\/dashboard\/connect\/overview"/);
-    assert.match(hero, /npx remotelink@latest/, "The install command sits under the buttons");
+    assert.match(
+      hero,
+      /curl -fsSL https:\/\/remotearc\.app\/install\.sh \| sh/,
+      "The no-Node.js install command sits under the buttons",
+    );
     assert.match(
       hero,
       new RegExp('class="heroArcAction" href="' + (locale === "zh" ? "/zh" : "") + '/arc"'),

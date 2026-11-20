@@ -16,6 +16,7 @@ import directory from "../../data/app-directory.json" with { type: "json" };
 import { AppCredentialForm, type AppCredentialInput } from "./apps-auth-form.js";
 import {
   GoogleBetaApplication,
+  GoogleBetaBanner,
   GoogleConsentDialog,
   type GoogleBetaState,
 } from "./google-app-beta.js";
@@ -1322,18 +1323,8 @@ export function AppsManager({
           {notice}
         </p>
       )}
-      {snapshot?.googleBeta?.mode === "beta" && (
-        <section className="appsBetaBanner">
-          <strong>
-            Google Apps <span className="appsBetaBadge">Beta</span>
-          </strong>
-          <p>{tr("apps.appsManager.byInvitationApplyOnceThenConnect")}</p>
-          <button type="button" onClick={() => setBetaProvider("gmail")}>
-            {snapshot.googleBeta.request
-              ? tr("apps.appsManager.viewApplication")
-              : tr("apps.appsManager.applyToJoin")}
-          </button>
-        </section>
+      {snapshot?.googleBeta && (
+        <GoogleBetaBanner state={snapshot.googleBeta} onOpen={setBetaProvider} />
       )}
       {loading && !snapshot && (
         <WorkspaceLoading label={tr("apps.appsManager.loadingAppConnections")} variant="rows" />

@@ -1,3 +1,4 @@
+import type { MessageKey } from "../../locales/locale-catalog.js";
 export type SupportStatus = "open" | "waiting" | "resolved";
 export type SupportSource = "email" | "google-beta";
 export type BetaStatus = "pending" | "approved" | "declined";
@@ -32,6 +33,8 @@ export type SupportDetail = {
   beta?: {
     googleEmail: string;
     providers: string[];
+    /** Google Cloud projects whose test-user list must hold this account. */
+    testerProjects?: string[];
     status: BetaStatus;
     reviewedAt: string | null;
     applicantPlan: ApplicantPlan | null;
@@ -44,6 +47,13 @@ export const GOOGLE_BETA_APP_NAMES: Record<string, string> = {
   google_sheets: "Google Sheets",
   google_calendar: "Google Calendar",
 };
+export const GOOGLE_TESTER_PROJECT_NAMES: Record<string, MessageKey> = {
+  "remote-arc-prod-2026": "admin.supportInbox.testerProjectMain",
+  "remote-arc-gmail-drive": "admin.supportInbox.testerProjectGmailDrive",
+};
+/** Projects to add the tester to; servers older than the split only used the main one. */
+export const testerProjects = (beta: NonNullable<SupportDetail["beta"]>) =>
+  beta.testerProjects?.length ? beta.testerProjects : ["remote-arc-prod-2026"];
 export function betaReplyDraft(detail: SupportDetail) {
   return (
     "Hi,\n\nYour Remote Arc Google Apps Beta access is now open.\n\nSign in to Remote Arc with " +

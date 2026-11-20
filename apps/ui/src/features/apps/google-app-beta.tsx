@@ -6,6 +6,8 @@ import "../../styles/apps/google-app-beta.css";
 
 export type GoogleBetaState = {
   mode: "beta" | "public";
+  /** Apps that still need an application: all pilot Apps in beta, Gmail and Drive once public. */
+  inviteOnly: string[];
   email: string;
   request: {
     googleEmail: string;
@@ -177,6 +179,34 @@ export function GoogleConsentDialog({
     </AppsPolicyDialog>
   );
 }
+export function GoogleBetaBanner({
+  state,
+  onOpen,
+}: {
+  state: GoogleBetaState;
+  onOpen: (provider: string) => void;
+}) {
+  const { tr } = useI18n();
+  if (!state.inviteOnly.length) return null;
+  return (
+    <section className="appsBetaBanner">
+      <strong>
+        {state.mode === "beta" ? "Google Apps" : "Gmail · Google Drive"}{" "}
+        <span className="appsBetaBadge">Beta</span>
+      </strong>
+      <p>
+        {state.mode === "beta"
+          ? tr("apps.appsManager.byInvitationApplyOnceThenConnect")
+          : tr("apps.googleAppBeta.gmailAndDriveByInvitation")}
+      </p>
+      <button type="button" onClick={() => onOpen(state.inviteOnly[0]!)}>
+        {state.request
+          ? tr("apps.appsManager.viewApplication")
+          : tr("apps.appsManager.applyToJoin")}
+      </button>
+    </section>
+  );
+}
 export function GoogleBetaApplication({
   apps,
   initialProvider,
@@ -200,9 +230,10 @@ export function GoogleBetaApplication({
   onClose: () => void;
 }) {
   const { tr } = useI18n();
+  const offered = apps.filter((app) => state.inviteOnly.includes(app.provider));
   const [email, setEmail] = useState(state.request?.googleEmail || state.email),
     [providers, setProviders] = useState(() =>
-      apps.some((app) => app.provider === initialProvider) ? [initialProvider] : [],
+      offered.some((app) => app.provider === initialProvider) ? [initialProvider] : [],
     ),
     [useCase, setUseCase] = useState(""),
     [accepted, setAccepted] = useState(false);
@@ -249,7 +280,7 @@ export function GoogleBetaApplication({
           </label>
           <fieldset>
             <legend>{tr("apps.googleAppBeta.appsYouWantToTry")}</legend>
-            {apps.map((app) => (
+            {offered.map((app) => (
               <label key={app.provider}>
                 <input
                   type="checkbox"
@@ -276,7 +307,11 @@ export function GoogleBetaApplication({
               rows={2}
             />
           </details>
-          <p>{tr("apps.googleAppBeta.limitedPlacesGoogleAuthorizationNormallyExpires")}</p>
+          <p>
+            {state.mode === "beta"
+              ? tr("apps.googleAppBeta.limitedPlacesGoogleAuthorizationNormallyExpires")
+              : tr("apps.googleAppBeta.restrictedAppsStayInTesting")}
+          </p>
           <label>
             <input
               type="checkbox"

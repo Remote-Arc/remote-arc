@@ -6,6 +6,8 @@ import "../../styles/admin/support-inbox.css";
 import {
   betaReplyDraft,
   GOOGLE_BETA_APP_NAMES,
+  GOOGLE_TESTER_PROJECT_NAMES,
+  testerProjects,
   type SupportThread as Thread,
   type SupportDetail as Detail,
   type ApplicantPlan,
@@ -151,7 +153,9 @@ export function AdminSupportInbox({ initialThread = "" }: { initialThread?: stri
     if (
       decision === "approve" &&
       !window.confirm(
-        tr("admin.supportInbox.confirmYouHaveAddedThisExact") + detail.beta.googleEmail,
+        tr("admin.supportInbox.confirmYouHaveAddedThisExact", {
+          projects: projectNames(testerProjects(detail.beta)),
+        }) + detail.beta.googleEmail,
       )
     )
       return;
@@ -199,6 +203,12 @@ export function AdminSupportInbox({ initialThread = "" }: { initialThread?: stri
           ? "admin.supportInbox.planTrial"
           : "admin.supportInbox.planFree",
     );
+  const projectNames = (projects: string[]) =>
+    projects
+      .map((project) =>
+        GOOGLE_TESTER_PROJECT_NAMES[project] ? tr(GOOGLE_TESTER_PROJECT_NAMES[project]!) : project,
+      )
+      .join(" + ");
   const betaLabel = (status: string) =>
     ({
       pending: tr("admin.supportInbox.pendingReview"),
@@ -444,7 +454,11 @@ export function AdminSupportInbox({ initialThread = "" }: { initialThread?: stri
                       <span>1</span>
                       <div>
                         <strong>{tr("admin.supportInbox.googleTestUsers")}</strong>
-                        <small>{tr("admin.supportInbox.addTheGoogleAccountAbove")}</small>
+                        <small>
+                          {tr("admin.supportInbox.addTheGoogleAccountTo", {
+                            projects: projectNames(testerProjects(detail.beta)),
+                          })}
+                        </small>
                       </div>
                     </li>
                     <li data-done={detail.beta.status === "approved"}>
@@ -468,14 +482,23 @@ export function AdminSupportInbox({ initialThread = "" }: { initialThread?: stri
                   </ol>
                   {detail.beta.status === "pending" ? (
                     <div className="adminSupportBetaActions">
-                      <a
-                        className="adminOutlineBtn"
-                        href="https://console.cloud.google.com/auth/audience?project=remote-arc-prod-2026"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {tr("admin.supportInbox.openGoogleTestUsers")} ↗
-                      </a>
+                      {testerProjects(detail.beta).map((project) => (
+                        <a
+                          key={project}
+                          className="adminOutlineBtn"
+                          href={
+                            "https://console.cloud.google.com/auth/audience?project=" +
+                            encodeURIComponent(project)
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {tr("admin.supportInbox.openGoogleTestUsers", {
+                            project: projectNames([project]),
+                          })}{" "}
+                          ↗
+                        </a>
+                      ))}
                       <button
                         type="button"
                         className="adminPrimaryBtn"

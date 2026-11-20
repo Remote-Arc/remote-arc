@@ -1,0 +1,70 @@
+.devicePairingGuide {
+  margin: 0 0 36px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--line);
+}
+.devicePairingGuide h3 {
+  margin: 0 0 10px;
+  font-size: 22px;
+  line-height: 1.3;
+}
+.devicePairingSteps {
+  margin: 18px 0 24px;
+  padding-left: 22px;
+}
+.devicePairingSteps > li + li {
+  margin-top: 18px;
+}
+.devicePairingSteps p {
+  margin: 6px 0;
+}
+.devicePresetPreview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.devicePresetPreview article {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.devicePresetPreview article[data-preset="full"] {
+  border-color: color-mix(in srgb, var(--red) 45%, var(--line));
+}
+.devicePresetPreview strong {
+  font-size: 17px;
+}
+.devicePresetPreview p {
+  margin: 6px 0 14px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.devicePresetToolsLabel {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.devicePresetPreview ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+/* Scoped under the docs article so it outranks its roomier list rules. */
+.productDocs .technicalArticle .devicePresetPreview li {
+  margin-top: 0;
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .devicePresetPreview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,13 +1,9 @@
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
-import { HomeHeroCopy, LandingContent } from "./home/landing-content.js";
+import { HomePage } from "./home/home-page.js";
 import { InstallCommands } from "../../components/install-commands.js";
-import { HomeConnectionScene, type HomeConnectionMode } from "./home/home-connection-scene.js";
-import { RequestVolume } from "./home/request-volume.js";
 import { ProductFilmSection } from "./home/product-film.js";
 import { PromoFilmSection } from "./home/promo-film.js";
 import { PlanSummary } from "./plan-summary.js";
-import { ProductFocus } from "./product-positioning.js";
-import { AgentUseCases } from "./use-cases/agent-use-cases.js";
 import { ProductIcon } from "../../components/product-icon.js";
 import { usePlatformCatalog } from "../../hooks/use-platform-catalog.js";
 import { should } from "../../lib/ui-access.js";
@@ -15,17 +11,12 @@ import { DASHBOARD_PATHS } from "../../lib/dashboard-workspaces.js";
 import { ArcComingSoonPageContent } from "./arc/arc-future.js";
 import { ArcRoadmapPageContent } from "./arc/arc-roadmap.js";
 import type { UseCaseSlug } from "./use-cases/use-cases.js";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useI18n } from "../../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../../lib/marketing-paths.js";
 import { TrustPage } from "./trust-pages.js";
 import { type User } from "../../types/app-types.js";
-import {
-  CopyButton,
-  PublicLayout,
-  aiClients,
-  topologyAiClients,
-} from "../../components/public-layout.js";
+import { CopyButton, PublicLayout, aiClients } from "../../components/public-layout.js";
 import { APP_ORIGIN, MCP_ENDPOINT, dashboardHref } from "../../config/app-config.js";
 
 const PricingContent = React.lazy(() =>
@@ -44,62 +35,9 @@ const UseCaseDetail = React.lazy(() =>
   import("./use-cases/use-case-detail.js").then((module) => ({ default: module.UseCaseDetail })),
 );
 export function Landing({ user }: { user?: User | null }) {
-  const { tr } = useI18n();
-  const arcAvailable = should("arcAvailable", usePlatformCatalog());
-  const [heroMode, setHeroMode] = useState<HomeConnectionMode>("connect");
   return (
     <PublicLayout user={user}>
-      <section className="landingHero landingHero--constellation" data-product={heroMode}>
-        <HomeHeroCopy
-          mode={heroMode}
-          arcAvailable={arcAvailable}
-          arcHref={arcAvailable ? dashboardHref(DASHBOARD_PATHS["agent-chat"]) : "/arc"}
-          connectHref={dashboardHref("/dashboard/connect/overview")}
-        />
-        <HomeConnectionScene
-          clients={topologyAiClients}
-          arcAvailable={arcAvailable}
-          mode={heroMode}
-          onModeChange={setHeroMode}
-        />
-      </section>
-
-      <section className="trustRail" aria-label={tr("marketing.marketingPages.supportedAiClients")}>
-        <span>{tr("marketing.marketingPages.worksWithTheAiYouUse")}</span>
-        {aiClients.map((client) => (
-          <a href={"/install/" + client.slug} key={client.name}>
-            <img
-              className={client.tone === "mono" ? "monoLogo" : "colorLogo"}
-              src={client.icon}
-              alt=""
-            />
-            <strong>{client.name}</strong>
-          </a>
-        ))}
-        <div>
-          <span className="miniMcp">M</span>
-          <strong>Remote MCP</strong>
-        </div>
-        <small>{tr("marketing.marketingPages.oneEndpointNoClientLockIn")}</small>
-      </section>
-
-      <RequestVolume />
-      <ProductFocus />
-      <AgentUseCases />
-
-      <LandingContent />
-      <section className="homepageConnectSetup" id="connect-your-computer">
-        <div>
-          <span className="eyebrow">REMOTE ARC CONNECT</span>
-          <h2>{tr("marketing.marketingPages.keepYourAiConnectYourComputer")}</h2>
-          <p>{tr("marketing.marketingPages.useChatgptClaudeOrAnotherCompatible")}</p>
-          <a href="/connect-ai">
-            {tr("marketing.marketingPages.connectSetupGuide")}
-            <ProductIcon name="arrowUpRight" size={15} />
-          </a>
-        </div>
-        <InstallCommands />
-      </section>
+      <HomePage />
     </PublicLayout>
   );
 }

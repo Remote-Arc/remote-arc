@@ -1,10 +1,23 @@
 import { test, expect } from "./fixtures";
 
-test("Connect homepage offers local installation commands in the hero", async ({ page }, info) => {
+test("Connect homepage offers the install command in the hero and every method at the close", async ({
+  page,
+}, info) => {
   const zh = info.project.metadata.language === "zh";
   await page.goto(zh ? "/zh" : "/");
-  const hero = page.locator('.heroCopy[data-product="connect"]');
-  const commands = hero.locator(".installCommands");
+  // The hero offers npx first and switches to curl.
+  const heroCommand = page.locator(".homeHero .heroCommand");
+  await expect(heroCommand.locator("code")).toHaveText("$ npx remotelink@latest");
+  await heroCommand.getByRole("tab", { name: "curl" }).click();
+  await expect(heroCommand.getByRole("tab", { name: "curl" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(heroCommand.locator("code")).toHaveText(
+    "$ curl -fsSL https://remotearc.app/install.sh | sh",
+  );
+  const commands = page.locator(".homeClosing .installCommands");
+  await commands.scrollIntoViewIfNeeded();
   await expect(commands).toBeVisible();
   await expect(commands.locator("code")).toHaveText("npx remotelink@latest");
   const npx = commands.getByRole("tab", { name: /npx/ });

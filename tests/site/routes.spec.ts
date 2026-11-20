@@ -34,10 +34,7 @@ for (const route of publicRoutes) {
     expect(response?.status()).toBe(200);
     await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("lang", localized ? "zh-CN" : "en");
-    await expect(page.locator("html")).toHaveAttribute(
-      "data-theme",
-      String(testInfo.project.metadata.theme),
-    );
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await expect
       .poll(
         () => page.evaluate(() => document.documentElement.scrollWidth - innerWidth),
@@ -79,10 +76,14 @@ for (const route of publicRoutes) {
   });
 }
 for (const route of [...new Set(Object.values(DASHBOARD_PATHS))]) {
-  test("Workspace page " + route, async ({ page }) => {
+  test("Workspace page " + route, async ({ page }, testInfo) => {
     await page.goto(route);
     await expect(page.locator(".appFrame")).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-theme",
+      String(testInfo.project.metadata.theme),
+    );
     await expect
       .poll(
         () => page.evaluate(() => document.documentElement.scrollWidth - innerWidth),

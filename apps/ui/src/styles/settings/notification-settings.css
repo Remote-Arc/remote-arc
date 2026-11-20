@@ -129,6 +129,14 @@
   line-height: 1.5;
   color: var(--rs-secondary);
 }
+.notificationChannelTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.notificationChannelTitle h4 {
+  margin: 0;
+}
 .notificationUpgradeBadge {
   display: inline-block;
   padding: 2px 8px;

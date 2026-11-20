@@ -445,43 +445,6 @@
   outline-offset: 4px;
   border-radius: 3px;
 }
-:root[data-theme] .publicPage .homeConnectionScene,
-:root[data-theme] .publicPage .homeConnectionScene[data-mode="arc"] {
-  --hcs-ink: var(--site-ink);
-  --hcs-muted: var(--site-muted);
-  --hcs-subtle: var(--site-muted);
-  --hcs-accent: var(--site-ink);
-  --hcs-rgb: 56, 189, 248;
-  --hcs-tile: var(--site-surface);
-  --hcs-edge: var(--site-line);
-}
-:root[data-theme] .publicPage .hcsModeSwitch {
-  background: var(--site-subtle);
-}
-:root[data-theme] .publicPage .hcsCoreMark {
-  background: linear-gradient(
-    145deg,
-    var(--site-surface),
-    color-mix(in srgb, #38bdf8 7%, var(--site-surface))
-  );
-  box-shadow:
-    0 0 0 7px #38bdf80a,
-    0 0 35px #38bdf826,
-    0 12px 28px #0000000a;
-  border-color: color-mix(in srgb, #38bdf8 28%, var(--site-line));
-}
-.publicPage .hcsCoreMark img {
-  filter: none;
-}
-.publicPage .hcsLogoTile {
-  background: var(--site-surface);
-  box-shadow: 0 8px 22px #00000009;
-}
-:root[data-theme] .publicPage .hcsPromptBubble {
-  background: var(--site-surface);
-  box-shadow: 0 9px 26px #00000009;
-  border-color: color-mix(in srgb, var(--site-violet) 24%, var(--site-line));
-}
 :root[data-theme] .publicPage .trustRail {
   display: flex;
   flex-wrap: wrap;
@@ -794,15 +757,11 @@
 :root[data-theme]
   .publicPage
   :is(
-    .unexpectedCard,
-    .platformCapabilities article,
     .goalContract,
     .goalDashboard,
     .securityFeatureGrid article,
     .permissionLayers article,
     .controlDetails > div,
-    .safetyTerminal,
-    .safetyPolicyRequest,
     .faqCategories,
     .modernFaq details,
     .finishCommand
@@ -814,31 +773,20 @@
 :root[data-theme]
   .publicPage
   :is(
-    .unexpectedCard p,
-    .platformCapabilities p,
     .goalIntro p,
     .goalDashboard p,
     .controlDetails p,
     .securityFeatureGrid p,
     .permissionLayers p,
-    .safetyStory p,
     .modernFaq p,
     .landingFinish p
   ) {
   color: var(--site-muted);
 }
-:root[data-theme]
-  .publicPage
-  :is(
-    .unexpectedSymbol,
-    .securityFeatureIcon,
-    .platformCapabilities a,
-    .goalIntro > a,
-    .safetyLearnLink
-  ) {
+:root[data-theme] .publicPage :is(.securityFeatureIcon, .goalIntro > a) {
   color: var(--site-muted);
 }
-:root[data-theme] .publicPage :is(.landingFinish, .landingGoals, .landingSetup) {
+:root[data-theme] .publicPage :is(.landingFinish, .landingGoals) {
   background: transparent;
 }
 :root[data-theme] .publicPage .arcV3 {
@@ -1309,38 +1257,6 @@
   margin-top: 14px;
   color: var(--site-muted);
 }
-.homepageConnectSetup {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
-  align-items: center;
-  margin: 40px 0 80px;
-  padding: 35px;
-  border: 1px solid var(--site-line);
-  border-radius: 12px;
-  background: var(--site-surface);
-}
-.homepageConnectSetup h2 {
-  font-size: 25px;
-  letter-spacing: -0.04em;
-  font-weight: 500;
-  margin: 13px 0;
-}
-.homepageConnectSetup p {
-  font-size: 12px;
-  line-height: 1.8;
-  color: var(--site-muted);
-  max-width: 440px;
-}
-.homepageConnectSetup a {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 11px;
-  text-decoration: none;
-  color: var(--site-ink);
-  margin-top: 10px;
-}
 :root[data-theme] .publicPage .landingHero h1.heroHeadline {
   font-size: clamp(38px, 4vw, 59px);
 }
@@ -1428,12 +1344,6 @@
   }
   .agentUseCaseExample blockquote {
     font-size: 14px;
-  }
-  .homepageConnectSetup {
-    grid-template-columns: 1fr;
-    gap: 25px;
-    padding: 25px;
-    margin-bottom: 55px;
   }
   .publicPage .heroTypeLine {
     min-height: 2.3em;
@@ -1671,14 +1581,11 @@
 }
 
 /* Harmonize content-card typography with the marketing heading system. */
-:root[data-theme] .publicPage :is(.unexpectedCard h3, .permissionLevels h3) {
+:root[data-theme] .publicPage .permissionLevels h3 {
   font-family: var(--font-product) !important;
   font-weight: 550;
   letter-spacing: -0.035em;
   line-height: 1.35;
-}
-:root[data-theme] .publicPage .unexpectedCard h3 {
-  font-size: clamp(20px, 1.65vw, 23px);
 }
 :root[data-theme] .publicPage .permissionLevels h3 {
   font-size: clamp(20px, 1.7vw, 23px);
@@ -1731,7 +1638,7 @@
 :root[data-theme]
   .publicPage
   :is(
-    .landingHero h1.heroHeadline,
+    .homeHero h1.heroHeadline,
     .arcV3Hero h1,
     .publicHero h1,
     .useCaseHeroText h1,

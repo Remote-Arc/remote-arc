@@ -4,43 +4,41 @@ test.beforeEach(async ({ page }, info) => {
   await page.goto(info.project.metadata.language === "zh" ? "/zh" : "/");
 });
 
-test("Homepage security sits directly above the questions", async ({ page }, info) => {
+test("Homepage questions lead into the technical docs, which link the security model", async ({
+  page,
+}, info) => {
   const zh = info.project.metadata.language === "zh";
-  const security = page.getByRole("region", { name: zh ? "权限与安全" : "Control and security" });
-  await expect(security).toHaveCount(1);
-  await expect(security.getByRole("link")).toHaveAttribute("href", /\/security-model$/);
   await expect(
-    page.locator(".homeSecurityIntro + .landingQuestions").getByRole("heading", {
+    page.locator(".landingQuestions").getByRole("heading", {
       name: zh ? "常见问题。" : "Common questions.",
     }),
   ).toBeVisible();
+  // The questions close the product content, and the docs come straight after it.
+  await expect(page.locator(".landingContent > .landingQuestions:last-child")).toHaveCount(1);
+  const docs = page.locator(".landingContent + .homeDocs");
+  await expect(docs).toHaveCount(1);
+  await expect(docs.locator('a.homeDocsCard[href$="/security-model"]')).toHaveCount(1);
 });
 
-test("The constellation switches with a shared slider and every brand opens a valid local destination", async ({
+test("The hero globe links three AI clients to apps and computers through Remote Arc, and every brand opens a valid local destination", async ({
   page,
 }) => {
-  const scene = page.locator(".homeConnectionScene");
-  // Three AI clients plus ten Apps / devices.
-  await expect(scene.locator("a.hcsFloatingNode")).toHaveCount(13);
+  const arc = page.locator(".homeArc");
   const aiClients = [
     { slug: "chatgpt", icon: "/ai-openai.svg" },
     { slug: "claude", icon: "/ai-claude.svg" },
     { slug: "cursor", icon: "/ai-cursor.svg" },
   ];
-  await expect(scene.locator("a.hcsAiNode")).toHaveCount(aiClients.length);
-  await expect(scene.locator(".hcsInboundPaths > g")).toHaveCount(3);
-  await expect(scene).not.toContainText("Gemini");
-  await expect(scene.locator('a[href$="/install/gemini"]')).toHaveCount(0);
-  await expect(scene).not.toContainText("Vercel");
-  await expect(
-    scene.locator('a.hcsResourceNode[href$="/integrations?provider=google_calendar"] img'),
-  ).toHaveAttribute("src", "/app-brands/googlecalendar.svg");
-  for (const { slug, icon } of aiClients) {
-    const link = scene.locator(`a.hcsAiNode[href$="/install/${slug}"]`);
+  const ai = arc.locator('a.homeArcNode[data-kind="ai"]');
+  // Phones keep the two outermost clients and drop Cursor.
+  const narrow = (page.viewportSize()?.width ?? 1440) <= 700;
+  await expect(ai).toHaveCount(narrow ? 2 : 3);
+  await expect(arc).not.toContainText("Gemini");
+  for (const { slug, icon } of narrow ? aiClients.slice(0, 2) : aiClients) {
+    const link = arc.locator(`a.homeArcNode[href$="/install/${slug}"]`);
     await expect(link).toHaveCount(1);
     await expect(link.locator("img")).toHaveAttribute("src", icon);
-    const asset = await page.request.get(icon);
-    expect(asset.ok(), icon).toBe(true);
+    expect((await page.request.get(icon)).ok(), icon).toBe(true);
   }
   const trustRail = page.locator(".trustRail");
   for (const { slug, icon } of [
@@ -51,28 +49,19 @@ test("The constellation switches with a shared slider and every brand opens a va
     await expect(link).toHaveCount(1);
     await expect(link.locator("img")).toHaveAttribute("src", icon);
   }
-  for (const link of await scene.locator("a.hcsFloatingNode").all()) {
+  for (const link of await arc.locator("a.homeArcNode").all()) {
     const href = await link.getAttribute("href");
     expect(href).toMatch(
-      /^\/(zh\/)?(install\/|integrations\?provider=|downloads$|chrome-extension$|use-cases\/video-creation#video-gallery$)/,
+      /^\/(zh\/)?(install\/|integrations\?provider=|downloads$|chrome-extension$)/,
     );
-    const result = await page.request.get(href!);
-    expect(result.ok(), href!).toBe(true);
+    expect((await page.request.get(href!)).ok(), href!).toBe(true);
   }
-  const core = scene.locator("a.hcsCoreMark");
-  await expect(core).toHaveAttribute("href", /connect-ai$/);
-  const tabs = scene.getByRole("tab");
-  await tabs.last().click();
-  await expect(scene).toHaveAttribute("data-mode", "arc");
-  await expect(tabs.last()).toHaveAttribute("aria-selected", "true");
-  await expect(core).toHaveAttribute("href", /arc$/);
-  expect(
-    await scene.locator(".hcsModeSlider").evaluate((el) => getComputedStyle(el).transform),
-  ).not.toBe("none");
-  await page.keyboard.press("ArrowLeft");
-  await expect(scene).toHaveAttribute("data-mode", "connect");
-  await expect(tabs.first()).toBeFocused();
-  await core.click();
+  // Apps on the rim, computers and the browser on the inner ring.
+  await expect(arc.locator('a.homeArcNode[href$="provider=whatsapp"]')).toHaveCount(1);
+  await expect(arc.locator('a.homeArcNode[data-ring="ring"]')).toHaveCount(narrow ? 2 : 4);
+  const hub = arc.locator("a.homeArcHubMark");
+  await expect(hub).toHaveAttribute("href", /connect-ai$/);
+  await hub.click();
   await expect(page).toHaveURL(/\/connect-ai$/);
 });
 
@@ -176,7 +165,7 @@ test("Connected capabilities include a browser scene that waits before sending",
 });
 
 test("New previews have no horizontal overflow or missing images", async ({ page }) => {
-  for (const selector of [".slackAgentPreview", "#agent-use-cases", ".appsDirectory"]) {
+  for (const selector of [".slackAgentPreview", "#agent-use-cases", ".homePricing"]) {
     const region = page.locator(selector);
     await region.scrollIntoViewIfNeeded();
     expect(await region.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
@@ -200,17 +189,16 @@ test("New previews have no horizontal overflow or missing images", async ({ page
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test("See it in action opens how it works, and /demo pins the promo film above the product film, both muted and unloaded until played", async ({
+test("The hero downloads the agent for this computer, and /demo pins the promo film above the product film, both muted and unloaded until played", async ({
   page,
 }, info) => {
   const zh = info.project.metadata.language === "zh";
   const prefix = zh ? "/zh" : "";
-  const link = page.locator(".landingActions").getByRole("link", {
-    name: zh ? "看看如何工作" : "See it in action",
-  });
-  await expect(link).toHaveAttribute("href", "#how-it-works");
-  await link.click();
-  await expect(page.locator("#how-it-works")).toBeInViewport();
+  // Detection names this computer's build; the tests run Chromium on Linux x64.
+  const link = page.locator(".landingActions .heroDownloadAgent");
+  await expect(link).toHaveAttribute("href", "/api/downloads/agent/linux/amd64");
+  await expect(link).toHaveAttribute("data-platform", "linux");
+  await expect(link).toHaveText(zh ? /下载 Linux 版/ : /Download for Linux/);
   await expect(page.locator("#film")).toHaveCount(0);
 
   const media: string[] = [];

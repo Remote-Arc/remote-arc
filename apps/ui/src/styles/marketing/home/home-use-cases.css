@@ -1,0 +1,282 @@
+/* "Ask in chat": the get-started bar (after Claude Code's), our ChatGPT /
+ * Claude / Cursor demo playing four requests, and a row of notes under it. */
+
+.homeUseCases {
+  --uc-ink: #f2f2f4;
+  --uc-muted: #9b9ba5;
+  --uc-faint: #6f6f78;
+  --uc-line: rgba(255, 255, 255, 0.08);
+  --uc-panel: #18181c;
+  --uc-window: #121215;
+  --uc-accent: #7dd3fc;
+  --uc-ok: #4ade80;
+  --uc-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Get started */
+.homeUseCasesStart {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  margin-bottom: clamp(48px, 6vw, 72px);
+}
+.homeUseCasesGet {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 5px 8px 5px 5px;
+  border: 1px solid var(--uc-line);
+  border-radius: 12px;
+  background: var(--uc-panel);
+}
+.homeUseCasesGetButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 14px 0 18px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--uc-ink);
+  color: #111114;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.homeUseCasesGetButton[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.homeUseCasesGetButton svg {
+  transition: transform 0.2s ease;
+}
+.homeUseCasesGet code {
+  color: var(--uc-ink);
+  font-family: var(--uc-mono);
+  font-size: 14.5px;
+  white-space: nowrap;
+}
+.homeUseCasesCopy {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--uc-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.homeUseCasesCopy:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--uc-ink);
+}
+.homeUseCasesMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 5px;
+  z-index: 20;
+  display: grid;
+  width: 220px;
+  padding: 6px;
+  border: 1px solid var(--uc-line);
+  border-radius: 12px;
+  background: var(--uc-panel);
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.8);
+}
+.homeUseCasesMenu[hidden] {
+  display: none;
+}
+:root[data-theme] .publicPage .homeUseCasesMenu a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: var(--uc-ink);
+  font-size: 14.5px;
+  font-weight: 500;
+  text-decoration: none;
+}
+:root[data-theme] .publicPage .homeUseCasesMenu a:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.homeUseCasesMenu a svg {
+  color: var(--uc-faint);
+}
+.homeUseCasesStart > p {
+  margin: 0;
+  color: var(--uc-muted);
+  font-size: 14px;
+}
+:root[data-theme] .publicPage .homeUseCasesStart > p a {
+  color: var(--uc-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* The demo keeps its full width; the notes run underneath it. */
+.homeUseCasesStage {
+  position: relative;
+}
+.homeUseCasesFleet {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  animation: uc-line-in 0.4s ease-out both;
+}
+.homeUseCasesFleetGrid {
+  display: grid;
+  grid-template-columns: repeat(32, minmax(0, 1fr));
+  gap: 3px;
+  max-width: 420px;
+}
+.homeUseCasesFleetGrid i {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: #22c55e;
+  animation: uc-cell-in 0.3s ease-out both;
+}
+.homeUseCasesFleetGrid i[data-state="warn"] {
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.7);
+}
+.homeUseCasesFleetGrid i[data-state="off"] {
+  background: #9ca3af;
+}
+.homeUseCasesFleetLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+  color: inherit;
+  opacity: 0.7;
+  font-size: 12px;
+}
+.homeUseCasesFleetLegend span::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 2px;
+  background: #22c55e;
+}
+.homeUseCasesFleetLegend span[data-state="warn"]::before {
+  background: #f59e0b;
+}
+.homeUseCasesFleetLegend span[data-state="off"]::before {
+  background: #9ca3af;
+}
+
+/* Notes: one per request, in a row under the demo; each also picks its request. */
+.homeUseCasesNotes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.homeUseCasesNotes button {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 18px 18px 20px;
+  border: 0;
+  border-top: 2px solid var(--uc-line);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.25s ease;
+}
+.homeUseCasesNotes button:hover {
+  border-top-color: rgba(255, 255, 255, 0.24);
+}
+.homeUseCasesNotes li[data-active] button {
+  border-top-color: var(--uc-accent);
+}
+.homeUseCasesNotes strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--uc-muted);
+  font-size: 16.5px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  transition: color 0.25s ease;
+}
+.homeUseCasesNotes li[data-active] strong {
+  color: var(--uc-ink);
+}
+.homeUseCasesNotes em {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(125, 211, 252, 0.14);
+  color: var(--uc-accent);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+.homeUseCasesNotes span {
+  color: var(--uc-faint);
+  font-size: 14px;
+  line-height: 1.6;
+  transition: color 0.25s ease;
+}
+.homeUseCasesNotes li[data-active] span {
+  color: var(--uc-muted);
+}
+
+@keyframes uc-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes uc-cell-in {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .homeUseCasesFleet,
+  .homeUseCasesFleetGrid i {
+    animation: none;
+  }
+}
+
+@media (max-width: 960px) {
+  .homeUseCasesNotes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 620px) {
+  .homeUseCasesGet {
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+  }
+  .homeUseCasesGet code {
+    font-size: 13px;
+  }
+  .homeUseCasesNotes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .homeUseCasesFleetGrid {
+    grid-template-columns: repeat(16, minmax(0, 1fr));
+  }
+}

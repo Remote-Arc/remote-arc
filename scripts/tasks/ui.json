@@ -57,6 +57,7 @@
       ["node", "--experimental-strip-types", "scripts/marketing-playback-test.mjs"],
       ["node", "--import", "tsx", "scripts/arc-positioning-test.mjs"],
       ["node", "--import", "tsx", "scripts/home-panorama-test.mjs"],
+      ["node", "--import", "tsx", "scripts/arc-horizon-test.ts"],
       ["node", "--import", "tsx", "scripts/arc-use-cases-test.ts"],
       ["node", "--import", "tsx", "scripts/skill-use-cases-test.ts"]
     ],

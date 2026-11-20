@@ -1,0 +1,135 @@
+/* Three panels in a row, joined by arrows: the request, the checks, the run.
+ * Numbered because the order is the point. */
+
+.homeThreeSteps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 44px;
+  margin: 56px 0 72px;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+.homeThreeSteps > li {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-width: 0;
+  min-height: 250px;
+  padding: 22px;
+  border: 1px solid var(--home-edge, rgba(255, 255, 255, 0.14));
+  border-radius: 16px;
+  background: linear-gradient(#18181c, #141417);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.homeThreeSteps > li + li::before {
+  content: "→";
+  position: absolute;
+  top: 50%;
+  left: -30px;
+  color: #6c6c76;
+  font-size: 18px;
+  transform: translateY(-50%);
+}
+.homeThreeSteps h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 2px;
+  color: #8e8e98;
+  font: 600 12px var(--home-mono, ui-monospace, monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.homeThreeSteps h3 b {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #26262c;
+  color: var(--site-ink);
+  font-size: 11px;
+}
+
+.homeThreeStepsBubble {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 16px 16px 4px 16px;
+  background: #26262c;
+  color: var(--site-ink);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.homeThreeStepsClients {
+  display: flex;
+  gap: 8px;
+}
+.homeThreeStepsClients img {
+  box-sizing: content-box;
+  padding: 6px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.homeThreeStepsChecks {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.homeThreeStepsChecks li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--home-hairline, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+  color: #d5d5dc;
+  font-size: 13.5px;
+}
+.homeThreeStepsChecks em {
+  flex: none;
+  color: #4ade80;
+  font: 12px var(--home-mono, ui-monospace, monospace);
+  font-style: normal;
+}
+.homeThreeStepsChecks li[data-allowed="false"] em {
+  color: #fbbf24;
+}
+
+.homeThreeStepsTerm {
+  margin: 0;
+  overflow-x: auto;
+  color: #c8c8d0;
+  font: 13px/1.8 var(--home-mono, ui-monospace, monospace);
+  white-space: pre;
+}
+.homeThreeStepsTerm .dim {
+  color: #6c6c76;
+}
+.homeThreeStepsTerm .ok {
+  color: #4ade80;
+}
+.homeThreeStepsTerm .warn {
+  color: #fbbf24;
+}
+
+@media (max-width: 960px) {
+  .homeThreeSteps {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 34px;
+  }
+  .homeThreeSteps > li {
+    min-height: 0;
+  }
+  .homeThreeSteps > li + li::before {
+    content: "↓";
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}

@@ -1,0 +1,81 @@
+/* App logos under the AI clients: two rows drifting in opposite directions,
+ * faded at both edges, paused on hover and still for reduced motion. */
+
+.appLogoMarquee {
+  display: grid;
+  gap: 12px;
+  width: 100vw;
+  max-width: 1440px;
+  margin-inline: calc(50% - min(50vw, 720px));
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.appLogoMarqueeRow {
+  display: flex;
+  width: max-content;
+}
+.appLogoMarqueeRow ul {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  padding: 0 12px 0 0;
+  list-style: none;
+}
+:root[data-theme] .publicPage .appLogoMarqueeRow a {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 16px 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  color: #a3a3ad;
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    border-color 0.25s ease,
+    color 0.25s ease,
+    background 0.25s ease;
+}
+:root[data-theme] .publicPage .appLogoMarqueeRow a:hover {
+  border-color: rgba(125, 211, 252, 0.35);
+  background: rgba(125, 211, 252, 0.06);
+  color: #f2f2f4;
+}
+.appLogoMarqueeRow img {
+  display: block;
+  width: 22px;
+  height: 22px;
+  padding: 3px;
+  border-radius: 6px;
+  background: #fff;
+}
+
+@keyframes app-marquee-left {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes app-marquee-right {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .appLogoMarqueeRow[data-direction="left"] {
+    animation: app-marquee-left 60s linear infinite;
+  }
+  .appLogoMarqueeRow[data-direction="right"] {
+    animation: app-marquee-right 70s linear infinite;
+  }
+  .appLogoMarqueeRow:hover {
+    animation-play-state: paused;
+  }
+}

@@ -8,6 +8,10 @@ import { isWebsite, localizedWebsiteHref } from "../lib/marketing-paths.js";
 import { BrandWordmark } from "./brand-wordmark.js";
 import { PublicFooter } from "./public-footer.js";
 import { useTheme } from "../hooks/use-theme.js";
+import { INSTALL_METHODS } from "./install-commands.js";
+import { useAgentDownload } from "../hooks/marketing/use-agent-download.js";
+import { AGENT_PLATFORM_NAMES, agentDownloadPath } from "../lib/agent-download.js";
+import { aiClients } from "../lib/ai-clients.js";
 import { APP_ORIGIN, MARKETING_ORIGIN, dashboardHref } from "../config/app-config.js";
 import { type User } from "../types/app-types.js";
 
@@ -80,6 +84,7 @@ function PublicHeader({ user }: { user?: User | null }) {
   const [openMenu, setOpenMenu] = useState<"mcp" | "resources" | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const navRef = useRef<HTMLElement | null>(null);
+  const agentTarget = useAgentDownload();
   useEffect(() => {
     const onOutsideClick = (event: PointerEvent) => {
       if (!navRef.current?.contains(event.target as Node)) setOpenMenu(null);
@@ -114,6 +119,30 @@ function PublicHeader({ user }: { user?: User | null }) {
     </svg>
   );
   const navHref = (path: string) => (isWebsite() ? localizedWebsiteHref(path, locale) : path);
+  const loginHref = APP_ORIGIN + "/dashboard/connect/overview";
+  // Each menu ends on the agent card: this computer's build, detected, one click away.
+  const agentLabel = agentTarget
+    ? labels.downloadForPlatform.replace("{platform}", AGENT_PLATFORM_NAMES[agentTarget.platform])
+    : labels.downloadAgent;
+  const megaAgent = (
+    <aside className="publicMegaAgent">
+      <span className="publicMegaAgentMark" aria-hidden="true">
+        <img src="/remote-arc.svg" alt="" width={28} height={28} />
+      </span>
+      <strong>{labels.agentCardTitle}</strong>
+      <p>{labels.agentCardBody}</p>
+      <code>{INSTALL_METHODS[0].command}</code>
+      <a
+        className="publicMegaAgentButton"
+        href={agentTarget ? agentDownloadPath(agentTarget) : navHref("/downloads")}
+      >
+        {agentLabel} <ProductIcon name="download" size={14} />
+      </a>
+      <a className="publicMegaAgentAll" href={navHref("/downloads")}>
+        {labels.allPlatforms} →
+      </a>
+    </aside>
+  );
   return (
     <>
       <header className="landingNav publicNav">
@@ -145,62 +174,33 @@ function PublicHeader({ user }: { user?: User | null }) {
             >
               {labels.product} {arrow}
             </button>
-            <div id="public-nav-product" className="publicNavDropdown productDropdown">
-              <section className="publicNavGroup">
-                <span className="publicNavGroupLabel">{labels.productGroup}</span>
-                <a className="publicProductEntry" href={navHref("/arc")}>
-                  <span className="publicProductIcon publicProductLogo">
-                    <img src="/remote-arc.svg" alt="" />
-                  </span>
-                  <span className="publicProductCopy">
-                    <strong>
-                      Arc <em>{arcAvailable ? labels.live : labels.comingSoon}</em>
-                    </strong>
-                    <small>{labels.arcDescription}</small>
-                  </span>
-                  <ProductIcon name="arrowUpRight" size={15} />
-                </a>
-                <a className="publicProductEntry" href={navHref("/connect-ai")}>
-                  <span className="publicProductIcon publicProductLogo">
-                    <img src="/connect-logo.svg" alt="" />
-                  </span>
-                  <span className="publicProductCopy">
-                    <strong>
-                      Connect <em>{labels.live}</em>
-                    </strong>
-                    <small>{labels.connectDescription}</small>
-                  </span>
-                  <ProductIcon name="arrowUpRight" size={15} />
-                </a>
-                <a className="publicProductEntry" href={navHref("/chrome-extension")}>
-                  <span className="publicProductIcon publicProductLogo publicProductLogoBrand">
-                    <img src="/platform-brands/browser.svg" alt="" />
-                  </span>
-                  <span className="publicProductCopy">
-                    <strong>{labels.browserProduct}</strong>
-                    <small>{labels.browserProductDescription}</small>
-                  </span>
-                  <ProductIcon name="arrowUpRight" size={15} />
-                </a>
-              </section>
-              <div className="publicNavProductFoot">
-                <a href={navHref("/install/chatgpt")}>
-                  <img className="monoLogo" src="/ai-openai.svg" alt="" />
-                  ChatGPT
-                </a>
-                <a href={navHref("/install/claude")}>
-                  <img src="/ai-claude.svg" alt="" />
-                  Claude
-                </a>
-                <a href={navHref("/install/cursor")}>
-                  <img className="monoLogo" src="/ai-cursor.svg" alt="" />
-                  Cursor
-                </a>
-                <a href={navHref("/remote-mcp")}>
-                  <ProductIcon name="link" size={15} />
-                  Remote MCP
-                  <ProductIcon name="arrowUpRight" size={12} />
-                </a>
+            <div id="public-nav-product" className="publicNavDropdown publicMega">
+              <div className="publicMegaColumns">
+                <section>
+                  <span className="publicMegaLabel">{labels.productsGroup}</span>
+                  <a href={navHref("/arc")}>
+                    Arc <em>{arcAvailable ? labels.live : labels.comingSoon}</em>
+                  </a>
+                  <a href={navHref("/connect-ai")}>Connect</a>
+                  <a href={navHref("/chrome-extension")}>{labels.browserExtension}</a>
+                </section>
+                <section>
+                  <span className="publicMegaLabel">{labels.worksWithGroup}</span>
+                  {aiClients.map((client) => (
+                    <a key={client.slug} href={navHref("/install/" + client.slug)}>
+                      {client.name}
+                    </a>
+                  ))}
+                  <a href={navHref("/remote-mcp")}>Remote MCP</a>
+                </section>
+                <section>
+                  <span className="publicMegaLabel">{labels.exploreGroup}</span>
+                  <a href={navHref("/use-cases")}>{labels.useCases}</a>
+                  <a href={navHref("/integrations")}>{labels.apps}</a>
+                  <a href={navHref("/pricing")}>{labels.pricing}</a>
+                  <a href={navHref("/security-model")}>{labels.security}</a>
+                </section>
+                {megaAgent}
               </div>
             </div>
           </div>
@@ -217,69 +217,50 @@ function PublicHeader({ user }: { user?: User | null }) {
             >
               {labels.resources} {arrow}
             </button>
-            <div id="public-nav-resources" className="publicNavDropdown resourceDropdown">
-              <div className="publicNavDropdownColumns">
-                <section className="publicNavGroup">
-                  <span className="publicNavGroupLabel">{labels.startGroup}</span>
-                  <a href={navHref("/docs")}>
-                    <strong>{labels.documentation}</strong>
-                    <small>{labels.documentationDescription}</small>
-                  </a>
-                  <a href={navHref("/docs/tools")}>
-                    <strong>{labels.allTools}</strong>
-                    <small>{labels.toolsDescription}</small>
-                  </a>
-                  <a href={navHref("/downloads")}>
-                    <strong>{labels.downloads}</strong>
-                    <small>Windows · macOS · Linux</small>
-                  </a>
-                  <a href={navHref("/demo")}>
-                    <strong>{labels.productFilm}</strong>
-                    <small>{labels.productFilmDescription}</small>
-                  </a>
-                  <a href={navHref("/chrome-extension")}>
-                    <strong>{labels.browserExtension}</strong>
-                    <small>{labels.browserDescription}</small>
-                  </a>
-                  <a href={navHref("/security-model")}>
-                    <strong>{labels.security}</strong>
-                    <small>{labels.securityDescription}</small>
-                  </a>
+            <div id="public-nav-resources" className="publicNavDropdown publicMega">
+              <div className="publicMegaColumns">
+                <section>
+                  <span className="publicMegaLabel">{labels.learnGroup}</span>
+                  <a href={navHref("/docs")}>{labels.documentation}</a>
+                  <a href={navHref("/docs/tools")}>{labels.allTools}</a>
+                  <a href={navHref("/downloads")}>{labels.downloads}</a>
+                  <a href={navHref("/demo")}>{labels.productFilm}</a>
                 </section>
-                <section className="publicNavGroup">
-                  <span className="publicNavGroupLabel">{labels.updatesGroup}</span>
-                  <a href={navHref("/blogs")}>
-                    <strong>{labels.blog}</strong>
-                    <small>{labels.blogDescription}</small>
-                  </a>
-                  <a href={navHref("/releases")}>
-                    <strong>{labels.changelog}</strong>
-                    <small>{labels.changelogDescription}</small>
-                  </a>
-                  <a href={navHref("/roadmap")}>
-                    <strong>{labels.roadmap}</strong>
-                    <small>{labels.roadmapDescription}</small>
-                  </a>
+                <section>
+                  <span className="publicMegaLabel">{labels.updatesGroup}</span>
+                  <a href={navHref("/blogs")}>{labels.blog}</a>
+                  <a href={navHref("/releases")}>{labels.changelog}</a>
+                  <a href={navHref("/roadmap")}>{labels.roadmap}</a>
                 </section>
+                <section>
+                  <span className="publicMegaLabel">{labels.footerCompany}</span>
+                  <a href={navHref("/about")}>{labels.aboutUs}</a>
+                  <a href={navHref("/careers")}>{labels.careers}</a>
+                </section>
+                {megaAgent}
               </div>
             </div>
           </div>
         </nav>
         <div className="publicNavActions">
           <LanguageSwitcher compact syncUrl dropdown />
-          <ThemeSwitcher compact />
           {user ? (
             <a className="navDashboard" href={dashboardHref("/dashboard/connect/overview")}>
               {labels.dashboard} <span>↗</span>
             </a>
           ) : (
-            <a
-              className="navLogin installNavCta"
-              href={APP_ORIGIN + "/dashboard/connect/overview"}
-              title={labels.signInDescription}
-            >
-              {labels.getStarted} <ProductIcon name="arrowUpRight" size={14} />
-            </a>
+            <>
+              <a className="publicNavSignIn" href={loginHref} title={labels.signInDescription}>
+                {labels.logIn}
+              </a>
+              <a
+                className="navLogin installNavCta"
+                href={loginHref}
+                title={labels.signInDescription}
+              >
+                {labels.getStarted} <ProductIcon name="arrowUpRight" size={14} />
+              </a>
+            </>
           )}
         </div>
       </header>
@@ -361,14 +342,7 @@ export function PublicLayout({
     </main>
   );
 }
-export const aiClients = [
-  { name: "ChatGPT", slug: "chatgpt", icon: "/ai-openai.svg", tone: "mono" },
-  { name: "Claude", slug: "claude", icon: "/ai-claude.svg", tone: "color" },
-  { name: "Gemini", slug: "gemini", icon: "/ai-gemini-four-color-2025.svg", tone: "color" },
-  { name: "Cursor", slug: "cursor", icon: "/ai-cursor.svg", tone: "color" },
-] as const;
-// The homepage topology uses the same supported-client list as the install guides.
-export const topologyAiClients = aiClients;
+export { aiClients, topologyAiClients } from "../lib/ai-clients.js";
 
 export function HelpTip({ label, text }: { label: string; text: string }) {
   return (

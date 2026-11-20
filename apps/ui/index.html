@@ -40,9 +40,8 @@
             .querySelector('meta[name="apple-mobile-web-app-title"]')
             .setAttribute("content", name);
         }
-        const saved = localStorage.getItem(
-          product ? "remote-arc-dashboard-theme-v3" : "remote-arc-theme",
-        );
+        // The public website is always dark; only product surfaces keep a theme choice.
+        const saved = product ? localStorage.getItem("remote-arc-dashboard-theme-v3") : "dark";
         const resolved =
           saved === "system"
             ? matchMedia("(prefers-color-scheme: dark)").matches

@@ -26,6 +26,9 @@ export function DevicesView({
     setShowAdd,
     tr,
   } = m;
+  // Arc has nothing to choose between until a computer is paired; a browser
+  // extension is not one.
+  const canAskArc = arcAvailable && devices.some((device) => device.platform !== "browser");
   return (
     <>
       <section className="overviewTopbar devicesPageHeader">
@@ -53,7 +56,7 @@ export function DevicesView({
         devices={devices}
         tr={tr}
         onChat={
-          arcAvailable
+          canAskArc
             ? () => openArcChat(tr("dashboard.views.devicesView.chooseASuitableComputerForMy"))
             : undefined
         }

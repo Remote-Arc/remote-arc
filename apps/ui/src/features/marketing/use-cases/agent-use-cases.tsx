@@ -10,6 +10,8 @@ import {
   WorkspacePreview,
 } from "../arc/arc-connected-previews.js";
 import { BrowserPreview } from "../arc/connected-browser-preview.js";
+import { HomeThreeSteps } from "../home/home-three-steps.js";
+import { SectionTitle } from "../home/section-title.js";
 import "../../../styles/marketing/use-cases/agent-use-cases.css";
 
 export function AgentUseCases() {
@@ -75,11 +77,18 @@ export function AgentUseCases() {
       id="agent-use-cases"
       aria-labelledby={uid + "-heading"}
     >
-      <header className="modernSectionIntro">
-        <span className="eyebrow">{tr("marketing.useCases.agentUseCases.aNewWayToWork")}</span>
-        <h2 id={uid + "-heading"}>{tr("marketing.useCases.agentUseCases.aNewWayToUseYour")}</h2>
-        <p>{tr("marketing.useCases.agentUseCases.forYearsUsingAComputerHas")}</p>
+      {/* Editorial intro: the headline large on the left, the eyebrow and copy beside it. */}
+      <header className="modernSectionIntro modernSectionIntro--split">
+        <SectionTitle
+          id={uid + "-heading"}
+          text={tr("marketing.useCases.agentUseCases.aNewWayToUseYour")}
+        />
+        <div>
+          <span className="eyebrow">{tr("marketing.useCases.agentUseCases.aNewWayToWork")}</span>
+          <p>{tr("marketing.useCases.agentUseCases.forYearsUsingAComputerHas")}</p>
+        </div>
       </header>
+      <HomeThreeSteps />
       <div className="agentConnectedToolbar">
         <div
           className="agentConnectedTabs"

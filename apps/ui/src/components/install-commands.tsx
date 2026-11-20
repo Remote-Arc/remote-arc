@@ -3,18 +3,23 @@ import { useI18n } from "../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../lib/marketing-paths.js";
 import "../styles/components/install-commands.css";
 
-const methods = [
+/** The install commands the site offers, npx first. */
+export const INSTALL_METHODS = [
   { id: "npx", label: "npx", command: "npx remotelink@latest" },
   { id: "curl", label: "curl", command: "curl -fsSL https://remotearc.app/install.sh | sh" },
 ] as const;
+export type InstallMethodId = (typeof INSTALL_METHODS)[number]["id"];
 
 export function InstallCommands({
   downloadHref,
   followHash = false,
-}: { downloadHref?: string; followHash?: boolean } = {}) {
+  defaultMethod = "npx",
+}: { downloadHref?: string; followHash?: boolean; defaultMethod?: InstallMethodId } = {}) {
   const { tr, locale } = useI18n();
   const id = useId();
-  const [selected, setSelected] = useState(0);
+  const [selected, setSelected] = useState(() =>
+    INSTALL_METHODS.findIndex((item) => item.id === defaultMethod),
+  );
   const [copyResult, setCopyResult] = useState<{ command: string; ok: boolean } | null>(null);
   const tabs = useRef<Array<HTMLButtonElement | null>>([]);
   const request = useRef(0);
@@ -26,7 +31,7 @@ export function InstallCommands({
     },
     [],
   );
-  const method = methods[selected]!;
+  const method = INSTALL_METHODS[selected]!;
   const feedback = copyResult?.command === method.command ? copyResult : null;
 
   function select(index: number, focus = false) {
@@ -56,13 +61,13 @@ export function InstallCommands({
   function navigate(event: React.KeyboardEvent<HTMLButtonElement>) {
     const next =
       event.key === "ArrowRight"
-        ? (selected + 1) % methods.length
+        ? (selected + 1) % INSTALL_METHODS.length
         : event.key === "ArrowLeft"
-          ? (selected + methods.length - 1) % methods.length
+          ? (selected + INSTALL_METHODS.length - 1) % INSTALL_METHODS.length
           : event.key === "Home"
             ? 0
             : event.key === "End"
-              ? methods.length - 1
+              ? INSTALL_METHODS.length - 1
               : null;
     if (next === null) return;
     event.preventDefault();
@@ -104,7 +109,7 @@ export function InstallCommands({
             role="tablist"
             aria-label={tr("components.installCommands.installationMethod")}
           >
-            {methods.map((item, index) => (
+            {INSTALL_METHODS.map((item, index) => (
               <button
                 key={item.id}
                 type="button"

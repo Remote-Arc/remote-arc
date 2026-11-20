@@ -10,7 +10,8 @@ test("local creative demos show real locale-specific outputs and load video only
     if (request.url().includes("/media/demo-gallery/") && request.url().endsWith(".mp4"))
       videoRequests++;
   });
-  await page.goto(prefix + "/");
+  // The creative requests live in the full demo on the Remote MCP guide.
+  await page.goto(prefix + "/remote-mcp");
   const demo = page.locator(".homeDemo");
   await demo.getByRole("button", { name: zh ? "制作视频" : "Make a video", exact: true }).click();
   const result = demo.locator('.localCreativeResult[data-kind="video"]');
@@ -49,7 +50,8 @@ test("Creative AI points to local film and image galleries, including directory 
 }, info) => {
   const zh = info.project.metadata.language === "zh",
     prefix = zh ? "/zh" : "";
-  await page.goto(prefix + "/");
+  // The apps directory lives on the Arc page; the home page links there instead.
+  await page.goto(prefix + "/arc");
   const card = page.locator('.appsDirectoryCard[data-category="creative"]');
   await expect(page.locator(".appsDirectoryCard")).toHaveCount(6);
   await expect(

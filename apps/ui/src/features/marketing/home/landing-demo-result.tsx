@@ -14,9 +14,9 @@ export function DemoResultCard({ id }: { id: string }) {
       meta: tr("marketing.home.landingDemoResult.mergedPrsPreviewNeedsAttention"),
     },
     knowledge: {
-      type: "DOC",
-      name: tr("marketing.home.landingDemoResult.launchDecisionsNextSteps"),
-      meta: tr("marketing.home.landingDemoResult.notionPageDriveSourceIncluded"),
+      type: "MSG",
+      name: tr("marketing.home.landingDemoResult.launchUpdate"),
+      meta: tr("marketing.home.landingDemoResult.whatsappTemplateSentDriveChecked"),
     },
     slides: {
       type: "PPT",

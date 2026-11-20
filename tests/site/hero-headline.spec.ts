@@ -1,34 +1,27 @@
 import { expect, test } from "@playwright/test";
 
-test("The hero headline slides through Connect scenarios, and Arc's when the Arc tab is chosen", async ({
+// The hero headline is one sentence in two parts, the second set in the accent.
+test("The hero headline connects your AI to your apps and computers, with no product tabs", async ({
   page,
 }, info) => {
   const zh = info.project.metadata.language === "zh";
   await page.goto(zh ? "/zh" : "/");
   const heading = page.getByRole("heading", { level: 1 });
-  const words = page.locator(".heroSlotLine .heroSlotWord");
-
-  // Screen readers get the whole sentence once; the sliding words are hidden from them.
   await expect(heading).toHaveAccessibleName(
-    zh
-      ? "Remote Arc：让你的 AI 接管每台服务器、每次发布、每周报表和整个机群。"
-      : "Remote Arc: your AI runs every server, every release, your reports and the whole fleet.",
+    zh ? /你的 AI，连接到\s*你的应用和电脑。/ : /Your AI, connected to\s*your apps and computers\./,
   );
-  await expect(words).toHaveCount(4);
-  // Reduced motion in the tests holds the first scenario in place.
-  await expect(words.first()).toHaveAttribute("data-state", "active");
-  await expect(words.first()).toHaveText(zh ? "每台服务器。" : "every server.");
-
-  await page.getByRole("tab", { name: /^Arc/ }).click();
-  await expect(heading).toHaveAccessibleName(
-    zh
-      ? "Remote Arc：让你的 AI 智能体负责晨间简报、销售报表、例行任务和后续跟进。"
-      : "Remote Arc: your AI agent handles the morning briefing, the sales report, every routine and the follow-ups.",
+  await expect(heading.locator("em")).toHaveText(
+    zh ? "你的应用和电脑。" : "your apps and computers.",
   );
-  await expect(words).toHaveCount(4);
-  await expect(words.first()).toHaveText(zh ? "每天的晨间简报。" : "the morning briefing.");
-
-  await page.getByRole("tab", { name: "Connect" }).click();
-  await expect(words.first()).toHaveText(zh ? "每台服务器。" : "every server.");
+  // The only tabs in the hero choose the install command, not a product.
+  await expect(page.locator(".homeHero").getByRole("tab", { name: /^(Connect|Arc)$/ })).toHaveCount(
+    0,
+  );
+  await expect(page.locator(".homeHero").getByRole("tab")).toHaveText(["npx", "curl"]);
+  // Visitors without an AI of their own are offered Arc, under the install command.
+  await expect(page.locator(".homeHero a.heroArcAction")).toHaveAttribute(
+    "href",
+    zh ? "/zh/arc" : "/arc",
+  );
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

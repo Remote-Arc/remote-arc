@@ -28,7 +28,9 @@ export type ProductIconName =
   | "refresh"
   | "chart"
   | "panel"
-  | "book";
+  | "book"
+  | "download"
+  | "copy";
 export function ProductIcon({ name, size = 18 }: { name: ProductIconName; size?: number }) {
   const paths: Record<ProductIconName, ReactNode> = {
     panel: (
@@ -77,6 +79,13 @@ export function ProductIcon({ name, size = 18 }: { name: ProductIconName; size?:
     ),
     arrowUp: <path d="M12 19V5m-6 6 6-6 6 6" />,
     arrowUpRight: <path d="M6 18 18 6M6 6h12v12" />,
+    download: <path d="M12 4v11m-5-5 5 5 5-5M5 20h14" />,
+    copy: (
+      <>
+        <rect x="9" y="9" width="11" height="11" rx="2" />
+        <path d="M5 15V6a2 2 0 0 1 2-2h9" />
+      </>
+    ),
     chat: <path d="M20 11.5a8 8 0 0 1-8 8 8.5 8.5 0 0 1-4-.9L4 20l1.3-4a8 8 0 1 1 14.7-4.5Z" />,
     check: <path d="m5 12 4 4L19 6" />,
     trash: (

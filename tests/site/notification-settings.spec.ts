@@ -49,9 +49,19 @@ test("a plan without notifications shows what they do and one way to get Pro", a
     const channel = page.locator(`[data-channel=${kind}]`);
     await expect(channel.getByRole("switch")).toBeDisabled();
     await expect(channel).toContainText(/Included with Pro and Max|Pro 和 Max 套餐包含此功能/);
+    // Each locked channel carries a Pro badge beside its title, so the disabled
+    // switch is explained where it is.
+    await expect(channel.locator(".notificationChannelTitle .notificationUpgradeBadge")).toHaveText(
+      "Pro",
+    );
+    // The badge is not part of the switch's accessible name.
+    await expect(channel.getByRole("switch")).toHaveAccessibleName(
+      /^(Slack direct message|Webhook|Slack 私信|Webhook)$/,
+    );
   }
-  // A plan that includes notifications shows no upgrade card.
+  // A plan that includes notifications shows no upgrade card and no badges.
   await page.goto("/settings?section=notifications");
   await expect(page.locator("[data-channel=webhook]")).toBeVisible();
   await expect(page.locator(".notificationUpgrade")).toHaveCount(0);
+  await expect(page.locator(".notificationChannel .notificationUpgradeBadge")).toHaveCount(0);
 });

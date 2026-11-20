@@ -46,6 +46,8 @@ function ChannelCard({ channel, model }: { channel: NotificationChannel; model: 
   const busy = model.busy === kind;
   const failure = model.failureFor(kind);
   const blocked = Boolean(channel.unavailable) && !channel.enabled;
+  // A plan-locked channel says so where its controls are, not only in the banner.
+  const proOnly = blocked && channel.unavailable === "PLAN_UPGRADE_REQUIRED";
   const toggleEvent = (event: NotificationEvent, on: boolean) =>
     model.save(kind, {
       events: on ? [...channel.events, event] : channel.events.filter((item) => item !== event),
@@ -59,7 +61,17 @@ function ChannelCard({ channel, model }: { channel: NotificationChannel; model: 
     >
       <div className="raSettingsRow raSettingsRowLast">
         <div className="raSettingsRowInfo">
-          <h4 id={"notify-" + kind}>{tr(text.title)}</h4>
+          <div className="notificationChannelTitle">
+            <h4 id={"notify-" + kind}>{tr(text.title)}</h4>
+            {proOnly && (
+              <span
+                className="notificationUpgradeBadge"
+                title={tr("settings.notificationSettings.unavailablePlan")}
+              >
+                Pro
+              </span>
+            )}
+          </div>
           <p>{tr(text.detail)}</p>
           {channel.unavailable && (
             <p className="notificationUnavailable">
@@ -77,9 +89,11 @@ function ChannelCard({ channel, model }: { channel: NotificationChannel; model: 
             aria-checked={channel.enabled}
             aria-labelledby={"notify-" + kind}
             title={
-              channel.enabled
-                ? tr("settings.notificationSettings.on")
-                : tr("settings.notificationSettings.off")
+              proOnly
+                ? tr("settings.notificationSettings.unavailablePlan")
+                : channel.enabled
+                  ? tr("settings.notificationSettings.on")
+                  : tr("settings.notificationSettings.off")
             }
             disabled={busy || blocked || (kind === "webhook" && !channel.enabled && !url.trim())}
             onClick={() =>

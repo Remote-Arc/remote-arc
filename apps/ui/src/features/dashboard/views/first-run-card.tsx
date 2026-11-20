@@ -2,6 +2,7 @@ import { useState } from "react";
 import { InstallCommands } from "../../../components/install-commands.js";
 import { ProductIcon } from "../../../components/product-icon.js";
 import type { DashboardModel } from "../../../hooks/dashboard/use-dashboard-model.js";
+import { detectAgentPlatform } from "../../../lib/agent-download.js";
 
 const dismissKey = (userId: string) => "remotearc.firstRun.dismissed:" + userId;
 
@@ -43,7 +44,9 @@ export function FirstRunCard({ m }: { m: DashboardModel }) {
         <li data-current="true">
           <strong>1 · {tr("dashboard.views.firstRunCard.installAndPair")}</strong>
           <small>{tr("dashboard.views.firstRunCard.runOneCommandOnTheComputer")}</small>
-          <InstallCommands />
+          {/* Same recommendation as the pairing dialog: the no-Node installer,
+              except on Windows, where `curl | sh` does not run. */}
+          <InstallCommands defaultMethod={detectAgentPlatform() === "windows" ? "npx" : "curl"} />
           <button
             type="button"
             className="addButton arcRadiantCta"

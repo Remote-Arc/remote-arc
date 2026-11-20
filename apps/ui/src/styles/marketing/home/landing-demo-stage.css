@@ -1,0 +1,127 @@
+/* The demo's "stage" layout: the chat window alone in the middle, the AI
+ * clients it can show on the left and the requests on the right, each a chip
+ * with its company's logo on a white tile. The site is dark only. */
+
+.publicPage .homeDemo[data-layout="stage"] {
+  margin-top: 40px;
+}
+.homeDemoStage {
+  display: grid;
+  grid-template-columns: minmax(150px, 190px) minmax(0, 860px) minmax(150px, 190px);
+  justify-content: center;
+  align-items: start;
+  gap: 28px;
+}
+
+/* Rails: a small mono label, then a column of chips. */
+.publicPage .homeDemoStage :is(.homeDemoClientSwitch, .homeDemoExamples) {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding-top: 36px;
+}
+.publicPage .homeDemoStage .homeDemoExamples {
+  justify-items: end;
+}
+.publicPage .homeDemoStage :is(.homeDemoClientSwitch > span, .homeDemoRailLabel) {
+  margin: 0 0 4px;
+  color: #6c6c76;
+  font:
+    600 11px ui-monospace,
+    "SF Mono",
+    Menlo,
+    monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.publicPage .homeDemoStage :is(.homeDemoClientSwitch, .homeDemoExamples) button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 0;
+  padding: 7px 14px 7px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(23, 23, 27, 0.9);
+  box-shadow: none;
+  color: #b9b9c2;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease;
+}
+/* Requests read from the chat outward: the name first, the logo at the edge. */
+.publicPage .homeDemoStage .homeDemoExamples button {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+  padding: 7px 7px 7px 14px;
+}
+.publicPage .homeDemoStage :is(.homeDemoClientSwitch, .homeDemoExamples) button:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #f2f2f4;
+}
+.publicPage .homeDemoStage .homeDemoClientSwitch button[aria-pressed="true"],
+.publicPage .homeDemoStage .homeDemoExamples button.active {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: #1f1f25;
+  color: #fff;
+}
+.publicPage .homeDemoStage .homeDemoClientSwitch img {
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  padding: 6px;
+  border-radius: 8px;
+  background: #fff;
+}
+.publicPage .homeDemoStage .homeDemoExampleLogos img {
+  width: 30px;
+  height: 30px;
+  padding: 6px;
+  border: 0;
+  border-radius: 8px;
+}
+
+/* The chat on its own, a little taller than in the split layout. */
+.publicPage .homeDemoStage .homeDemoSurface {
+  display: block;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  box-shadow: 0 40px 120px -40px rgba(0, 0, 0, 0.9);
+}
+.publicPage .homeDemoStage .homeDemoChat {
+  height: 600px;
+}
+
+/* Narrow screens: chat views above the chat, requests below, each a row. */
+@media (max-width: 1080px) {
+  .homeDemoStage {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .publicPage .homeDemoStage :is(.homeDemoClientSwitch, .homeDemoExamples) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding-top: 0;
+  }
+  .publicPage .homeDemoStage :is(.homeDemoClientSwitch > span, .homeDemoRailLabel) {
+    flex-basis: 100%;
+    text-align: center;
+  }
+  .publicPage .homeDemoStage :is(.homeDemoClientSwitch, .homeDemoExamples) button {
+    width: auto;
+  }
+  .publicPage .homeDemoStage .homeDemoExamples {
+    order: 3;
+  }
+  .publicPage .homeDemoStage .homeDemoChat {
+    height: 560px;
+  }
+}

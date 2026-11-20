@@ -3,6 +3,7 @@ import type { Translate } from "../../locales/locale-catalog.js";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useI18n } from "../../hooks/use-i18n.js";
 import { WorkspaceLoading } from "../../components/workspace-loading.js";
+import { usePlatformCatalog, type PlatformCatalog } from "../../hooks/use-platform-catalog.js";
 import {
   billingRequest,
   billingFailureMessage,
@@ -64,8 +65,44 @@ export function ArcAccountPlan({ onManage }: { onManage: () => void }) {
     </section>
   );
 }
+// The account's billing comes from the payment provider and can take a while.
+// The public catalog answers sooner, so the Free limits show while it loads.
+function FreePlanPreview({
+  catalog,
+  tr,
+  locale,
+}: {
+  catalog: PlatformCatalog | null;
+  tr: Translate;
+  locale: string;
+}) {
+  const free = catalog?.plans.find((plan) => plan.id === "free");
+  if (!catalog || catalog.connectFreeCalls === null || free?.deviceLimit == null) return null;
+  return (
+    <section className="raSettingsSurface raBillingSummary">
+      <div>
+        <span className="raSettingsFieldLabel">
+          {tr("billing.arcBillingPanel.freePlanIncludes")}
+        </span>
+        <h3>Connect Free</h3>
+        <p>
+          {tr("billing.arcBillingPanel.freePlanLimits", {
+            calls: catalog.connectFreeCalls.toLocaleString(locale),
+            computers: free.deviceLimit.toLocaleString(locale),
+          })}
+        </p>
+      </div>
+      <div className="raBillingActions">
+        <a className="raSettingsButton" href="/checkout">
+          {tr("billing.arcBillingPanel.chooseAPlan")}
+        </a>
+      </div>
+    </section>
+  );
+}
 export function ArcBillingPanel() {
   const { tr, locale } = useI18n(),
+    catalog = usePlatformCatalog(),
     [data, setData] = useState<ArcBilling | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
@@ -213,7 +250,10 @@ export function ArcBillingPanel() {
         </button>
       </section>
     ) : (
-      <WorkspaceLoading label={tr("billing.arcBillingPanel.loadingBilling")} variant="cards" />
+      <div className="raBilling">
+        <FreePlanPreview catalog={catalog} tr={tr} locale={locale} />
+        <WorkspaceLoading label={tr("billing.arcBillingPanel.loadingBilling")} variant="cards" />
+      </div>
     );
   // A cancelled subscription (ended early, e.g. after a refund) no longer has a renewal or access date.
   const resetText = data.usage.month

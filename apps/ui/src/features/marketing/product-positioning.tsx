@@ -2,9 +2,10 @@ import "../../styles/marketing/home/platform-intro.css";
 import { useI18n } from "../../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../../lib/marketing-paths.js";
 import { ProductIcon as Icon } from "../../components/product-icon.js";
+import { SectionTitle } from "./home/section-title.js";
 
 const P = "marketing.productPositioning.";
-const APP_ICONS = ["github", "slack", "gmail", "notion", "googledrive", "linear", "jira"];
+const APP_ICONS = ["github", "slack", "gmail", "whatsapp", "googledrive", "linear", "jira"];
 const FLEET = [
   { os: "macos", name: "macOS" },
   { os: "linux", name: "Linux", picked: true },
@@ -76,7 +77,7 @@ export function ProductFocus() {
     {
       label: tr(`${P}yourApps`),
       title: tr(`${P}bringYourToolsTogether`),
-      text: tr(`${P}workAcrossGithubSlackGmailNotion`),
+      text: tr(`${P}workAcrossGithubSlackGmailWhatsapp`),
       href: "/integrations",
       action: tr(`${P}exploreApps`),
       visual: <AppsVisual more={tr(`${P}appsMore`)} />,
@@ -103,7 +104,10 @@ export function ProductFocus() {
       <header className="homePlatformHeader">
         <div>
           <span className="eyebrow">{tr(`${P}theRemoteArcPlatform`)}</span>
-          <h2 id="home-platform-heading">{tr(`${P}agentInfrastructureForRealWorkAcross`)}</h2>
+          <SectionTitle
+            id="home-platform-heading"
+            text={tr(`${P}agentInfrastructureForRealWorkAcross`)}
+          />
         </div>
         <div className="homePlatformAside">
           <p>{tr(`${P}lead`)}</p>

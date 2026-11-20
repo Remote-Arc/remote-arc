@@ -7,17 +7,35 @@ import React, { useEffect, useRef, useState } from "react";
 import { useI18n } from "../../../hooks/use-i18n.js";
 import { localizedWebsiteHref } from "../../../lib/marketing-paths.js";
 import "../../../styles/marketing/home/landing-interactive-demo.css";
+import "../../../styles/marketing/home/landing-demo-stage.css";
 
-type DemoScenario = {
+/**
+ * A scenario the demo plays. The built-in ids (code, video, the app workflows
+ * and so on) carry their own trace; any other scenario brings a `script`.
+ */
+export type DemoScenario = {
   id: string;
   label: string;
   request: string;
   result: string;
   permission: string;
   link: string;
+  script?: DemoScript;
+};
+export type DemoScript = {
+  /** "app" scenarios run through connected apps, "device" ones on computers. */
+  kind: "app" | "device";
+  events: DemoEvent[];
+  progress: DemoProgress[];
+  /** Logo files for the example button; a glyph is shown when there are none. */
+  icons?: string[];
+  glyph?: DemoGlyphName;
+  href: string;
+  /** Shown under the assistant's reply, for a result that is more than text. */
+  attachment?: React.ReactNode;
 };
 
-type DemoEvent = {
+export type DemoEvent = {
   tool: string;
   arguments: string;
   output: string;
@@ -165,14 +183,23 @@ function DemoGlyph({ name, size = 18 }: { name: DemoGlyphName; size?: number }) 
   );
 }
 
-function ScenarioIcon({ id }: { id: string }) {
+function ScenarioIcon({ id, script }: { id: string; script?: DemoScript }) {
   const workflow = findAppWorkflow(id);
-  if (workflow)
+  const icons = script
+    ? (script.icons ?? [])
+    : (workflow?.brands.map((brand) => "/app-brands/" + brand.brand + ".svg") ?? []);
+  if (icons.length)
     return (
       <span className="homeDemoExampleLogos" aria-hidden="true">
-        {workflow.brands.slice(0, 2).map((brand) => (
-          <img src={"/app-brands/" + brand.brand + ".svg"} key={brand.brand} alt="" />
+        {icons.slice(0, 2).map((icon) => (
+          <img src={icon} key={icon} alt="" />
         ))}
+      </span>
+    );
+  if (script?.glyph)
+    return (
+      <span className="homeDemoScenarioGlyph" aria-hidden="true">
+        <DemoGlyph name={script.glyph} size={18} />
       </span>
     );
   return (
@@ -418,7 +445,7 @@ function eventsFor(id: string, tr: Translate): DemoEvent[] {
   }
 }
 
-type DemoProgress = { working: string; done: string };
+export type DemoProgress = { working: string; done: string };
 
 function progressFor(id: string, tr: Translate): DemoProgress[] {
   const workflow = findAppWorkflow(id);
@@ -575,15 +602,47 @@ function progressFor(id: string, tr: Translate): DemoProgress[] {
   }
 }
 
-export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoScenario[] }) {
+export function InteractiveWorkDemo({
+  scenarios,
+  selected: controlled,
+  onSelect,
+  layout = "split",
+}: {
+  scenarios: readonly DemoScenario[];
+  /** Pass both to choose the scenario from outside the demo too. */
+  selected?: number;
+  onSelect?: (index: number) => void;
+  /**
+   * "split": requests and chat views above, the chat beside its execution log.
+   * "stage": the chat alone in the middle, chat views on its left and requests
+   * on its right, each request under its company's logo.
+   */
+  layout?: "split" | "stage";
+}) {
   const { tr, locale } = useI18n();
-  const [selected, setSelected] = useState(0);
+  const [ownSelected, setOwnSelected] = useState(0);
+  const selected = controlled ?? ownSelected;
+  const eventsOf = (item?: DemoScenario) =>
+    item?.script ? item.script.events : eventsFor(item?.id ?? "code", tr);
   const [step, setStep] = useState(-1);
   const [client, setClient] = useState<DemoClient>("ChatGPT");
   const demoRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
   const chatBodyRef = useRef<HTMLDivElement>(null);
-  const events = eventsFor(scenarios[selected]?.id ?? "code", tr);
+  const events = eventsOf(scenarios[selected]);
+  // A scenario chosen from outside (the notes beside the demo) plays from the start too.
+  const shownScenario = useRef(selected);
+  useEffect(() => {
+    if (shownScenario.current === selected) return;
+    shownScenario.current = selected;
+    setStep(
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? eventsOf(scenarios[selected]).length * 2 + 1
+        : 0,
+    );
+    if (chatBodyRef.current) chatBodyRef.current.scrollTop = 0;
+    if (terminalRef.current) terminalRef.current.scrollTop = 0;
+  }, [selected]);
   const scenario = scenarios[selected] ?? scenarios[0];
   const finished = step >= events.length * 2 + 1;
   const active = step >= 0 && !finished;
@@ -635,11 +694,13 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
 
   if (!scenario) return null;
 
-  const isAppScenario =
-    Boolean(findAppWorkflow(scenario.id)) || ["mail", "calendar"].includes(scenario.id);
+  const script = scenario.script;
+  const isAppScenario = script
+    ? script.kind === "app"
+    : Boolean(findAppWorkflow(scenario.id)) || ["mail", "calendar"].includes(scenario.id);
   const isCreativeScenario = scenario.id === "video" || scenario.id === "image";
   const finalReply =
-    isAppScenario || isCreativeScenario
+    script || isAppScenario || isCreativeScenario
       ? scenario.result
       : scenarios[selected]?.id === "code"
         ? tr("marketing.home.landingInteractiveDemo.iFixedTheFormattingEdgeCase")
@@ -656,17 +717,18 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
                   );
 
   const pickScenario = (index: number) => {
-    setSelected(index);
+    setOwnSelected(index);
+    onSelect?.(index);
     setStep(
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? eventsFor(scenarios[index]?.id ?? "code", tr).length * 2 + 1
+        ? eventsOf(scenarios[index]).length * 2 + 1
         : 0,
     );
     if (chatBodyRef.current) chatBodyRef.current.scrollTop = 0;
     if (terminalRef.current) terminalRef.current.scrollTop = 0;
   };
 
-  const progress = progressFor(scenario.id, tr);
+  const progress = script ? script.progress : progressFor(scenario.id, tr);
   const progressIndex = Math.min(progress.length - 1, Math.max(0, Math.floor(step / 2)));
   const progressTitle = finished
     ? tr("marketing.home.landingInteractiveDemo.finishedWorkingOnYourRequest")
@@ -678,403 +740,432 @@ export function InteractiveWorkDemo({ scenarios }: { scenarios: readonly DemoSce
           tr("marketing.home.landingInteractiveDemo.workingOnYourRequest"));
   const prompt = scenario.request.replace(/^“|”$/g, "");
   const workflow = findAppWorkflow(scenario.id);
-  const workflowHref = workflow
-    ? "/integrations?provider=" + workflow.connectionProvider
-    : "/use-cases/" + scenario.link;
+  const workflowHref = script
+    ? script.href
+    : workflow
+      ? "/integrations?provider=" + workflow.connectionProvider
+      : "/use-cases/" + scenario.link;
+
+  const stage = layout === "stage";
+  const examples = (
+    <div
+      className="homeDemoExamples"
+      aria-label={tr("marketing.home.landingInteractiveDemo.tryAnExampleRequest")}
+    >
+      {stage && (
+        <span className="homeDemoRailLabel">
+          {tr("marketing.home.landingInteractiveDemo.tryAnExampleRequest")}
+        </span>
+      )}
+      {scenarios.map((example, index) => (
+        <button
+          key={example.id}
+          type="button"
+          className={index === selected ? "active" : ""}
+          aria-pressed={index === selected}
+          onClick={() => pickScenario(index)}
+        >
+          <ScenarioIcon id={example.id} script={example.script} />
+          <span>{example.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+  const clientSwitch = (
+    <div
+      className="homeDemoClientSwitch"
+      aria-label={tr("marketing.home.landingInteractiveDemo.previewTheConversationInAnAi")}
+    >
+      <span>{tr("marketing.home.landingInteractiveDemo.chatView")}</span>
+      {(["ChatGPT", "Claude", "Cursor"] as const).map((name) => (
+        <button
+          type="button"
+          key={name}
+          className={"homeDemoClientTab--" + name.toLowerCase()}
+          aria-pressed={name === client}
+          onClick={() => setClient(name)}
+        >
+          <img src={clientLogo[name]} alt="" />
+          {name}
+        </button>
+      ))}
+    </div>
+  );
+  const chat = (
+    <section
+      className={"homeDemoChat homeDemoChat--" + client.toLowerCase()}
+      aria-label={tr("marketing.home.landingInteractiveDemo.exampleConversationIn", { client })}
+    >
+      {client !== "Cursor" && (
+        <aside className="homeDemoChatRail" aria-hidden="true">
+          <div className="homeDemoRailTop">
+            <DemoGlyph name="sidebar" size={19} />
+            <DemoGlyph name="new" size={19} />
+          </div>
+          <div className="homeDemoRailBottom">
+            <span className="homeDemoRailAvatar">S</span>
+          </div>
+        </aside>
+      )}
+      <div className="homeDemoChatMain">
+        <header className="homeDemoChatChrome">
+          {client === "ChatGPT" && (
+            <>
+              <div className="homeDemoBrandTitle">
+                <img src={clientLogo.ChatGPT} alt="" />
+                <strong>ChatGPT</strong>
+                <DemoGlyph name="chevron" size={14} />
+              </div>
+              <div className="homeDemoChromeActions">
+                <DemoGlyph name="share" size={17} />
+                <DemoGlyph name="dots" size={19} />
+              </div>
+            </>
+          )}
+          {client === "Claude" && (
+            <>
+              <div className="homeDemoBrandTitle">
+                <img src={clientLogo.Claude} alt="" />
+                <strong>Claude</strong>
+              </div>
+              <div className="homeDemoClaudeNav">
+                <span className="selected">Chat</span>
+                <span>Cowork</span>
+                <span>Code</span>
+              </div>
+            </>
+          )}
+          {client === "Cursor" && (
+            <>
+              <div className="homeDemoCursorWindow">
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="homeDemoCursorTab">
+                <img src={clientLogo.Cursor} alt="" />
+                <span>Agent</span>
+                <DemoGlyph name="chevron" size={12} />
+              </div>
+              <div className="homeDemoChromeActions">
+                <DemoGlyph name="new" size={16} />
+                <DemoGlyph name="dots" size={17} />
+              </div>
+            </>
+          )}
+        </header>
+
+        <div className="homeDemoChatBody" ref={chatBodyRef}>
+          {client === "Cursor" && (
+            <div className="homeDemoCursorContext">
+              <DemoGlyph name="sidebar" size={14} />
+              <span>{tr("marketing.home.landingInteractiveDemo.newChat")}</span>
+              <span className="homeDemoCursorContextModel">Auto</span>
+            </div>
+          )}
+          <div className="homeDemoUserBubble">{prompt}</div>
+
+          {step >= 0 && (
+            <div className="homeDemoAssistant">
+              {client === "Claude" && (
+                <img className="homeDemoAssistantLogo" src={clientLogo.Claude} alt="" />
+              )}
+              {client === "Cursor" && (
+                <div className="homeDemoCursorAgent">
+                  <DemoGlyph name="sparkle" size={15} />
+                  <strong>Agent</strong>
+                  <span>· Auto</span>
+                </div>
+              )}
+              {client !== "Cursor" && (
+                <p className="homeDemoAssistantIntro">
+                  {isAppScenario
+                    ? tr("marketing.home.landingInteractiveDemo.iLlUseYourConnectedApps")
+                    : tr("marketing.home.landingInteractiveDemo.iLlUseRemoteArcTo")}
+                </p>
+              )}
+              <div className="homeDemoActivity" aria-live="polite" aria-atomic="false">
+                <header className="homeDemoActivityHeader">
+                  <span className="homeDemoActivityIcon">
+                    <img src="/remote-arc.svg" alt="" width="30" height="30" />
+                  </span>
+                  <div className="homeDemoActivityHeading">
+                    <span>Remote Arc</span>
+                    <strong>{progressTitle}</strong>
+                  </div>
+                  {finished ? (
+                    <span className="homeDemoActivityCheck">
+                      <DemoGlyph name="check" size={15} />
+                    </span>
+                  ) : (
+                    <span
+                      className="homeDemoMiniSpinner"
+                      aria-label={tr("marketing.home.landingInteractiveDemo.working")}
+                    />
+                  )}
+                </header>
+                {step > 0 && (
+                  <ol className="homeDemoProgressList">
+                    {progress.map((part, index) => {
+                      const started = step >= index * 2 + 1;
+                      const done = step >= index * 2 + 2;
+                      if (!started) return null;
+                      return (
+                        <li
+                          key={index}
+                          className={done ? "homeDemoProgressDone" : "homeDemoProgressCurrent"}
+                        >
+                          <span className="homeDemoProgressMarker">
+                            {done ? (
+                              <DemoGlyph name="check" size={11} />
+                            ) : (
+                              <span className="homeDemoProgressPulse" />
+                            )}
+                          </span>
+                          <span>{done ? part.done : part.working}</span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
+              </div>
+              {finished ? (
+                <>
+                  <p className="homeDemoAssistantAnswer">{finalReply}</p>
+                  <DemoResultCard key={scenario.id} id={scenario.id} />
+                  {script?.attachment}
+                  {isCreativeScenario && (
+                    <LocalCreativeResult
+                      key={scenario.id + locale}
+                      kind={scenario.id as "video" | "image"}
+                    />
+                  )}
+                  <div className="homeDemoMessageTools" aria-hidden="true">
+                    <DemoGlyph name="paperclip" size={14} />
+                    <DemoGlyph name="share" size={14} />
+                    <DemoGlyph name="dots" size={16} />
+                  </div>
+                </>
+              ) : null}
+            </div>
+          )}
+        </div>
+
+        <div className="homeDemoComposer">
+          {client === "ChatGPT" && (
+            <div className="homeDemoComposerBox">
+              <div className="homeDemoComposerPlaceholder">
+                {tr("marketing.home.landingInteractiveDemo.askAnything")}
+              </div>
+              <div className="homeDemoComposerRow">
+                <span className="homeDemoComposerRound">
+                  <DemoGlyph name="plus" size={19} />
+                </span>
+                <span className="homeDemoComposerTools">
+                  <DemoGlyph name="sparkle" size={16} />
+                  {tr("marketing.home.landingInteractiveDemo.tools")}
+                </span>
+                <span className="homeDemoComposerSpacer" />
+                <DemoGlyph name="mic" size={19} />
+                <span className="homeDemoComposerSend">
+                  <DemoGlyph name="send" size={18} />
+                </span>
+              </div>
+            </div>
+          )}
+          {client === "Claude" && (
+            <div className="homeDemoComposerBox">
+              <div className="homeDemoComposerPlaceholder">
+                {tr("marketing.home.landingInteractiveDemo.replyToClaude")}
+              </div>
+              <div className="homeDemoComposerRow">
+                <DemoGlyph name="plus" size={20} />
+                <span className="homeDemoComposerSpacer" />
+                <span className="homeDemoClaudeModel">
+                  Sonnet 4.6 <DemoGlyph name="chevron" size={13} />
+                </span>
+                <span className="homeDemoComposerSend">
+                  <DemoGlyph name="send" size={18} />
+                </span>
+              </div>
+            </div>
+          )}
+          {client === "Cursor" && (
+            <div className="homeDemoComposerBox">
+              <div className="homeDemoCursorAddContext">
+                <DemoGlyph name="plus" size={13} />{" "}
+                {tr("marketing.home.landingInteractiveDemo.addContext")}
+              </div>
+              <div className="homeDemoComposerPlaceholder">
+                {tr("marketing.home.landingInteractiveDemo.planSearchBuildAnything")}
+              </div>
+              <div className="homeDemoComposerRow">
+                <span className="homeDemoCursorMode">
+                  ∞ {tr("marketing.home.landingInteractiveDemo.agent")}{" "}
+                  <DemoGlyph name="chevron" size={12} />
+                </span>
+                <span className="homeDemoCursorModel">
+                  Auto <DemoGlyph name="chevron" size={12} />
+                </span>
+                <span className="homeDemoComposerSpacer" />
+                <DemoGlyph name="paperclip" size={16} />
+                <span className="homeDemoComposerSend">
+                  <DemoGlyph name="send" size={16} />
+                </span>
+              </div>
+            </div>
+          )}
+          <span className="homeDemoComposerDisclaimer">
+            {client === "Cursor"
+              ? tr("marketing.home.landingInteractiveDemo.aiGeneratedCodeMayContainErrors")
+              : client === "Claude"
+                ? tr("marketing.home.landingInteractiveDemo.claudeCanMakeMistakesPleaseDouble")
+                : tr("marketing.home.landingInteractiveDemo.chatgptCanMakeMistakesCheckImportant")}
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+  const terminal = (
+    <section
+      className="homeDemoTerminal"
+      aria-label={
+        isAppScenario
+          ? tr("marketing.home.landingInteractiveDemo.exampleAppActivity")
+          : tr("marketing.home.landingInteractiveDemo.exampleDeviceExecutionLog")
+      }
+    >
+      <header className="homeDemoTerminalHeader">
+        <div className="homeDemoTerminalDots" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </div>
+        <span>
+          Remote Arc <b>/</b>{" "}
+          {isAppScenario
+            ? tr("marketing.home.landingInteractiveDemo.appActivity")
+            : tr("marketing.home.landingInteractiveDemo.deviceActivity")}
+        </span>
+        <span className="homeDemoTerminalDevice">
+          <i aria-hidden="true" />
+          {isAppScenario
+            ? tr("marketing.home.landingInteractiveDemo.connectedApps")
+            : tr("marketing.home.landingInteractiveDemo.exampleWorkstation")}
+        </span>
+      </header>
+      <div
+        className="homeDemoTerminalBody"
+        ref={terminalRef}
+        role="log"
+        aria-label={tr("marketing.home.landingInteractiveDemo.simulatedToolCallSequence")}
+      >
+        <div className="homeDemoTerminalBanner">
+          <span className="homeDemoMonoAccent">remote-arc</span>
+          <span>
+            {isAppScenario
+              ? tr("marketing.home.landingInteractiveDemo.cloudAppsWorkflow")
+              : tr("marketing.home.landingInteractiveDemo.localExecution")}
+          </span>
+        </div>
+        <div className="homeDemoTerminalInfo">
+          ✓ {tr("marketing.home.landingInteractiveDemo.secureMcpConnectionReady")}
+        </div>
+        {step < 0 && (
+          <p className="homeDemoTerminalWaiting">
+            {tr("marketing.home.landingInteractiveDemo.waitingForARequestFromYour")}
+          </p>
+        )}
+        {step >= 0 && (
+          <div className="homeDemoTraceLine">
+            <span className="homeDemoTraceTime">00:00</span>
+            <span className="homeDemoTraceEvent">request</span>
+            <code>
+              {isAppScenario
+                ? tr(
+                    "marketing.home.landingInteractiveDemo.connectedAccountScopesCheckedExecutingYour",
+                  )
+                : tr("marketing.home.landingInteractiveDemo.devicePolicyCheckedApprovedTools")}
+            </code>
+          </div>
+        )}
+        {events.map((event, index) => {
+          const showCall = step >= index * 2 + 1;
+          const showResult = step >= index * 2 + 2;
+          return showCall ? (
+            <React.Fragment key={event.tool + index}>
+              <div className="homeDemoTraceLine">
+                <span className="homeDemoTraceTime">{`00:${String(index * 2 + 1).padStart(2, "0")}`}</span>
+                <span className="homeDemoTraceEvent">tool.call</span>
+                <code>{event.tool}</code>
+              </div>
+              <div className="homeDemoTraceArgs">
+                <code>{event.arguments}</code>
+              </div>
+              {showResult && (
+                <div className="homeDemoTraceLine homeDemoTraceResult">
+                  <span className="homeDemoTraceTime">{`00:${String(index * 2 + 2).padStart(2, "0")}`}</span>
+                  <span className="homeDemoTraceSuccess">tool.done</span>
+                  <code>
+                    {event.output} <small>· {event.duration}</small>
+                  </code>
+                </div>
+              )}
+            </React.Fragment>
+          ) : null;
+        })}
+        {finished && (
+          <div className="homeDemoTerminalFinished">
+            ✓ {tr("marketing.home.landingInteractiveDemo.executionCompleteResponseDelivered")}
+          </div>
+        )}
+        {active && (
+          <span className="homeDemoTerminalCursor" aria-hidden="true">
+            ▌
+          </span>
+        )}
+      </div>
+      <footer className="homeDemoTerminalFooter">
+        <span>
+          {tr("marketing.home.landingInteractiveDemo.permission")}: {scenario.permission}
+        </span>
+        <span>
+          {finished
+            ? tr("marketing.home.landingInteractiveDemo.complete")
+            : active
+              ? tr("marketing.home.landingInteractiveDemo.executing")
+              : tr("marketing.home.landingInteractiveDemo.ready")}
+        </span>
+      </footer>
+    </section>
+  );
 
   return (
     <div
       className="homeDemo"
       ref={demoRef}
+      data-layout={layout}
       data-scenario={scenario.id}
       data-state={finished ? "complete" : active ? "working" : "ready"}
     >
-      <div className="homeDemoToolbar">
-        <div
-          className="homeDemoExamples"
-          aria-label={tr("marketing.home.landingInteractiveDemo.tryAnExampleRequest")}
-        >
-          {scenarios.map((example, index) => (
-            <button
-              key={example.id}
-              type="button"
-              className={index === selected ? "active" : ""}
-              aria-pressed={index === selected}
-              onClick={() => pickScenario(index)}
-            >
-              <ScenarioIcon id={example.id} />
-              <span>{example.label}</span>
-            </button>
-          ))}
+      {stage ? (
+        <div className="homeDemoStage">
+          {clientSwitch}
+          <div className="homeDemoSurface">{chat}</div>
+          {examples}
         </div>
-        <div
-          className="homeDemoClientSwitch"
-          aria-label={tr("marketing.home.landingInteractiveDemo.previewTheConversationInAnAi")}
-        >
-          <span>{tr("marketing.home.landingInteractiveDemo.chatView")}</span>
-          {(["ChatGPT", "Claude", "Cursor"] as const).map((name) => (
-            <button
-              type="button"
-              key={name}
-              className={"homeDemoClientTab--" + name.toLowerCase()}
-              aria-pressed={name === client}
-              onClick={() => setClient(name)}
-            >
-              <img src={clientLogo[name]} alt="" />
-              {name}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="homeDemoSurface">
-        <section
-          className={"homeDemoChat homeDemoChat--" + client.toLowerCase()}
-          aria-label={tr("marketing.home.landingInteractiveDemo.exampleConversationIn", { client })}
-        >
-          {client !== "Cursor" && (
-            <aside className="homeDemoChatRail" aria-hidden="true">
-              <div className="homeDemoRailTop">
-                <DemoGlyph name="sidebar" size={19} />
-                <DemoGlyph name="new" size={19} />
-              </div>
-              <div className="homeDemoRailBottom">
-                <span className="homeDemoRailAvatar">S</span>
-              </div>
-            </aside>
-          )}
-          <div className="homeDemoChatMain">
-            <header className="homeDemoChatChrome">
-              {client === "ChatGPT" && (
-                <>
-                  <div className="homeDemoBrandTitle">
-                    <img src={clientLogo.ChatGPT} alt="" />
-                    <strong>ChatGPT</strong>
-                    <DemoGlyph name="chevron" size={14} />
-                  </div>
-                  <div className="homeDemoChromeActions">
-                    <DemoGlyph name="share" size={17} />
-                    <DemoGlyph name="dots" size={19} />
-                  </div>
-                </>
-              )}
-              {client === "Claude" && (
-                <>
-                  <div className="homeDemoBrandTitle">
-                    <img src={clientLogo.Claude} alt="" />
-                    <strong>Claude</strong>
-                  </div>
-                  <div className="homeDemoClaudeNav">
-                    <span className="selected">Chat</span>
-                    <span>Cowork</span>
-                    <span>Code</span>
-                  </div>
-                </>
-              )}
-              {client === "Cursor" && (
-                <>
-                  <div className="homeDemoCursorWindow">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                  <div className="homeDemoCursorTab">
-                    <img src={clientLogo.Cursor} alt="" />
-                    <span>Agent</span>
-                    <DemoGlyph name="chevron" size={12} />
-                  </div>
-                  <div className="homeDemoChromeActions">
-                    <DemoGlyph name="new" size={16} />
-                    <DemoGlyph name="dots" size={17} />
-                  </div>
-                </>
-              )}
-            </header>
-
-            <div className="homeDemoChatBody" ref={chatBodyRef}>
-              {client === "Cursor" && (
-                <div className="homeDemoCursorContext">
-                  <DemoGlyph name="sidebar" size={14} />
-                  <span>{tr("marketing.home.landingInteractiveDemo.newChat")}</span>
-                  <span className="homeDemoCursorContextModel">Auto</span>
-                </div>
-              )}
-              <div className="homeDemoUserBubble">{prompt}</div>
-
-              {step >= 0 && (
-                <div className="homeDemoAssistant">
-                  {client === "Claude" && (
-                    <img className="homeDemoAssistantLogo" src={clientLogo.Claude} alt="" />
-                  )}
-                  {client === "Cursor" && (
-                    <div className="homeDemoCursorAgent">
-                      <DemoGlyph name="sparkle" size={15} />
-                      <strong>Agent</strong>
-                      <span>· Auto</span>
-                    </div>
-                  )}
-                  {client !== "Cursor" && (
-                    <p className="homeDemoAssistantIntro">
-                      {isAppScenario
-                        ? tr("marketing.home.landingInteractiveDemo.iLlUseYourConnectedApps")
-                        : tr("marketing.home.landingInteractiveDemo.iLlUseRemoteArcTo")}
-                    </p>
-                  )}
-                  <div className="homeDemoActivity" aria-live="polite" aria-atomic="false">
-                    <header className="homeDemoActivityHeader">
-                      <span className="homeDemoActivityIcon">
-                        <img src="/remote-arc.svg" alt="" width="30" height="30" />
-                      </span>
-                      <div className="homeDemoActivityHeading">
-                        <span>Remote Arc</span>
-                        <strong>{progressTitle}</strong>
-                      </div>
-                      {finished ? (
-                        <span className="homeDemoActivityCheck">
-                          <DemoGlyph name="check" size={15} />
-                        </span>
-                      ) : (
-                        <span
-                          className="homeDemoMiniSpinner"
-                          aria-label={tr("marketing.home.landingInteractiveDemo.working")}
-                        />
-                      )}
-                    </header>
-                    {step > 0 && (
-                      <ol className="homeDemoProgressList">
-                        {progress.map((part, index) => {
-                          const started = step >= index * 2 + 1;
-                          const done = step >= index * 2 + 2;
-                          if (!started) return null;
-                          return (
-                            <li
-                              key={index}
-                              className={done ? "homeDemoProgressDone" : "homeDemoProgressCurrent"}
-                            >
-                              <span className="homeDemoProgressMarker">
-                                {done ? (
-                                  <DemoGlyph name="check" size={11} />
-                                ) : (
-                                  <span className="homeDemoProgressPulse" />
-                                )}
-                              </span>
-                              <span>{done ? part.done : part.working}</span>
-                            </li>
-                          );
-                        })}
-                      </ol>
-                    )}
-                  </div>
-                  {finished ? (
-                    <>
-                      <p className="homeDemoAssistantAnswer">{finalReply}</p>
-                      <DemoResultCard key={scenario.id} id={scenario.id} />
-                      {isCreativeScenario && (
-                        <LocalCreativeResult
-                          key={scenario.id + locale}
-                          kind={scenario.id as "video" | "image"}
-                        />
-                      )}
-                      <div className="homeDemoMessageTools" aria-hidden="true">
-                        <DemoGlyph name="paperclip" size={14} />
-                        <DemoGlyph name="share" size={14} />
-                        <DemoGlyph name="dots" size={16} />
-                      </div>
-                    </>
-                  ) : null}
-                </div>
-              )}
-            </div>
-
-            <div className="homeDemoComposer">
-              {client === "ChatGPT" && (
-                <div className="homeDemoComposerBox">
-                  <div className="homeDemoComposerPlaceholder">
-                    {tr("marketing.home.landingInteractiveDemo.askAnything")}
-                  </div>
-                  <div className="homeDemoComposerRow">
-                    <span className="homeDemoComposerRound">
-                      <DemoGlyph name="plus" size={19} />
-                    </span>
-                    <span className="homeDemoComposerTools">
-                      <DemoGlyph name="sparkle" size={16} />
-                      {tr("marketing.home.landingInteractiveDemo.tools")}
-                    </span>
-                    <span className="homeDemoComposerSpacer" />
-                    <DemoGlyph name="mic" size={19} />
-                    <span className="homeDemoComposerSend">
-                      <DemoGlyph name="send" size={18} />
-                    </span>
-                  </div>
-                </div>
-              )}
-              {client === "Claude" && (
-                <div className="homeDemoComposerBox">
-                  <div className="homeDemoComposerPlaceholder">
-                    {tr("marketing.home.landingInteractiveDemo.replyToClaude")}
-                  </div>
-                  <div className="homeDemoComposerRow">
-                    <DemoGlyph name="plus" size={20} />
-                    <span className="homeDemoComposerSpacer" />
-                    <span className="homeDemoClaudeModel">
-                      Sonnet 4.6 <DemoGlyph name="chevron" size={13} />
-                    </span>
-                    <span className="homeDemoComposerSend">
-                      <DemoGlyph name="send" size={18} />
-                    </span>
-                  </div>
-                </div>
-              )}
-              {client === "Cursor" && (
-                <div className="homeDemoComposerBox">
-                  <div className="homeDemoCursorAddContext">
-                    <DemoGlyph name="plus" size={13} />{" "}
-                    {tr("marketing.home.landingInteractiveDemo.addContext")}
-                  </div>
-                  <div className="homeDemoComposerPlaceholder">
-                    {tr("marketing.home.landingInteractiveDemo.planSearchBuildAnything")}
-                  </div>
-                  <div className="homeDemoComposerRow">
-                    <span className="homeDemoCursorMode">
-                      ∞ {tr("marketing.home.landingInteractiveDemo.agent")}{" "}
-                      <DemoGlyph name="chevron" size={12} />
-                    </span>
-                    <span className="homeDemoCursorModel">
-                      Auto <DemoGlyph name="chevron" size={12} />
-                    </span>
-                    <span className="homeDemoComposerSpacer" />
-                    <DemoGlyph name="paperclip" size={16} />
-                    <span className="homeDemoComposerSend">
-                      <DemoGlyph name="send" size={16} />
-                    </span>
-                  </div>
-                </div>
-              )}
-              <span className="homeDemoComposerDisclaimer">
-                {client === "Cursor"
-                  ? tr("marketing.home.landingInteractiveDemo.aiGeneratedCodeMayContainErrors")
-                  : client === "Claude"
-                    ? tr("marketing.home.landingInteractiveDemo.claudeCanMakeMistakesPleaseDouble")
-                    : tr(
-                        "marketing.home.landingInteractiveDemo.chatgptCanMakeMistakesCheckImportant",
-                      )}
-              </span>
-            </div>
+      ) : (
+        <>
+          <div className="homeDemoToolbar">
+            {examples}
+            {clientSwitch}
           </div>
-        </section>
-
-        <section
-          className="homeDemoTerminal"
-          aria-label={
-            isAppScenario
-              ? tr("marketing.home.landingInteractiveDemo.exampleAppActivity")
-              : tr("marketing.home.landingInteractiveDemo.exampleDeviceExecutionLog")
-          }
-        >
-          <header className="homeDemoTerminalHeader">
-            <div className="homeDemoTerminalDots" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </div>
-            <span>
-              Remote Arc <b>/</b>{" "}
-              {isAppScenario
-                ? tr("marketing.home.landingInteractiveDemo.appActivity")
-                : tr("marketing.home.landingInteractiveDemo.deviceActivity")}
-            </span>
-            <span className="homeDemoTerminalDevice">
-              <i aria-hidden="true" />
-              {isAppScenario
-                ? tr("marketing.home.landingInteractiveDemo.connectedApps")
-                : tr("marketing.home.landingInteractiveDemo.exampleWorkstation")}
-            </span>
-          </header>
-          <div
-            className="homeDemoTerminalBody"
-            ref={terminalRef}
-            role="log"
-            aria-label={tr("marketing.home.landingInteractiveDemo.simulatedToolCallSequence")}
-          >
-            <div className="homeDemoTerminalBanner">
-              <span className="homeDemoMonoAccent">remote-arc</span>
-              <span>
-                {isAppScenario
-                  ? tr("marketing.home.landingInteractiveDemo.cloudAppsWorkflow")
-                  : tr("marketing.home.landingInteractiveDemo.localExecution")}
-              </span>
-            </div>
-            <div className="homeDemoTerminalInfo">
-              ✓ {tr("marketing.home.landingInteractiveDemo.secureMcpConnectionReady")}
-            </div>
-            {step < 0 && (
-              <p className="homeDemoTerminalWaiting">
-                {tr("marketing.home.landingInteractiveDemo.waitingForARequestFromYour")}
-              </p>
-            )}
-            {step >= 0 && (
-              <div className="homeDemoTraceLine">
-                <span className="homeDemoTraceTime">00:00</span>
-                <span className="homeDemoTraceEvent">request</span>
-                <code>
-                  {isAppScenario
-                    ? tr(
-                        "marketing.home.landingInteractiveDemo.connectedAccountScopesCheckedExecutingYour",
-                      )
-                    : tr("marketing.home.landingInteractiveDemo.devicePolicyCheckedApprovedTools")}
-                </code>
-              </div>
-            )}
-            {events.map((event, index) => {
-              const showCall = step >= index * 2 + 1;
-              const showResult = step >= index * 2 + 2;
-              return showCall ? (
-                <React.Fragment key={event.tool + index}>
-                  <div className="homeDemoTraceLine">
-                    <span className="homeDemoTraceTime">{`00:${String(index * 2 + 1).padStart(2, "0")}`}</span>
-                    <span className="homeDemoTraceEvent">tool.call</span>
-                    <code>{event.tool}</code>
-                  </div>
-                  <div className="homeDemoTraceArgs">
-                    <code>{event.arguments}</code>
-                  </div>
-                  {showResult && (
-                    <div className="homeDemoTraceLine homeDemoTraceResult">
-                      <span className="homeDemoTraceTime">{`00:${String(index * 2 + 2).padStart(2, "0")}`}</span>
-                      <span className="homeDemoTraceSuccess">tool.done</span>
-                      <code>
-                        {event.output} <small>· {event.duration}</small>
-                      </code>
-                    </div>
-                  )}
-                </React.Fragment>
-              ) : null;
-            })}
-            {finished && (
-              <div className="homeDemoTerminalFinished">
-                ✓ {tr("marketing.home.landingInteractiveDemo.executionCompleteResponseDelivered")}
-              </div>
-            )}
-            {active && (
-              <span className="homeDemoTerminalCursor" aria-hidden="true">
-                ▌
-              </span>
-            )}
+          <div className="homeDemoSurface">
+            {chat}
+            {terminal}
           </div>
-          <footer className="homeDemoTerminalFooter">
-            <span>
-              {tr("marketing.home.landingInteractiveDemo.permission")}: {scenario.permission}
-            </span>
-            <span>
-              {finished
-                ? tr("marketing.home.landingInteractiveDemo.complete")
-                : active
-                  ? tr("marketing.home.landingInteractiveDemo.executing")
-                  : tr("marketing.home.landingInteractiveDemo.ready")}
-            </span>
-          </footer>
-        </section>
-      </div>
+        </>
+      )}
 
       <div className="homeDemoUnder">
         <p>

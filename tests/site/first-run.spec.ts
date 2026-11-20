@@ -8,7 +8,10 @@ test("A new account sees an inline pairing guide on Overview until it hides it",
     name: /Pair your computer so your AI can work on it|配对电脑，让 AI 在上面工作/,
   });
   await expect(card).toBeVisible();
-  await expect(card).toContainText("npx remotelink@latest");
+  // Like the pairing dialog, the card recommends the installer that needs no Node.js.
+  await expect(card.locator(".installCommands code")).toHaveText(
+    "curl -fsSL https://remotearc.app/install.sh | sh",
+  );
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await card.getByRole("button", { name: /Open the pairing guide|打开配对向导/ }).click();
   const dialog = page.getByRole("dialog", { name: /Connect a computer|连接一台电脑/ });
@@ -41,4 +44,28 @@ test("Overview does not show the pairing guide once a computer is paired", async
   await page.goto("/dashboard/connect/overview");
   await expect(page.locator(".overviewStatusGrid")).toBeVisible();
   await expect(page.locator(".firstRunCard")).toHaveCount(0);
+});
+
+test("On Windows the Overview pairing guide starts on npx, since curl | sh does not run there", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, "userAgentData", {
+      configurable: true,
+      get: () => ({ platform: "Windows", mobile: false }),
+    }),
+  );
+  await page.goto("/dashboard/connect/overview?demo=first-run");
+  await expect(page.locator(".firstRunCard .installCommands code")).toHaveText(
+    "npx remotelink@latest",
+  );
+});
+
+test("Devices offers Ask Arc to choose only once a computer is paired", async ({ page }) => {
+  const ask = page.getByRole("button", { name: /Ask Arc to choose|让 Arc 选择/ });
+  await page.goto("/dashboard/connect/devices?demo=first-run");
+  await expect(page.locator(".fleetOverview")).toBeVisible();
+  await expect(ask).toHaveCount(0);
+  await page.goto("/dashboard/connect/devices");
+  await expect(ask).toBeVisible();
 });

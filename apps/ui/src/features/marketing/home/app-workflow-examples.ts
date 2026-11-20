@@ -23,7 +23,7 @@ const ids = {
   vercel: "22222222-2222-4222-8222-222222222222",
   slack: "33333333-3333-4333-8333-333333333333",
   google_drive: "55555555-5555-4555-8555-555555555555",
-  notion: "66666666-6666-4666-8666-666666666666",
+  whatsapp: "88888888-8888-4888-8888-888888888888",
 };
 const call = (
   provider: keyof typeof ids,
@@ -95,15 +95,15 @@ export const APP_WORKFLOW_EXAMPLES: readonly AppWorkflowExample[] = [
   },
   {
     id: "knowledge",
-    connectionProvider: "google_drive",
-    label: "marketing.home.appWorkflowExamples.driveNotion",
-    title: "marketing.home.appWorkflowExamples.turnScatteredFilesIntoShared",
-    request: "marketing.home.appWorkflowExamples.findTheLaunchBriefIn",
-    result: "marketing.home.appWorkflowExamples.createdANotionPageWith",
-    permission: "marketing.home.appWorkflowExamples.connectedGoogleDriveAndNotion",
+    connectionProvider: "whatsapp",
+    label: "marketing.home.appWorkflowExamples.driveWhatsapp",
+    title: "marketing.home.appWorkflowExamples.turnALaunchBriefIntoACustomerUpdate",
+    request: "marketing.home.appWorkflowExamples.findTheLaunchBriefAndSendTemplate",
+    result: "marketing.home.appWorkflowExamples.sentTheLaunchUpdateTemplate",
+    permission: "marketing.home.appWorkflowExamples.connectedGoogleDriveAndWhatsapp",
     brands: [
       { brand: "googledrive", name: "Google Drive" },
-      { brand: "notion", name: "Notion" },
+      { brand: "whatsapp", name: "WhatsApp Business" },
     ],
     traces: [
       {
@@ -141,19 +141,22 @@ export const APP_WORKFLOW_EXAMPLES: readonly AppWorkflowExample[] = [
       },
       {
         tool: "call_app",
-        provider: "notion",
+        provider: "whatsapp",
+        input: call("whatsapp", "templates.list", {}, "demo-knowledge-templates"),
+        output: "marketing.home.appWorkflowExamples.launchUpdateTemplateApproved",
+        working: "marketing.home.appWorkflowExamples.checkingTheApprovedTemplates",
+      },
+      {
+        tool: "call_app",
+        provider: "whatsapp",
         input: call(
-          "notion",
-          "pages.create",
-          {
-            parentPageId: "77777777-7777-4777-8777-777777777777",
-            title: "Launch decisions and next steps",
-            text: "Source: https://docs.google.com/document/d/example-launch-document\nDecision: ship the approved release after preview checks pass.\nNext: investigate the failing preview and review the launch checklist.",
-          },
-          "demo-knowledge-page",
+          "whatsapp",
+          "templates.send",
+          { to: "15550100123", name: "launch_update", language: "en_US" },
+          "demo-knowledge-send",
         ),
-        output: "marketing.home.appWorkflowExamples.notionPageCreatedSourceLink",
-        working: "marketing.home.appWorkflowExamples.creatingTheNotionPageWith",
+        output: "marketing.home.appWorkflowExamples.whatsappTemplateSentMessageId",
+        working: "marketing.home.appWorkflowExamples.sendingTheLaunchUpdateTemplate",
       },
     ],
   },

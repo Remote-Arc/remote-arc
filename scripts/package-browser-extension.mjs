@@ -6,7 +6,10 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = path.join(root, "apps", "browser-extension");
-const output = path.join(root, "apps", "ui", "public", "downloads", "remote-arc-browser.zip");
+// The extension ships only through Chrome Web Store, so the ZIP is a release
+// input for scripts/publish-chrome-extension.mjs, not a website download. It goes
+// to the ignored dist/ folder.
+const output = path.join(root, "dist", "browser-extension", "remote-arc-browser.zip");
 const staging = fs.mkdtempSync(path.join(os.tmpdir(), "remote-arc-browser-"));
 
 try {

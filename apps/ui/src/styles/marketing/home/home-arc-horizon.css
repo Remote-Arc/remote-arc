@@ -1,0 +1,357 @@
+/* The hero arc: one wide curve across the whole width, its inside a deep wash
+ * that fades into the page. Tiles sit on the curve with a ring of page colour
+ * so the line passes behind them; Remote Arc sits at the top. The light is the
+ * crisp rim itself, running from cyan to violet. */
+
+.homeArc {
+  --arc-from: #7dd3fc;
+  --arc-mid: #e0f2fe;
+  --arc-to: #a78bfa;
+  --arc-fill: #162131;
+  --arc-pulse: #e0f2fe;
+  position: relative;
+  justify-self: stretch;
+  width: 100vw;
+  min-height: 300px;
+  margin-top: 14px;
+  margin-inline: calc(50% - 50vw);
+}
+
+.homeArcArt {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  /* The arc may rise above the stage as it grows, never below or past the sides. */
+  clip-path: inset(-300vh 0 0 0);
+  pointer-events: none;
+}
+.homeArcArt :is(path, ellipse) {
+  vector-effect: non-scaling-stroke;
+}
+.homeArcStopEdge {
+  stop-color: var(--arc-from);
+  stop-opacity: 0;
+}
+.homeArcStopFrom {
+  stop-color: var(--arc-from);
+  stop-opacity: 0.9;
+}
+.homeArcStopMid {
+  stop-color: var(--arc-mid);
+}
+.homeArcStopTo {
+  stop-color: var(--arc-to);
+  stop-opacity: 0.9;
+}
+.homeArcFillTop {
+  stop-color: var(--arc-fill);
+}
+.homeArcFillBottom {
+  stop-color: var(--site-canvas, #111114);
+}
+.homeArcFill {
+  stroke: none;
+}
+/* The globe's surface: faint latitudes and meridians that meet at the apex. */
+.homeArcLine {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.045);
+  stroke-width: 1;
+}
+/* The inner latitude the computers sit on, a little stronger than the rest. */
+.homeArcRingPath {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+}
+.homeArcRim {
+  fill: none;
+  stroke-width: 1.6;
+}
+/* A request: its route shows as a hairline while it travels, and a streak of
+   light runs along it, bright and thick at the head, thin and clear at the tail. */
+.homeArcRoute {
+  fill: none;
+  stroke: var(--arc-pulse);
+  stroke-width: 1;
+  opacity: 0.16;
+}
+.homeArcStreak {
+  fill: none;
+  stroke: var(--arc-pulse);
+  stroke-linecap: round;
+}
+
+/* Tiles on the curve: the tile's centre is on the line, the name hangs below. */
+.publicPage .homeArcNode {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  color: #c9c9d1;
+  text-decoration: none;
+}
+.homeArcTile {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow:
+    0 0 0 6px var(--site-canvas, #111114),
+    0 0 0 7px rgba(255, 255, 255, 0);
+  transition:
+    box-shadow 0.35s ease,
+    transform 0.35s var(--home-ease, ease);
+}
+.homeArcTile img {
+  width: 24px;
+  height: 24px;
+}
+.homeArcLabel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color 0.3s ease;
+}
+.homeArcNode[data-lit] .homeArcTile {
+  box-shadow:
+    0 0 0 6px var(--site-canvas, #111114),
+    0 0 0 7.5px var(--arc-from);
+  transform: translateY(-3px);
+}
+.homeArcNode[data-lit] .homeArcLabel,
+.homeArcNode:hover .homeArcLabel {
+  color: #fff;
+}
+.homeArcNode:focus-visible {
+  outline: none;
+}
+.homeArcNode:focus-visible .homeArcTile {
+  box-shadow:
+    0 0 0 6px var(--site-canvas, #111114),
+    0 0 0 8px #fff;
+}
+
+/* Remote Arc at the top of the curve. */
+.homeArcHub {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  transform: translate(-50%, -52px);
+}
+.publicPage .homeArcHubMark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 104px;
+  height: 104px;
+  border: 1px solid var(--home-edge, rgba(255, 255, 255, 0.14));
+  border-radius: 50%;
+  background: #141418;
+  box-shadow: 0 0 0 10px var(--site-canvas, #111114);
+  transition:
+    border-color 0.3s ease,
+    transform 0.3s var(--home-ease, ease);
+}
+.homeArcHubMark[data-busy] {
+  border-color: var(--arc-from);
+  transform: scale(1.04);
+}
+.homeArcHubMark img {
+  position: relative;
+  z-index: 1;
+  width: 60px;
+  height: 60px;
+}
+/* A short arc of light circling the edge: a conic sweep masked to a 2px ring. */
+.homeArcHubMark::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 62%,
+    color-mix(in srgb, var(--arc-from) 40%, transparent) 78%,
+    var(--arc-from) 90%,
+    #fff 95%,
+    transparent 96%
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2px),
+    #000 calc(100% - 1.5px)
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  animation: home-arc-hub-spin 3.6s linear infinite;
+  pointer-events: none;
+}
+/* Each request passing through sends one thin ring out from the edge. */
+.homeArcHubMark::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 1px solid var(--arc-from);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+.homeArcHubMark[data-busy]::after {
+  animation: home-arc-hub-ping 0.9s ease-out;
+}
+.homeArc[data-running="false"] .homeArcHubMark::before {
+  animation-play-state: paused;
+}
+@keyframes home-arc-hub-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes home-arc-hub-ping {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.32);
+  }
+}
+.homeArcHubMark:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+/* The latest request along the bottom, as one quiet pill: an "Example" tag,
+   what happened in plain words, the tool it used and how long it took. */
+.homeArcLog {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transform: translateX(-50%);
+  opacity: var(--arc-fade, 1);
+}
+.homeArcLog li {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px 6px 6px;
+  border: 1px solid var(--home-hairline, rgba(255, 255, 255, 0.08));
+  border-radius: 999px;
+  background: rgba(17, 17, 20, 0.85);
+  white-space: nowrap;
+  animation: arc-log-in 0.5s var(--home-ease, ease);
+}
+.homeArcLogTag {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #9b9ba5;
+  font: 600 11px var(--home-mono, ui-monospace, monospace);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.homeArcLogSay {
+  color: #e6e6ea;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.homeArcLog code {
+  color: #8e8e98;
+  font: 12px var(--home-mono, ui-monospace, monospace);
+}
+.homeArcLog em {
+  color: #4ade80;
+  font: 12px var(--home-mono, ui-monospace, monospace);
+  font-style: normal;
+}
+@keyframes arc-log-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (max-width: 700px) {
+  .homeArcTile {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+  }
+  .homeArcTile img {
+    width: 20px;
+    height: 20px;
+  }
+  .homeArcLabel {
+    display: none;
+  }
+  .publicPage .homeArcHubMark {
+    width: 80px;
+    height: 80px;
+  }
+  .homeArcHubMark img {
+    width: 46px;
+    height: 46px;
+  }
+  .homeArcHub {
+    transform: translate(-50%, -40px);
+  }
+  .homeArcLog code {
+    display: none;
+  }
+  .homeArcLog li {
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .homeArcHubMark::before,
+  .homeArcHubMark::after {
+    animation: none !important;
+  }
+  .homeArcTile,
+  .homeArcHubMark,
+  .homeArcLog li {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* Computers on the inner ring sit slightly smaller, so the rim leads. */
+.homeArcNode[data-ring="ring"] .homeArcTile {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+}
+.homeArcNode[data-ring="ring"] .homeArcTile img {
+  width: 21px;
+  height: 21px;
+}
+@media (max-width: 700px) {
+  .homeArcNode[data-ring="ring"] .homeArcTile {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+  }
+  .homeArcNode[data-ring="ring"] .homeArcTile img {
+    width: 18px;
+    height: 18px;
+  }
+}

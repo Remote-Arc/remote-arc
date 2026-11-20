@@ -37,10 +37,7 @@
       ["pnpm", "test"],
       ["go", "-C", "apps/agent", "test", "./internal/workspace"]
     ],
-    "build:ui": [
-      ["pnpm", "package:browser"],
-      ["pnpm", "--filter", "@remotearc/ui", "build"]
-    ],
+    "build:ui": [["pnpm", "--filter", "@remotearc/ui", "build"]],
     "test:wiring": [
       ["node", "scripts/test-wiring-check-test.mjs"],
       ["node", "scripts/test-wiring-check.mjs"],

@@ -147,6 +147,10 @@ export function useArcChat(accountId: string, initialSessionId?: string) {
     pending = useRef<{ id: string; text: string; sessionId: string; modelId: string } | null>(null);
   const selected = useRef<string | null>(null),
     poll = useRef<AbortController | null>(null);
+  // The latest service, so send() right after checkAccess() sees refreshed access
+  // without waiting for a re-render.
+  const serviceRef = useRef<ChatService | null>(null);
+  serviceRef.current = service;
   // Account-wide lists/allowances survive chat navigation; message state does not.
   const refreshSessions = useCallback(async () => {
     const version = accountGeneration.current;
@@ -156,7 +160,11 @@ export function useArcChat(accountId: string, initialSessionId?: string) {
   const refreshService = useCallback(async () => {
     const version = accountGeneration.current;
     const value = await arcRequest<ChatService>("status");
-    if (mounted.current && accountGeneration.current === version) setService(value);
+    if (mounted.current && accountGeneration.current === version) {
+      serviceRef.current = value;
+      setService(value);
+    }
+    return value;
   }, []);
   useEffect(() => {
     mounted.current = true;
@@ -285,7 +293,8 @@ export function useArcChat(accountId: string, initialSessionId?: string) {
     employeeIds: string[] = [],
     inputs: { attachmentIds?: string[]; location?: ArcLocation } = {},
   ) {
-    if (requestLock.current || opening || running || !service?.enabled || !service.access.canUse)
+    const latest = serviceRef.current;
+    if (requestLock.current || opening || running || !latest?.enabled || !latest.access.canUse)
       return false;
     const lock = Symbol();
     requestLock.current = lock;
@@ -430,8 +439,17 @@ export function useArcChat(accountId: string, initialSessionId?: string) {
         setError(e instanceof Error ? e.message : "CHAT_UNAVAILABLE");
     }
   }
+  /** Re-reads access from the server, e.g. after a trial started in another tab. */
+  async function checkAccess(): Promise<ArcAccess | null> {
+    try {
+      return (await refreshService()).access;
+    } catch {
+      return serviceRef.current?.access ?? null;
+    }
+  }
+  /** Starts the Arc trial; resolves true once the refreshed access allows sending. */
   async function startTrial() {
-    if (requestLock.current || !service?.enabled) return;
+    if (requestLock.current || !service?.enabled) return false;
     const lock = Symbol();
     requestLock.current = lock;
     setBusy(true);
@@ -440,11 +458,12 @@ export function useArcChat(accountId: string, initialSessionId?: string) {
       accountVersion = accountGeneration.current;
     try {
       await arcRequest("trial", { method: "POST", body: JSON.stringify({ confirm: true }) });
-      if (!mounted.current || accountVersion !== accountGeneration.current) return;
-      await refreshService();
+      if (!mounted.current || accountVersion !== accountGeneration.current) return false;
+      return (await refreshService()).access.canUse;
     } catch (e) {
       if (mounted.current && version === generation.current)
         setError(e instanceof Error ? e.message : "CHAT_UNAVAILABLE");
+      return false;
     } finally {
       if (requestLock.current === lock) requestLock.current = null;
       if (mounted.current && version === generation.current) setBusy(false);
@@ -470,6 +489,7 @@ export function useArcChat(accountId: string, initialSessionId?: string) {
     cancel,
     remove,
     startTrial,
+    checkAccess,
     refreshCurrent,
   };
 }

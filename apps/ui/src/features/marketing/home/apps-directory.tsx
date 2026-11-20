@@ -6,6 +6,7 @@ import { localizedWebsiteHref } from "../../../lib/marketing-paths.js";
 import directory from "../../../data/app-directory.json" with { type: "json" };
 import "../../../styles/marketing/home/apps-directory.css";
 import "../../../styles/marketing/home/apps-directory-compact.css";
+import { SectionTitle } from "./section-title.js";
 
 type SkillLink = { name: MessageKey; keywords: MessageKey; href: string };
 type Showcase = {
@@ -156,9 +157,10 @@ export function AppsDirectory({ id = "apps" }: { id?: string } = {}) {
     <section className="appsDirectory sectionBlock" id={id} aria-labelledby={id + "DirectoryTitle"}>
       <header className="modernSectionIntro">
         <span className="eyebrow">{tr("marketing.home.appsDirectory.appsBuiltInSkills")}</span>
-        <h2 id={id + "DirectoryTitle"}>
-          {tr("marketing.home.appsDirectory.yourAppsMoreWaysToGet")}
-        </h2>
+        <SectionTitle
+          id={id + "DirectoryTitle"}
+          text={tr("marketing.home.appsDirectory.yourAppsMoreWaysToGet")}
+        />
         <p>{tr("marketing.home.appsDirectory.bringConnectedAccountsLocalFilesAnd")}</p>
       </header>
       <div className="appsDirectoryToolbar">

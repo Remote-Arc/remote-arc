@@ -5,6 +5,7 @@ import React from "react";
 import { useI18n } from "../../hooks/use-i18n.js";
 import { ArchitectureDeepDive } from "./architecture-deep-dive.js";
 import { BrowserModes } from "./browser-modes.js";
+import { DevicePairingGuide } from "./device-pairing-guide.js";
 import "../../styles/public-docs.css";
 
 const endpoint = "https://mcp.remotearc.app/mcp";
@@ -205,6 +206,7 @@ export function Documentation({
             <ArchitectureDeepDive />
             <section id="docs-policy">
               <h2>{tr("docs.productDocs.choosePermissionsForEachComputer")}</h2>
+              <DevicePairingGuide />
               <div className="docsTableWrap">
                 <table className="articleTable">
                   <thead>

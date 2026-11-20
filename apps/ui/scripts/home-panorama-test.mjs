@@ -15,8 +15,9 @@ registerHooks({
 });
 const { HomeConnectionScene } =
   await import("../src/features/marketing/home/home-connection-scene.tsx");
-const { LandingContent, HomeHeroCopy } =
-  await import("../src/features/marketing/home/landing-content.tsx");
+const { LandingContent } = await import("../src/features/marketing/home/landing-content.tsx");
+const { HomeHeroCopy } = await import("../src/features/marketing/home/home-hero.tsx");
+const { HomeArcHorizon } = await import("../src/features/marketing/home/home-arc-horizon.tsx");
 const { I18nProvider } = await import("../src/app/i18n.tsx");
 const publicDir = fileURLToPath(new URL("../public/", import.meta.url));
 const geminiIcon = "/ai-gemini-four-color-2025.svg";
@@ -28,7 +29,7 @@ for (const color of ["#FC413D", "#FBBC04", "#00B95C", "#3186FF"]) {
   );
 }
 for (const file of [
-  "components/public-layout.tsx",
+  "lib/ai-clients.ts",
   "features/install/client-install-page.tsx",
   "features/docs/tool-reference.tsx",
 ]) {
@@ -77,7 +78,7 @@ try {
       "Gmail",
       "Google Calendar",
       "Google Drive",
-      "Notion",
+      "WhatsApp",
       "Mac",
       "Windows",
       "Linux",
@@ -144,57 +145,58 @@ try {
       assert.ok(
         html.includes('href="' + (locale === "zh" ? "/zh" : "") + "/install/" + slug + '"'),
       );
-    for (const mode of ["connect", "arc"]) {
-      const hero = renderToStaticMarkup(
-        React.createElement(
-          I18nProvider,
-          null,
-          React.createElement(HomeHeroCopy, {
-            mode,
-            arcAvailable: true,
-            arcHref: "https://agent.remotearc.app/chat",
-            connectHref: "https://mcp.remotearc.app/dashboard/connect/overview",
-          }),
-        ),
-      );
-      assert.match(hero, new RegExp('data-product="' + mode + '"'));
-      assert.equal((hero.match(/<h1\b/g) || []).length, 1);
-      const copy = hero.replace(/<[^>]*>/g, " ");
-      assert.match(
-        copy,
-        mode === "connect"
-          ? locale === "zh"
-            ? /AI 基础设施/
-            : /AI INFRASTRUCTURE/
-          : locale === "zh"
-            ? /新一代 AI AGENT/
-            : /NEXT-GENERATION AI AGENT/,
-      );
-      // The headline's lead, then every scenario its last words slide through.
-      assert.match(
-        copy,
-        mode === "connect"
-          ? locale === "zh"
-            ? /让你的 AI 接管\s+每台服务器。\s+每次发布。\s+每周报表。\s+整个机群。/
-            : /Your AI runs\s+every server\.\s+every release\.\s+your reports\.\s+the whole fleet\./
-          : locale === "zh"
-            ? /让你的 AI 智能体负责\s+每天的晨间简报。\s+每月销售报表。\s+每个例行任务。\s+后续跟进。/
-            : /Your AI agent handles\s+the morning briefing\.\s+the sales report\.\s+every routine\.\s+the follow-ups\./,
-      );
-      assert.match(
-        hero,
-        mode === "connect"
-          ? /href="https:\/\/mcp.remotearc.app\/dashboard\/connect\/overview"/
-          : /href="https:\/\/agent.remotearc.app\/chat"/,
-      );
-      if (mode === "arc") {
-        assert.match(hero, /Meet Arc|认识 Arc/);
-        assert.match(hero, new RegExp('href="' + (locale === "zh" ? "/zh" : "") + '/arc"'));
-      }
-    }
+    // The hero copy: the product label, one headline in two parts, and Connect.
+    const hero = renderToStaticMarkup(
+      React.createElement(
+        I18nProvider,
+        null,
+        React.createElement(HomeHeroCopy, {
+          connectHref: "https://mcp.remotearc.app/dashboard/connect/overview",
+        }),
+      ),
+    );
+    assert.equal((hero.match(/<h1\b/g) || []).length, 1);
+    const heroCopy = hero.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
+    assert.match(heroCopy, locale === "zh" ? /AI 基础设施/ : /AI INFRASTRUCTURE/);
+    assert.match(
+      heroCopy,
+      locale === "zh"
+        ? /你的 AI，连接到 你的应用和电脑。/
+        : /Your AI, connected to your apps and computers\./,
+    );
+    assert.match(hero, /<em>/, "The second half of the headline is set apart");
+    assert.match(hero, /href="https:\/\/mcp.remotearc.app\/dashboard\/connect\/overview"/);
+    assert.match(hero, /npx remotelink@latest/, "The install command sits under the buttons");
+    assert.match(
+      hero,
+      new RegExp('class="heroArcAction" href="' + (locale === "zh" ? "/zh" : "") + '/arc"'),
+      "Visitors without an AI are offered Arc",
+    );
+    // The globe under it: three AI clients and three apps on the rim, four
+    // computers (including the browser) on the inner ring, Remote Arc on top.
+    const arc = renderToStaticMarkup(
+      React.createElement(I18nProvider, null, React.createElement(HomeArcHorizon, { progress: 0 })),
+    );
+    assert.equal((arc.match(/class="homeArcNode"/g) || []).length, 10);
+    assert.equal((arc.match(/data-kind="ai"/g) || []).length, 3);
+    assert.equal((arc.match(/data-kind="app"/g) || []).length, 3);
+    assert.equal((arc.match(/data-kind="device"/g) || []).length, 4);
+    assert.equal(
+      (arc.match(/data-ring="ring"/g) || []).length,
+      4,
+      "Computers sit on the inner ring",
+    );
+    for (const name of ["WhatsApp", "Mac", "Windows", "Linux", "Chrome"])
+      assert.ok(arc.includes(">" + name + "<"), "On the globe: " + name);
+    assert.doesNotMatch(arc, /Gemini|ai-gemini/, "Gemini stays off the arc, as in the topology");
+    for (const slug of ["chatgpt", "claude", "cursor"])
+      assert.ok(arc.includes('href="' + (locale === "zh" ? "/zh" : "") + "/install/" + slug + '"'));
+    assert.match(arc, /\/connect-ai"/, "Remote Arc at the top opens Connect");
+    assert.equal((arc.match(/<li\b/g) || []).length, 1, "One example request, in plain words");
+    assert.match(arc, locale === "zh" ? /示例/ : /Example/);
+    for (const src of new Set([...arc.matchAll(/<img\b[^>]*src="([^"]+)"/g)].map((m) => m[1])))
+      assert.ok(existsSync(path.join(publicDir, src)), "Bundled arc asset: " + src);
     assert.doesNotMatch(lowerHome, /Runway|runway/);
-    assert.match(lowerHome, /data-category="creative"/);
-    assert.match(lowerHome, /use-cases\/image-studio#image-gallery/);
     assert.match(
       lowerHome,
       /class="homeDemo"/,
@@ -202,31 +204,15 @@ try {
     );
     assert.match(lowerHome, /id="how-it-works"/);
     assert.match(lowerHome, /arcV3Teaser/);
+    // The home demo plays seven requests: Slack, WhatsApp, GitHub, fixing code,
+    // the browser, away from the desk and a server room.
     for (const name of locale === "zh"
-      ? [
-          "修复项目",
-          "GitHub + Vercel",
-          "制作视频",
-          "生成图片",
-          "Drive + Notion",
-          "制作 PPT",
-          "生成 Excel",
-        ]
-      : [
-          "Fix a project",
-          "GitHub + Vercel",
-          "Make a video",
-          "Create images",
-          "Drive + Notion",
-          "Create a PPT",
-          "Build an Excel report",
-        ])
-      assert.ok(
-        lowerHome.includes(name.replaceAll(">", "&gt;")),
-        "Preserve selected task: " + name,
-      );
+      ? ["Slack", "WhatsApp", "GitHub", "修改代码", "浏览器", "出门在外", "机房巡检"]
+      : ["Slack", "WhatsApp", "GitHub", "Fix code", "Browser", "On the road", "Server room"])
+      assert.ok(lowerHome.includes(name), "Home request: " + name);
+    // The headline is split into two tones, so match its text without the markup.
     assert.match(
-      lowerHome,
+      lowerHome.replace(/<[^>]*>/g, ""),
       locale === "zh" ? /在聊天里说需求，看它把事做完/ : /Ask in chat. Watch the work get done/,
     );
     const images = [...html.matchAll(/<img\b[^>]*src="([^"]+)"/g)].map((match) => match[1]);
@@ -246,5 +232,5 @@ try {
   else globalThis.window = originalWindow;
 }
 console.log(
-  "PASS: bilingual floating constellation, manual Connect/Arc modes, genuine brands, lower live demo and App examples",
+  "PASS: bilingual floating constellation with Connect/Arc modes, the hero copy and arc with genuine brands, lower live demo and App examples",
 );

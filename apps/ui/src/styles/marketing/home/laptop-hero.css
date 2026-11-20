@@ -57,15 +57,6 @@
     margin-top: 8px;
     font-size: 11px;
   }
-  .landingHero--constellation .homeConnectionScene {
-    max-width: min(100%, max(360px, calc((100svh - 350px) * 1.2)));
-  }
-  .landingHero--constellation .hcsModeIntroduction {
-    margin-top: 16px;
-  }
-  .landingHero--constellation .hcsFoundation {
-    margin-bottom: 16px;
-  }
 }
 @media (max-width: 999px) and (min-width: 621px) {
   .landingHero.landingHero--constellation {

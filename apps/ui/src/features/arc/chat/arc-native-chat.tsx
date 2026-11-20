@@ -42,6 +42,7 @@ import "../../../styles/arc/chat/arc-verification.css";
 import { billingRecovery } from "../../../../../../packages/protocol/src/billing-recovery.js";
 import { BillingRecoveryActions } from "../../billing/billing-recovery-actions.js";
 import { PRO_TRIAL_CHECKOUT_HREF } from "../../billing/arc-billing-client.js";
+import { ArcTrialDialog } from "./arc-trial-dialog.js";
 
 type Props = {
   navigationOpen: boolean;
@@ -109,6 +110,10 @@ export function ArcNativeChat({
   }, [draft]);
   const inputs = useArcComposerInputs(accountId, setDraft, tr, draft);
   const [dragging, setDragging] = useState(false);
+  // Send stays clickable without Arc access; pressing it checks access and, if
+  // there is still none, offers the trial instead of a silently disabled button.
+  const [trialPrompt, setTrialPrompt] = useState(false),
+    checkingAccess = useRef(false);
   const resourceRevision = JSON.stringify([
     chat.current?.employeeDrafts?.map((item) => [item.employeeId, item.status]),
     chat.current?.appConnections?.map((item) => [item.id, item.status]),
@@ -448,6 +453,27 @@ export function ArcNativeChat({
   };
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (!draft.trim() && !inputs.attachmentIds.length && !inputs.location) return;
+    if (!chat.service?.access.canUse) {
+      if (checkingAccess.current) return;
+      checkingAccess.current = true;
+      // A trial or plan may have started elsewhere since this page loaded.
+      const access = await chat.checkAccess().finally(() => {
+        checkingAccess.current = false;
+      });
+      if (!access?.canUse) {
+        setTrialPrompt(true);
+        return;
+      }
+    }
+    await sendDraft();
+  }
+  async function startTrialAndSend() {
+    const ready = await chat.startTrial();
+    setTrialPrompt(false);
+    if (ready) await sendDraft();
+  }
+  async function sendDraft() {
     const value =
       draft.trim() ||
       (inputs.attachmentIds.length
@@ -599,8 +625,7 @@ export function ArcNativeChat({
                   (!draft.trim() && !inputs.attachmentIds.length && !inputs.location) ||
                   inputs.blocked ||
                   chat.busy ||
-                  !chat.service?.enabled ||
-                  !chat.service.access.canUse
+                  !chat.service?.enabled
                 }
                 aria-label={tr("arc.chat.arcNativeChat.sendMessage")}
               >
@@ -1043,6 +1068,15 @@ export function ArcNativeChat({
       )}
       {(chat.current || access?.status !== "eligible") && trial}
       {chat.current && composer}
+      {trialPrompt && access && (
+        <ArcTrialDialog
+          access={access}
+          busy={chat.busy}
+          tr={tr}
+          onClose={() => setTrialPrompt(false)}
+          onStartArcTrial={() => void startTrialAndSend()}
+        />
+      )}
       {mobileOpen &&
         createPortal(
           <div

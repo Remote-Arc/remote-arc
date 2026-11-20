@@ -1,21 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { MARKETING_ORIGIN } from "../../../config/app-config.js";
+import { detectAgentPlatform, type AgentPlatform } from "../../../lib/agent-download.js";
 import { CopyButton } from "../../../components/public-layout.js";
 import type { DashboardModel } from "../../../hooks/dashboard/use-dashboard-model.js";
 
-type Platform = "darwin" | "windows" | "linux";
+type Platform = AgentPlatform;
 const CURL = "curl -fsSL https://remotearc.app/install.sh | sh";
 
 // The computer being paired is usually the one showing this page.
-function currentPlatform(): Platform {
-  const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
-  const value = nav.userAgentData?.platform || nav.platform || nav.userAgent;
-  return /win/i.test(value)
-    ? "windows"
-    : /linux|x11|cros/i.test(value) && !/android/i.test(value)
-      ? "linux"
-      : "darwin";
-}
+const currentPlatform = (): Platform => detectAgentPlatform() ?? "darwin";
 
 function Command({ value }: { value: string }) {
   return (

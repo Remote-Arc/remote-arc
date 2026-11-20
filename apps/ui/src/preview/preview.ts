@@ -23,6 +23,12 @@ const previewProTrial = () => new URLSearchParams(location.search).get("protrial
 const proTrialOn = () => previewProTrial() !== "off";
 // Set when the preview's Start trial button is used; the trial never starts by itself.
 let previewTrialStarted = false;
+/** ?arcaccess=pro-trial|arc-trial|ended shows Arc chat for an account without Arc
+ * access: one offered the Pro trial at checkout, one offered the Arc trial in the
+ * chat (Start trial then grants access), or one whose trial has ended. Without it,
+ * the account is in its Arc trial. */
+const previewArcAccess = () => new URLSearchParams(location.search).get("arcaccess");
+let previewArcTrialStarted = false;
 function previewUsage(requested: string | null) {
   const month = new Date().toISOString().slice(0, 7);
   const startable = requested === "full" || requested === "writes-next";
@@ -779,6 +785,14 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       previewTrialStarted = true;
       return json({ usage: previewUsage(quota) });
     }
+    if (
+      url.pathname === "/api/arc/trial" &&
+      method === "POST" &&
+      previewArcAccess() === "arc-trial"
+    ) {
+      previewArcTrialStarted = true;
+      return json({ ok: true });
+    }
     if (method !== "GET") {
       return json(
         { error: "PR Preview is read-only. This action is not connected to production." },
@@ -854,14 +868,17 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
       });
     if (url.pathname === "/api/arc/status") {
       const enabled = (await runtimeConfig()).arcAvailable;
+      const mode = previewArcAccess();
+      const offered = mode === "pro-trial" || (mode === "arc-trial" && !previewArcTrialStarted);
       return json({
         enabled,
         preview: true,
         access: {
-          status: "active",
-          canUse: enabled,
+          status: offered ? "eligible" : mode === "ended" ? "expired" : "active",
+          canUse: enabled && !offered && mode !== "ended",
+          ...(mode === "pro-trial" ? { proTrial: true } : {}),
           // The decided trial: 7 days and 300 Credits.
-          daysRemaining: 7,
+          daysRemaining: mode === "ended" ? 0 : 7,
           trialDays: 7,
           trialCredits: 300,
           dailyUsedPercent: 0,

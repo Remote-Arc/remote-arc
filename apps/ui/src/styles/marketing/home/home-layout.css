@@ -1,0 +1,245 @@
+/* Home page layout: one rhythm for every section.
+ * Section intros are centered: a small eyebrow, a two-tone headline and one
+ * supporting line. Product
+ * demos sit on a quiet stage, the proof band and pricing follow the hero, and
+ * one closing call to action ends the page. Selectors start with the theme
+ * root so they sit above the shared public-page rules. */
+
+:root[data-theme] .publicPage .homePage {
+  --home-section-gap: clamp(88px, 11vw, 148px);
+  --home-radius: 24px;
+  --home-accent: #0284c7;
+  --home-stage-bg: linear-gradient(180deg, var(--site-subtle), var(--site-canvas));
+  --home-stage-line: var(--site-line);
+}
+:root[data-theme="dark"] .publicPage .homePage {
+  --home-accent: #7dd3fc;
+  --home-stage-bg: linear-gradient(180deg, #17171c, #121216);
+}
+
+/* The nav sits on the page instead of drawing its own bar on the home page. */
+:root[data-theme] .publicPage:has(.homePage) .publicNav {
+  background: transparent;
+  border-bottom-color: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Proof band: the AI clients as tiles, with the request volume beneath. */
+:root[data-theme] .publicPage .homePage .homeProof {
+  display: grid;
+  justify-items: center;
+  gap: 28px;
+  padding: 8px 0 clamp(24px, 4vw, 40px);
+}
+:root[data-theme] .publicPage .homePage .homeProof .trustRail {
+  justify-content: center;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+:root[data-theme] .publicPage .homePage .homeProof .trustRail > span,
+:root[data-theme] .publicPage .homePage .homeProof .trustRail > small {
+  width: 100%;
+  text-align: center;
+  font-size: 14px;
+  color: var(--site-muted);
+}
+:root[data-theme] .publicPage .homePage .homeProof .trustRail > small {
+  font-size: 12px;
+}
+:root[data-theme] .publicPage .homePage .homeProof .trustRail > :is(a, div) {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 10px;
+  width: 104px;
+  height: 92px;
+  border: 1px solid var(--site-line);
+  border-radius: 16px;
+  background: var(--site-surface);
+  text-decoration: none;
+}
+:root[data-theme] .publicPage .homePage .homeProof .trustRail img,
+:root[data-theme] .publicPage .homePage .homeProof .trustRail .miniMcp {
+  width: 26px;
+  height: 26px;
+}
+:root[data-theme] .publicPage .homePage .homeProof .trustRail .miniMcp {
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  font-size: 13px;
+}
+:root[data-theme] .publicPage .homePage .homeProof .trustRail strong {
+  font-size: 12.5px;
+  color: var(--site-ink);
+}
+:root[data-theme] .publicPage .homePage .homeProof .homeRequestVolume {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  text-align: center;
+}
+:root[data-theme] .publicPage .homePage .homeProof .requestVolumeMetric {
+  align-items: center;
+}
+
+/* Sections */
+:root[data-theme] .publicPage .homePage :is(.sectionBlock, .homePlatformIntro, .arcProductTeaser) {
+  margin-block: 0;
+  padding-block: calc(var(--home-section-gap) / 2);
+  border: 0;
+}
+
+/* Section intro, centered as on the reference pages: eyebrow, a two-tone
+   headline, then one supporting line. */
+:root[data-theme] .publicPage .homePage .modernSectionIntro,
+:root[data-theme] .publicPage .homePage .homePlatformHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 0;
+  max-width: 860px;
+  margin: 0 auto clamp(40px, 5vw, 64px);
+  text-align: center;
+}
+:root[data-theme] .publicPage .homePage .modernSectionIntro > :not(.eyebrow, h2, p) {
+  margin-top: 20px;
+}
+:root[data-theme] .publicPage .homePage :is(.modernSectionIntro, .homePlatformHeader) .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--home-accent);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+:root[data-theme]
+  .publicPage
+  .homePage
+  :is(.modernSectionIntro, .homePlatformHeader, .homeClosing)
+  h2 {
+  max-width: 16em;
+  margin: 16px auto 0;
+  color: var(--site-ink);
+  font-size: clamp(36px, 4.4vw, 58px);
+  font-weight: 560;
+  line-height: 1.04;
+  letter-spacing: -0.048em;
+  text-wrap: balance;
+}
+:root[data-theme] .publicPage .homePage .sectionTitleRest {
+  color: var(--site-muted);
+}
+:root[data-theme] .publicPage .homePage :is(.modernSectionIntro, .homePlatformAside) > p {
+  max-width: 620px;
+  margin: 20px auto 0;
+  color: var(--site-muted);
+  font-size: 17px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+:root[data-theme] .publicPage .homePage .homePlatformAside {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  max-width: 620px;
+}
+:root[data-theme] .publicPage .homePage .chatSellingPoints {
+  justify-content: center;
+}
+
+/* Questions: the intro above, the topics and answers in one readable column. */
+:root[data-theme] .publicPage .homePage .landingQuestions {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+:root[data-theme] .publicPage .homePage .faqContent {
+  width: min(100%, 860px);
+  margin-inline: auto;
+}
+
+/* Product stages: a quiet surface with a hairline edge. */
+:root[data-theme] .publicPage .homePage .arcProductTeaser {
+  border: 1px solid var(--home-stage-line);
+  border-radius: var(--home-radius);
+  background: var(--home-stage-bg);
+}
+:root[data-theme] .publicPage .homePage .arcProductTeaser {
+  margin-block: calc(var(--home-section-gap) / 2);
+  padding: clamp(28px, 4.5vw, 64px);
+}
+
+/* Closing call to action */
+:root[data-theme] .publicPage .homePage .homeClosing {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: grid;
+  justify-items: center;
+  margin: calc(var(--home-section-gap) / 2) 0 var(--home-section-gap);
+  padding: clamp(56px, 9vw, 120px) clamp(20px, 5vw, 64px);
+  border: 1px solid var(--home-stage-line);
+  border-radius: calc(var(--home-radius) + 4px);
+  background: var(--home-stage-bg);
+  text-align: center;
+}
+:root[data-theme] .publicPage .homePage .homeClosing h2 {
+  max-width: 14em;
+  margin: 18px 0 16px;
+}
+:root[data-theme] .publicPage .homePage .homeClosing .eyebrow {
+  color: var(--home-accent);
+  letter-spacing: 0.14em;
+}
+:root[data-theme] .publicPage .homePage .homeClosing > p {
+  max-width: 560px;
+  margin: 0 0 32px;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--site-muted);
+}
+.homePage .homeClosingActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+:root[data-theme] .publicPage .homePage .homeClosing .installCommands {
+  width: min(100%, 560px);
+  text-align: left;
+}
+
+@media (max-width: 720px) {
+  :root[data-theme] .publicPage .homePage {
+    --home-radius: 20px;
+  }
+  :root[data-theme] .publicPage .homePage .homeProof .trustRail > :is(a, div) {
+    width: 84px;
+    height: 80px;
+  }
+  :root[data-theme]
+    .publicPage
+    .homePage
+    :is(.modernSectionIntro, .homePlatformHeader, .homeClosing)
+    h2 {
+    font-size: 34px;
+  }
+  :root[data-theme] .publicPage .homePage :is(.modernSectionIntro, .homePlatformAside) > p {
+    font-size: 15.5px;
+  }
+}

@@ -19,11 +19,13 @@ function dashboardSurface() {
 }
 
 function preferenceKey() {
-  return dashboardSurface() ? "remote-arc-dashboard-theme-v3" : "remote-arc-theme";
+  return "remote-arc-dashboard-theme-v3";
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemePreference>(() => {
+    // The public website is always dark; only product surfaces keep a theme choice.
+    if (!dashboardSurface()) return "dark";
     try {
       const saved = localStorage.getItem(preferenceKey());
       return saved === "light" || saved === "dark" || saved === "system" ? saved : "dark";
@@ -54,6 +56,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       theme,
       resolvedTheme,
       setTheme(next) {
+        if (!dashboardSurface()) return;
         try {
           localStorage.setItem(preferenceKey(), next);
         } catch {

@@ -1,0 +1,250 @@
+/* Home hero: centred copy (product label, headline, one line, actions with the
+ * install command) above the arc. As the page scrolls, --scroll-progress (set
+ * by useScrollProgress) fades the copy while the arc grows over it. The site
+ * is dark only. */
+
+.homePage {
+  --home-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --home-cyan: #7dd3fc;
+  --home-violet: #a78bfa;
+  --home-panel: #17171b;
+  --home-hairline: rgba(255, 255, 255, 0.08);
+  --home-edge: rgba(255, 255, 255, 0.14);
+}
+
+:root[data-theme] .publicPage .homePage .homeHero {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  min-height: min(100svh - 88px, 900px);
+  grid-template-rows: auto minmax(300px, 1fr);
+  padding-top: clamp(20px, 3.5vh, 48px);
+  isolation: isolate;
+}
+
+:root[data-theme] .publicPage .homePage .homeHero .heroCopy {
+  display: grid;
+  /* One shrinkable column, so a long install command scrolls inside its box
+     instead of widening the copy. */
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  width: 100%;
+  max-width: 880px !important;
+  margin: 0 auto;
+  text-align: center;
+  /* The words leave with the arc: they rise faster than the page, shrink a
+     little, blur and fade, and are gone before the arc's top reaches them. */
+  opacity: calc(1 - var(--scroll-progress, 0) * 3.2);
+  filter: blur(calc(var(--scroll-progress, 0) * 14px));
+  transform: translate3d(0, calc(var(--scroll-progress, 0) * -200px), 0)
+    scale(calc(1 - var(--scroll-progress, 0) * 0.1));
+  transform-origin: 50% 100%;
+  will-change: opacity, transform, filter;
+}
+
+/* Product label as a pill with a live dot. */
+:root[data-theme] .publicPage .homePage .homeHero .heroProductLabel {
+  gap: 9px;
+  margin: 0;
+  padding: 6px 13px;
+  border: 1px solid var(--home-edge);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.02);
+  color: #c9c9d1;
+  font: 600 11.5px/1.2 var(--home-mono);
+  letter-spacing: 0.08em;
+}
+:root[data-theme] .publicPage .homePage .homeHero .heroProductLabel i {
+  width: 6px;
+  height: 6px;
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+}
+
+:root[data-theme] .publicPage .homePage .homeHero h1.heroHeadline {
+  /* Face, size and weight come from the shared page-title rule (marketing-design.css). */
+  margin: 18px 0 0;
+  color: var(--site-ink);
+}
+:root[data-theme] .publicPage .homePage .homeHero h1.heroHeadline em {
+  font-style: normal;
+  background: linear-gradient(90deg, var(--home-cyan), #93a5ff 70%, var(--home-violet));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+:root[data-theme] .publicPage .homePage .homeHero .heroCopy > p {
+  max-width: 640px;
+  margin: 16px auto 0;
+  color: var(--site-muted);
+  font-size: 18px;
+  line-height: 1.55;
+  text-wrap: balance;
+}
+
+:root[data-theme] .publicPage .homePage .homeHero .landingActions {
+  justify-content: center;
+  gap: 12px;
+  margin: 24px 0 0;
+}
+:root[data-theme] .publicPage .homePage .homeHero .landingActions > a {
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+:root[data-theme] .publicPage .homePage .homeHero .marketingSecondary {
+  border-color: var(--home-edge);
+  background: transparent;
+}
+:root[data-theme] .publicPage .homePage .homeHero .marketingSecondary:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+/* The install command under the buttons: an npx / curl switch, the command and
+   a copy button. Wide enough for the longer curl line, so switching never
+   moves the page. */
+.homeHero .heroCommand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 620px);
+  min-height: 46px;
+  margin-top: 12px;
+  padding: 0 6px;
+  border: 1px solid var(--home-hairline);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.homeHero .heroCommandTabs {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.homeHero .heroCommandTabs button {
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #8e8e98;
+  font: 600 12.5px var(--home-mono);
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+.homeHero .heroCommandTabs button[aria-selected="true"] {
+  background: #f2f4f8;
+  color: #0b0d12;
+}
+.homeHero .heroCommand code {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  color: #d5d5dc;
+  font: 14px var(--home-mono);
+  text-align: left;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+.homeHero .heroCommand code > span {
+  color: #6c6c76;
+}
+.homeHero .heroCommandCopy {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: #8e8e98;
+  cursor: pointer;
+}
+.homeHero .heroCommandCopy:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f2f2f4;
+}
+.homeHero :is(.heroCommandTabs button, .heroCommandCopy):focus-visible {
+  outline: 2px solid var(--home-cyan);
+  outline-offset: 2px;
+}
+.homeHero .heroCommandStatus {
+  position: absolute;
+  inset: auto 0 calc(100% + 6px);
+  color: #4ade80;
+  font:
+    12px Inter,
+    sans-serif;
+}
+
+/* The way in for visitors without an AI: a full-width secondary action under
+   the command, set apart by Arc's mark and a white hairline edge. */
+.homeHero .heroArcAction {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 620px);
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #cfcfd6;
+  font-size: 14px;
+  text-align: left;
+  text-decoration: none;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+.homeHero .heroArcAction b {
+  color: #fff;
+  font-weight: 600;
+}
+.homeHero .heroArcAction svg {
+  flex: none;
+  margin-left: auto;
+  color: #d5d5dc;
+}
+.homeHero .heroArcAction:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.06);
+}
+.homeHero .heroArcAction:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+  /* The command scrolls inside its box on phones; the fade shows there is more. */
+  .homeHero .heroCommand code {
+    -webkit-mask-image: linear-gradient(90deg, #000 82%, transparent);
+    mask-image: linear-gradient(90deg, #000 82%, transparent);
+  }
+  :root[data-theme] .publicPage .homePage .homeHero {
+    min-height: 0;
+    grid-template-rows: auto 300px;
+    padding-top: 28px;
+  }
+  :root[data-theme] .publicPage .homePage .homeHero .heroCopy > p {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme] .publicPage .homePage .homeHero .heroCopy {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+}

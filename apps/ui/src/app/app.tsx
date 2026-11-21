@@ -75,6 +75,12 @@ const NativeInstall = React.lazy(() =>
   })),
 );
 
+const ComputerUsePage = React.lazy(() =>
+  import("../features/marketing/product/computer-use-page.js").then((module) => ({
+    default: module.ComputerUsePage,
+  })),
+);
+
 const ChromeExtensionPage = React.lazy(() =>
   import("../features/install/chrome-extension-page.js").then((module) => ({
     default: module.ChromeExtensionPage,
@@ -310,6 +316,20 @@ export function App() {
           }
         >
           <RemoteMcpGuide />
+        </React.Suspense>
+      </PublicLayout>
+    );
+  if (routePath === "/computer-use")
+    return (
+      <PublicLayout user={user === undefined ? null : user}>
+        <React.Suspense
+          fallback={
+            <main className="featurePage">
+              <WorkspaceLoading label={tr("marketing.computerUsePage.title")} />
+            </main>
+          }
+        >
+          <ComputerUsePage />
         </React.Suspense>
       </PublicLayout>
     );

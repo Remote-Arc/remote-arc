@@ -75,3 +75,20 @@ test("Top-level pages share the home page's title type", async ({ page }, info) 
     expect(await type(), path).toBe(home);
   }
 });
+
+// The FAQ answers how Remote Arc relates to the AI clients' own computer use,
+// as a complement, and links the computer use guide.
+test("The home FAQ explains what Remote Arc adds to ChatGPT and Claude", async ({ page }, info) => {
+  const zh = info.project.metadata.language === "zh",
+    prefix = zh ? "/zh" : "";
+  await page.goto(prefix + "/");
+  const question = page.locator(".modernFaq summary", {
+    hasText: zh ? "为什么还要 Remote Arc" : "Why add Remote Arc?",
+  });
+  await question.scrollIntoViewIfNeeded();
+  await question.click();
+  const answer = question.locator("xpath=..").locator("p");
+  await expect(answer).toContainText(zh ? "跨 AI 厂商" : "across AI vendors");
+  await expect(answer).toContainText(zh ? "你随时可以接手" : "take over at any moment");
+  await expect(answer.locator('a[href$="/docs/computer-use"]')).toHaveCount(1);
+});

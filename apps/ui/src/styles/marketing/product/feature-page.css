@@ -1,0 +1,247 @@
+/* A product feature's page: Agent Orchestration, Computer use. */
+.featurePage {
+  max-width: 1210px;
+  margin: 0 auto;
+  padding: 0 28px 100px;
+  color: var(--text);
+}
+.featureHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr);
+  align-items: center;
+  gap: 42px;
+  margin: 40px 0 0;
+  padding: 52px 36px 48px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel);
+}
+.featureHeroCopy {
+  min-width: 0;
+}
+.featureHeroCopy .eyebrow {
+  color: var(--sky-light);
+}
+.featureHeroCopy h1 {
+  max-width: 640px;
+  margin: 13px 0 19px;
+  font-size: clamp(32px, 4.2vw, 52px);
+  letter-spacing: -0.047em;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+.featureHeroCopy > p {
+  max-width: 620px;
+  margin: 0 0 25px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.8;
+}
+.featureCtas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 20px;
+}
+.featurePrimary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 51px;
+  padding: 13px 21px;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.featureSecondary,
+.featureComparePlans,
+.featurePlanActions a:not(.primaryButton),
+.featureRelated a {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.featureSecondary:hover,
+.featureComparePlans:hover,
+.featurePlanActions a:not(.primaryButton):hover,
+.featureRelated a:hover {
+  color: var(--sky-light);
+}
+.featureVisual {
+  min-width: 0;
+}
+
+.featureSteps,
+.featurePlans,
+.featureDetails {
+  margin-top: 72px;
+}
+.featureSteps h2,
+.featurePlansIntro h2 {
+  margin: 0 0 22px;
+  font-size: clamp(24px, 2.6vw, 34px);
+  letter-spacing: -0.03em;
+}
+.featureSteps ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.featureSteps li {
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+}
+.featureSteps li > span {
+  color: var(--sky-light);
+  font-size: 13px;
+  font-weight: 700;
+}
+.featureSteps h3 {
+  margin: 10px 0 8px;
+  font-size: 17px;
+}
+.featureSteps p,
+.featurePlansIntro p,
+.featurePlanCard p,
+.featureDetails p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.7;
+}
+.featurePlansIntro p {
+  max-width: 720px;
+  margin-bottom: 22px;
+}
+.featurePlanCards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.featurePlanCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+}
+.featurePlanCard[data-plan="pro"] {
+  border-color: var(--sky-light);
+}
+.featurePlanCard h3 {
+  margin: 0;
+  font-size: 20px;
+}
+.featurePlanActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+.featurePlanActions .primaryButton {
+  min-height: 42px;
+  padding: 10px 16px;
+  font-size: 14px;
+  text-decoration: none;
+}
+.featureComparePlans {
+  display: inline-block;
+  margin-top: 18px;
+}
+.featureDetails {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 28px;
+}
+.featureDetails h2 {
+  margin: 0 0 10px;
+  font-size: 20px;
+}
+.featureRelated {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 28px;
+  margin-top: 56px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+/* The picture: a small, static rendering of the feature at work. */
+.featureMock {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg);
+  font-size: 13px;
+}
+.featureMockRow {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.featureMockRow header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.featureMockRow small,
+.featureMockMuted {
+  color: var(--muted);
+}
+.featureMockState {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(37, 99, 235, 0.15);
+  color: #2563eb;
+}
+.featureMockState.is-done {
+  background: rgba(22, 163, 74, 0.15);
+  color: #16a34a;
+}
+.featureMockTool {
+  color: var(--muted);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+}
+.featureMockQuota {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.featureMockQuota strong {
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .featureHero {
+    grid-template-columns: 1fr;
+    padding: 34px 22px;
+  }
+  .featurePlanCards {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .featurePage {
+    padding: 0 16px 80px;
+  }
+}

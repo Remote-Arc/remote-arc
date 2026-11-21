@@ -183,6 +183,7 @@ function PublicHeader({ user }: { user?: User | null }) {
                   </a>
                   <a href={navHref("/connect-ai")}>Connect</a>
                   <a href={navHref("/chrome-extension")}>{labels.browserExtension}</a>
+                  <a href={navHref("/computer-use")}>{labels.computerUse}</a>
                 </section>
                 <section>
                   <span className="publicMegaLabel">{labels.worksWithGroup}</span>

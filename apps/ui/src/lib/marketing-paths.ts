@@ -16,6 +16,7 @@ export const chinesePages = new Set([
   "/remote-mcp",
   "/connect-ai",
   "/chrome-extension",
+  "/computer-use",
   "/",
   "/install/chatgpt",
   "/install/claude",

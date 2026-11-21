@@ -244,6 +244,15 @@ export function LandingContent() {
           </>,
         ],
         [
+          tr("marketing.home.landingContent.chatgptAndClaudeAlreadyUseComputers"),
+          <>
+            {tr("marketing.home.landingContent.remoteArcAddsThreeThings")}{" "}
+            <a href="/docs/computer-use">
+              {tr("marketing.home.landingContent.howComputerUseWorks")} →
+            </a>
+          </>,
+        ],
+        [
           tr("marketing.home.landingContent.doINeedAPaidAi"),
           <>
             {tr("marketing.home.landingContent.youDoNotNeedToBring")}{" "}

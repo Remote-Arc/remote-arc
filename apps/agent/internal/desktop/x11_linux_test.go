@@ -3,6 +3,7 @@
 package desktop
 
 import (
+	"image"
 	"os"
 	"testing"
 	"time"
@@ -37,6 +38,12 @@ func fixtureX11Window(t *testing.T) (*xgb.Conn, xproto.Window, chan xgb.Event) {
 	pid := make([]byte, 4)
 	xgb.Put32(pid, uint32(os.Getpid()))
 	xproto.ChangeProperty(conn, xproto.PropModeReplace, window, atom("_NET_WM_PID"), xproto.AtomCardinal, 32, 1, pid)
+	// Other tests open windows on the same display at the same time (the
+	// browser runner's Chrome in the coverage job), so the fixture asks the
+	// window manager to keep it above them.
+	above := make([]byte, 4)
+	xgb.Put32(above, uint32(atom("_NET_WM_STATE_ABOVE")))
+	xproto.ChangeProperty(conn, xproto.PropModeReplace, window, atom("_NET_WM_STATE"), xproto.AtomAtom, 32, 1, above)
 	xproto.MapWindow(conn, window)
 	conn.Sync()
 	events := make(chan xgb.Event, 64)
@@ -69,7 +76,7 @@ func TestX11DesktopAgainstARealWindow(t *testing.T) {
 	if err != nil || len(displays) == 0 {
 		t.Fatalf("displays: %v %v", displays, err)
 	}
-	_, window, events := fixtureX11Window(t)
+	fixtureConn, window, events := fixtureX11Window(t)
 
 	// The window manager lists the fixture once it has managed it.
 	var fixture Window
@@ -91,14 +98,22 @@ func TestX11DesktopAgainstARealWindow(t *testing.T) {
 	// The screenshot sees the red window, but never the notice.
 	p.Indicate(true)
 	defer p.Indicate(false)
-	time.Sleep(100 * time.Millisecond)
-	img, err := p.Capture(displays[0].Bounds)
-	if err != nil {
-		t.Fatal(err)
-	}
 	cx, cy := fixture.Bounds.X+200, fixture.Bounds.Y+120
-	if c := img.RGBAAt(cx, cy); c.R != 0xff || c.G != 0 || c.B != 0 {
-		t.Fatalf("pixel inside the fixture is %+v", c)
+	// A window another test opened a moment ago may still be on top: raise the
+	// fixture until the screenshot shows it, for up to two seconds.
+	var img *image.RGBA
+	for deadline := time.Now().Add(2 * time.Second); ; {
+		xproto.ConfigureWindow(fixtureConn, window, xproto.ConfigWindowStackMode, []uint32{xproto.StackModeAbove})
+		fixtureConn.Sync()
+		time.Sleep(100 * time.Millisecond)
+		if img, err = p.Capture(displays[0].Bounds); err != nil {
+			t.Fatal(err)
+		}
+		if c := img.RGBAAt(cx, cy); c.R == 0xff && c.G == 0 && c.B == 0 {
+			break
+		} else if time.Now().After(deadline) {
+			t.Fatalf("pixel inside the fixture is %+v", c)
+		}
 	}
 	if c := img.RGBAAt(displays[0].Bounds.W/2, 30); c.R == 0x6d && c.G == 0x28 && c.B == 0xd9 {
 		t.Fatal("the notice must be hidden while the screen is captured")

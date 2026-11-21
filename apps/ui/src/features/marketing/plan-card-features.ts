@@ -8,6 +8,19 @@ import {
 } from "../billing/arc-billing-client.js";
 import { approxTaskCount } from "./plan-copy.js";
 
+/** How many background commands run at once, or nothing for a catalog that
+ * predates the term. */
+function backgroundLine(plan: CatalogPlan, tr: Translate): string[] {
+  if (plan.backgroundTasks === undefined) return [];
+  return [
+    plan.backgroundTasks === null
+      ? tr("marketing.arcPublicPricing.backgroundCommandsUnlimited")
+      : tr("marketing.arcPublicPricing.backgroundCommandsAtOnce", {
+          count: plan.backgroundTasks.toLocaleString(),
+        }),
+  ];
+}
+
 /** One checklist line, with an optional note in small print under it. */
 export type PlanFeature = { text: string; note?: string };
 const line = (text: string): PlanFeature => ({ text });
@@ -43,6 +56,8 @@ function arcPlanFeatures(plan: CatalogPlan, catalog: PlatformCatalog, tr: Transl
       runs: count(plan.concurrentRuns),
       minutes: count(Math.round(plan.maxSeconds / 60)),
     }),
+    // Arc's parallel tasks, then the Connect background commands beside them.
+    ...backgroundLine(plan, tr),
     tr("marketing.arcPublicPricing.creditsMonthAboutTasks", {
       credits: count(plan.monthlyCredits),
       tasks: count(approxTaskCount(plan.monthlyCredits)),
@@ -67,6 +82,7 @@ export function planCardFeatures(
     return [
       tr("marketing.arcPublicPricing.yourAgentsAtFullSpeedAll"),
       tr("marketing.arcPublicPricing.unlimitedComputersAndFileTransfer"),
+      ...backgroundLine(plan, tr),
       tr("marketing.arcPublicPricing.terminalFilesBrowserFleetAndConnected"),
       tr("marketing.arcPublicPricing.computerUseOnYourComputers"),
       tr("marketing.arcPublicPricing.worksWithYourOwnChatgptClaude"),
@@ -93,6 +109,7 @@ export function planCardFeatures(
         slowLaneCallsPerMinute: CONNECT_FREE_OVERFLOW.slowLaneCallsPerMinute,
       }),
       tr("marketing.arcPublicPricing.upToComputers"),
+      ...backgroundLine(plan, tr),
       tr("marketing.arcPublicPricing.gbFileTransferMonth"),
       tr("marketing.arcPublicPricing.devicePermissionsAndLocalUndo"),
       tr("marketing.arcPublicPricing.computerUseOnYourComputers"),

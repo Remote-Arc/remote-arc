@@ -82,6 +82,17 @@ const rules: readonly [readonly string[], BillingRecovery][] = [
     ),
   ],
   [
+    ["BACKGROUND_TASK_LIMIT"],
+    recovery(
+      [
+        "Your plan’s background tasks are all running. Wait for one to finish or stop one, or review a plan that runs more at once. Foreground commands and other tools are not affected.",
+        "当前套餐允许同时运行的后台任务已满。请等其中一个结束或停止一个，或查看可以同时运行更多任务的套餐。前台命令和其他工具不受影响。",
+      ],
+      [billing],
+      "later",
+    ),
+  ],
+  [
     ["APP_DAILY_LIMIT_REACHED"],
     recovery(
       [

@@ -60,6 +60,29 @@ export const usageAndCostsSections: DocSection[] = [
     ],
   },
   {
+    heading: { en: "Background commands at once", zh: "同时运行的后台命令" },
+    text: {
+      en: "A background command is one your AI starts to keep running after its reply, such as a build, a test suite, a dev server or a routine's step. Your plan sets how many run at once across all your computers.",
+      zh: "后台命令是 AI 启动后会在回复结束后继续运行的命令，例如构建、测试、开发服务器或例行任务中的一步。你的套餐决定所有电脑合计可以同时运行多少个。",
+    },
+    list: {
+      items: [
+        {
+          en: "Free runs 1 at once. Paid plans run more; the pricing page lists each plan's number. A coding agent started from the Dashboard counts as one.",
+          zh: "Free 同时运行 1 个，付费套餐可以运行更多，具体数量见价格页。从 Dashboard 启动的编程 Agent 也算一个。",
+        },
+        {
+          en: "Reading and editing files, commands that finish within two minutes, browser tasks, Apps and computer use are not background commands and are never held up by this.",
+          zh: "读写文件、两分钟内结束的命令、浏览器任务、Apps 和 Computer Use 都不是后台命令，不受这个限制影响。",
+        },
+        {
+          en: "When they are all running, a new one is refused with BACKGROUND_TASK_LIMIT before anything starts. Your AI can wait for one to finish, stop one, or run a short command in the foreground.",
+          zh: "名额用满时，新的后台命令会在启动前被拒绝，返回 BACKGROUND_TASK_LIMIT。AI 可以等其中一个结束、停止一个，或把较短的命令改为前台运行。",
+        },
+      ],
+    },
+  },
+  {
     heading: { en: "Who pays for a connected App", zh: "连接的应用由谁付费" },
     text: {
       en: "A connected App bills whatever account you connected, under that account’s own arrangement. Some examples:",

@@ -18,6 +18,19 @@ func activeProcessLimit() int {
 	}
 	return n
 }
+func (p *Processes) backgroundCountLocked() int {
+	running := 0
+	for _, m := range p.items {
+		select {
+		case <-m.done:
+		default:
+			if m.background {
+				running++
+			}
+		}
+	}
+	return running
+}
 func (p *Processes) activeCountLocked() int {
 	active := 0
 	for _, m := range p.items {

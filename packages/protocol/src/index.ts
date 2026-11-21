@@ -52,6 +52,10 @@ export const CONNECT_FREE_OVERFLOW = {
 /** Published monthly binary transfer allowance for Free accounts, shared by
  * read_binary_file and temporary file links. Paid plans have no transfer cap. */
 export const FREE_BINARY_BYTES_PER_MONTH = 2 * 1024 ** 3;
+/** Background commands a Free account may run at once when its published version
+ * predates the term. Paid versions published before it keep no limit (null in
+ * ARC_PLANS); a newly published version sets its own number. */
+export const FREE_BACKGROUND_TASKS = 1;
 /** Ordered by precedence: a later entry wins when several assignments are active.
  * `null` limits are explicit unlimited entitlements, never magic large numbers. */
 export const ARC_PLANS = [
@@ -65,6 +69,7 @@ export const ARC_PLANS = [
     connectionLimit: 5,
     allHostedModels: false,
     concurrentRuns: 1,
+    backgroundTasks: 1,
     routines: 3,
     maxSteps: 8,
     maxTokens: 24000,
@@ -80,6 +85,7 @@ export const ARC_PLANS = [
     connectionLimit: 50,
     allHostedModels: false,
     concurrentRuns: 1,
+    backgroundTasks: null,
     routines: 3,
     maxSteps: 8,
     maxTokens: 24000,
@@ -95,6 +101,7 @@ export const ARC_PLANS = [
     connectionLimit: 50,
     allHostedModels: true,
     concurrentRuns: 2,
+    backgroundTasks: null,
     routines: 20,
     maxSteps: 16,
     maxTokens: 48000,
@@ -110,6 +117,7 @@ export const ARC_PLANS = [
     connectionLimit: 200,
     allHostedModels: true,
     concurrentRuns: 5,
+    backgroundTasks: null,
     routines: 100,
     maxSteps: 32,
     maxTokens: 96000,
@@ -319,6 +327,8 @@ export type DeviceMetadata = {
     memoryAvailableMB: number;
     cpuPercent?: number;
     managedProcesses?: number;
+    /** Background tasks only (start_process background=true), from Agents that report it. */
+    backgroundProcesses?: number;
   } | null;
 };
 

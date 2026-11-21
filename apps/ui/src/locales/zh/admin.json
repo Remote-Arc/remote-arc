@@ -1561,6 +1561,7 @@
     "admin.adminFleetFilters.planMax": "Max",
     "admin.adminFleetFilters.planPlus": "Plus",
     "admin.adminFleetFilters.planPro": "Pro",
-    "admin.adminOperations.recentlyActiveFirst": "最近活跃优先"
+    "admin.adminOperations.recentlyActiveFirst": "最近活跃优先",
+    "admin.payments.adminPayments.backgroundTasksBlankUnlimited": "同时运行的后台命令（留空 = 不限）"
   }
 }

@@ -137,6 +137,7 @@ func (a *Agent) fleetCapacity(ctx context.Context) map[string]any {
 	}
 	if a.Core != nil && a.Core.Processes != nil {
 		result["managedProcesses"] = a.Core.Processes.ActiveCount()
+		result["backgroundProcesses"] = a.Core.Processes.BackgroundCount()
 	}
 	return result
 }

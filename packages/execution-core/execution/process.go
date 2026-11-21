@@ -85,6 +85,7 @@ type managed struct {
 	signal           any
 	out, err         cappedBuffer
 	secret           string // given on stdin; never shown in output
+	background       bool   // started with background=true; counts toward the plan's background tasks
 	done             chan struct{}
 	killOnce         sync.Once
 }
@@ -153,13 +154,21 @@ func (m *managed) text(b *cappedBuffer) string {
 	return s
 }
 
-func (p *Processes) start(command, cwd string, deadline time.Duration, secret string) (*managed, error) {
+// start launches a managed process. backgroundLimit, when above zero, is how
+// many background tasks this computer may run under the account's plan; a
+// new background task beyond it is refused before anything starts.
+func (p *Processes) start(command, cwd string, deadline time.Duration, secret string, background bool, backgroundLimit int) (*managed, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.closed {
 		return nil, errors.New("Execution core is closed.")
 	}
 	p.cleanup()
+	if background && backgroundLimit > 0 {
+		if running := p.backgroundCountLocked(); running >= backgroundLimit {
+			return nil, fmt.Errorf("BACKGROUND_TASK_LIMIT: this account's plan allows no more background tasks right now (%d running on this computer). Wait for one to finish with process_status, or stop one with stop_process, then start this again.", running)
+		}
+	}
 	if active, limit := p.activeCountLocked(), activeProcessLimit(); active >= limit {
 		return nil, fmt.Errorf("Remote Arc already has the maximum number of managed background processes on this device. Running: %d; limit: %d. Finished tasks do not count. Set REMOTEARC_MAX_ACTIVE_PROCESSES to 1-256 to change the limit.", active, limit)
 	}
@@ -181,7 +190,7 @@ func (p *Processes) start(command, cwd string, deadline time.Duration, secret st
 	cmd := shellCommand(command)
 	cmd.Dir = cwd
 	cmd.WaitDelay = 3 * time.Second
-	m := &managed{id: randomID(), command: command, cwd: cwd, cmd: cmd, started: time.Now(), secret: secret, done: make(chan struct{})}
+	m := &managed{id: randomID(), command: command, cwd: cwd, cmd: cmd, started: time.Now(), secret: secret, background: background, done: make(chan struct{})}
 	cmd.Stdout = &m.out
 	cmd.Stderr = &m.err
 	if secret != "" {
@@ -235,10 +244,16 @@ func (p *Processes) Background(command, cwd string, seconds int) (map[string]any
 // BackgroundWithSecret gives secret to the command on stdin and keeps it out
 // of everything the process reports.
 func (p *Processes) BackgroundWithSecret(command, cwd string, seconds int, secret string) (map[string]any, error) {
+	return p.BackgroundWithin(command, cwd, seconds, secret, 0)
+}
+
+// BackgroundWithin is BackgroundWithSecret under a plan's allowance of
+// background tasks on this computer; 0 means no allowance applies.
+func (p *Processes) BackgroundWithin(command, cwd string, seconds int, secret string, limit int) (map[string]any, error) {
 	if seconds < 0 || seconds > 7*86400 {
 		return nil, errors.New("Invalid managed process duration.")
 	}
-	m, e := p.start(command, cwd, time.Duration(seconds)*time.Second, secret)
+	m, e := p.start(command, cwd, time.Duration(seconds)*time.Second, secret, true, limit)
 	if e != nil {
 		return nil, e
 	}
@@ -255,7 +270,7 @@ func (p *Processes) Run(ctx context.Context, command, cwd string, timeout int) (
 // RunWithSecret gives secret to the command on stdin and keeps it out of the
 // output it returns.
 func (p *Processes) RunWithSecret(ctx context.Context, command, cwd string, timeout int, secret string) (map[string]any, error) {
-	m, e := p.start(command, cwd, 0, secret)
+	m, e := p.start(command, cwd, 0, secret, false, 0)
 	if e != nil {
 		return nil, e
 	}
@@ -389,6 +404,14 @@ func (p *Processes) ActiveCount() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.activeCountLocked()
+}
+
+// BackgroundCount is how many background tasks are running; foreground
+// commands, which end within two minutes, are not counted.
+func (p *Processes) BackgroundCount() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.backgroundCountLocked()
 }
 
 func (p *Processes) List() []map[string]any {

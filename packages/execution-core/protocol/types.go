@@ -27,6 +27,10 @@ type Policy struct {
 	// AllowPowerCommands is the owner's per-computer choice, made in the Dashboard,
 	// to let start_process shut down or restart this computer. Absent means off.
 	AllowPowerCommands bool `json:"allowPowerCommands,omitempty"`
+	// BackgroundTaskLimit is how many background tasks this computer may run
+	// now under the account's plan, after those on its other computers. The
+	// Relay sends it with start_process; 0 means no limit applies.
+	BackgroundTaskLimit int `json:"backgroundTaskLimit,omitempty"`
 	// DesktopControlEnabled is the owner's per-computer choice to let AI see
 	// the screen and use the mouse and keyboard. Absent means off.
 	DesktopControlEnabled bool `json:"desktopControlEnabled,omitempty"`

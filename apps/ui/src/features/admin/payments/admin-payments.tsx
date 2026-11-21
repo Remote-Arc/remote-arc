@@ -236,6 +236,8 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
     const switches =
       current && "monthlyPriceCents" in current
         ? {
+            // Blank is no limit, as on every version published before the term.
+            backgroundTasks: null,
             notifications: true,
             unattendedBrowser: true,
             fleetRun: true,
@@ -327,6 +329,7 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
       deviceLimit: tr("admin.payments.adminPayments.computersBlankUnlimited"),
       connectionLimit: tr("admin.payments.adminPayments.appConnections"),
       concurrentRuns: tr("admin.payments.adminPayments.concurrentRuns"),
+      backgroundTasks: tr("admin.payments.adminPayments.backgroundTasksBlankUnlimited"),
       routines: tr("admin.payments.adminPayments.routines"),
       maxSteps: tr("admin.payments.adminPayments.stepsPerRun"),
       maxTokens: tr("admin.payments.adminPayments.tokensPerRun"),
@@ -675,7 +678,8 @@ export function AdminPayments({ preview = false }: { preview?: boolean }) {
                               setEditing({
                                 ...editing,
                                 [key]:
-                                  key === "deviceLimit" && e.target.value === ""
+                                  (key === "deviceLimit" || key === "backgroundTasks") &&
+                                  e.target.value === ""
                                     ? null
                                     : Number(e.target.value),
                               });

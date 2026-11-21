@@ -279,7 +279,7 @@ func (c *Core) call(ctx context.Context, name string, args map[string]any, p pro
 			}
 		}
 		if protocol.Bool(args, "background") {
-			result, e = c.Processes.BackgroundWithSecret(command, cwd, seconds, secret)
+			result, e = c.Processes.BackgroundWithin(command, cwd, seconds, secret, p.BackgroundTaskLimit)
 		} else {
 			result, e = c.Processes.RunWithSecret(ctx, command, cwd, protocol.Number(args, "timeout_ms", 5000), secret)
 		}

@@ -11,6 +11,9 @@ export type CatalogPlan = {
   /** The most calls that change something, within connectToolCalls; absent means no cap. */
   connectWriteCalls?: number | null;
   concurrentRuns: number;
+  /** Connect background commands running at once across the account's computers;
+   * null is no limit. Absent in responses from before the term existed. */
+  backgroundTasks?: number | null;
   maxSeconds: number;
   deviceLimit: number | null;
   /** Published by every current catalog version; the plan details leave out a

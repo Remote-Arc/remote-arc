@@ -63,6 +63,15 @@ export function PlanComparison({
       cell: (p) => (p.deviceLimit === null ? unlimited : count(p.deviceLimit)),
     },
     {
+      key: "marketing.planComparison.backgroundCommands",
+      cell: (p) =>
+        p.backgroundTasks === undefined
+          ? false
+          : p.backgroundTasks === null
+            ? unlimited
+            : count(p.backgroundTasks),
+    },
+    {
       key: "marketing.planComparison.arcCredits",
       cell: (p) =>
         p.monthlyCredits > 0

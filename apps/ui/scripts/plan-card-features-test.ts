@@ -162,6 +162,34 @@ assert.equal(
 );
 assert.equal(rows(max, families([]), en).at(-1), maxRows.at(-1));
 
+// Background commands at once follow the computers line (on Arc cards, the
+// parallel tasks line after it) on every card, with no
+// limit said plainly; a catalog from before the term leaves the line out.
+{
+  const at = (rowsOf: string[]) => rowsOf.findIndex((row) => row.startsWith("Background commands"));
+  const freeRows = rows({ ...free, backgroundTasks: 1 }, catalog, en);
+  assert.equal(freeRows[at(freeRows)], "Background commands at once: 1 · across your computers");
+  assert.equal(freeRows[at(freeRows) - 1], "Up to 2 computers");
+  const maxBg = rows({ ...max, backgroundTasks: 20 }, catalog, en);
+  assert.equal(maxBg[at(maxBg) - 1], "Parallel tasks: 5 · up to 60 minutes each");
+  assert.equal(maxBg.length, maxRows.length + 1);
+  assert.equal(
+    rows({ ...pro, backgroundTasks: null }, catalog, en).find((row) =>
+      row.startsWith("Background"),
+    ),
+    "Background commands at once: no limit",
+  );
+  assert.equal(
+    rows(
+      { ...pro, monthlyCredits: 0, allHostedModels: false, backgroundTasks: 5 },
+      catalog,
+      zh,
+    ).find((row) => row.startsWith("同时运行的后台命令")),
+    "同时运行的后台命令：5 个 · 所有电脑合计",
+  );
+  assert.equal(at(rows(free, catalog, en)), -1, "no term, no line");
+}
+
 // Free and a Pro without Arc keep their own lists, without Credits.
 assert.ok(!rows(free, catalog, en).some((row) => row.includes("Credits")));
 assert.ok(

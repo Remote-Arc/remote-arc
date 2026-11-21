@@ -1,10 +1,18 @@
 import assert from "node:assert/strict";
 import {
   BROWSER_RUNNER_TOOLS,
+  DESKTOP_TOOLS,
   INTERNAL_DEVICE_TOOLS,
   browserRunnerEnabled,
+  desktopControlEnabled,
   toggledDeviceTools,
 } from "../src/features/dashboard/devices/device-tools.js";
+import {
+  DEVELOPER_DEVICE_TOOLS,
+  SAFE_DEVICE_TOOLS,
+  deviceAccessPreset,
+  presetDeviceTools,
+} from "../src/features/dashboard/devices/device-presets.js";
 
 const advertised = ["read_file", "write_file", ...BROWSER_RUNNER_TOOLS];
 
@@ -28,6 +36,48 @@ assert.deepEqual(toggledDeviceTools(on, advertised, "read_file", false), [
   "browser_runner_wait",
 ]);
 console.log("PASS: Browser Runner device switch");
+
+// Desktop control is never implied by a legacy list, switches both tools
+// together, and does not change which preset a device shows.
+{
+  const windows = ["read_file", "write_file", ...DESKTOP_TOOLS];
+  assert.deepEqual(toggledDeviceTools(null, windows, "write_file", false), ["read_file"]);
+  assert.equal(desktopControlEnabled(null), false);
+  const on = toggledDeviceTools(["read_file"], windows, "desktop_act", true);
+  assert.deepEqual(on, ["read_file", ...DESKTOP_TOOLS]);
+  assert.equal(desktopControlEnabled(on), true);
+  assert.equal(
+    desktopControlEnabled(["desktop_snapshot"]),
+    false,
+    "seeing alone is not the switch",
+  );
+  assert.deepEqual(toggledDeviceTools(on, windows, "desktop_snapshot", false), ["read_file"]);
+  const offered = [...DEVELOPER_DEVICE_TOOLS, ...DESKTOP_TOOLS];
+  assert.equal(deviceAccessPreset([...DEVELOPER_DEVICE_TOOLS], offered), "developer");
+  assert.equal(
+    deviceAccessPreset([...DEVELOPER_DEVICE_TOOLS, ...DESKTOP_TOOLS], offered),
+    "developer",
+  );
+}
+// Developer and Full turn desktop control on where the computer offers it;
+// Safe turns it off, and every preset keeps the Browser Runner switch.
+{
+  const offers = ["read_file", ...DESKTOP_TOOLS];
+  const current = ["read_file", ...BROWSER_RUNNER_TOOLS, ...DESKTOP_TOOLS];
+  assert.deepEqual(presetDeviceTools("safe", current, offers), [
+    ...SAFE_DEVICE_TOOLS,
+    ...BROWSER_RUNNER_TOOLS,
+  ]);
+  for (const preset of ["developer", "full"] as const) {
+    assert.equal(desktopControlEnabled(presetDeviceTools(preset, ["read_file"], offers)), true);
+    assert.equal(
+      desktopControlEnabled(presetDeviceTools(preset, ["read_file"], ["read_file"])),
+      false,
+      "a Mac or Linux computer never gets the switch",
+    );
+  }
+}
+console.log("PASS: desktop control device switch and presets");
 
 // A paired browser extension older than the version live on Chrome Web Store
 // shows that an update is needed, like an outdated computer Agent.

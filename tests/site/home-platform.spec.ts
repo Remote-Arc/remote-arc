@@ -1,8 +1,8 @@
 import { test, expect } from "./fixtures";
 
-// The home page's platform section is a short header and three linked cards, each
+// The home page's platform section is a short header and four linked cards, each
 // with a small picture of that part working, and every brand mark loads.
-test("The home platform section links its three parts, each with a picture", async ({
+test("The home platform section links its four parts, each with a picture", async ({
   page,
 }, info) => {
   const zh = info.project.metadata.language === "zh",
@@ -14,15 +14,23 @@ test("The home platform section links its three parts, each with a picture", asy
   await section.scrollIntoViewIfNeeded();
   await expect(section.locator(".homePlatformAside p")).toHaveCount(1);
   const pillars = section.locator(".platformPillar");
-  await expect(pillars).toHaveCount(3);
+  await expect(pillars).toHaveCount(4);
   const hrefs = await pillars.evaluateAll((links) => links.map((a) => a.getAttribute("href")));
-  expect(hrefs).toEqual([prefix + "/integrations", prefix + "/docs/device-fleet", prefix + "/arc"]);
+  expect(hrefs).toEqual([
+    prefix + "/integrations",
+    prefix + "/docs/device-fleet",
+    prefix + "/arc",
+    prefix + "/docs/computer-use",
+  ]);
   for (const image of await section.locator(".pillarApps img, .pillarFleet img").all())
     expect(
       await image.evaluate((img: HTMLImageElement) => img.decode().then(() => img.naturalWidth)),
     ).toBeGreaterThan(0);
   await expect(section.locator(".pillarFleet li[data-picked]")).toHaveCount(1);
   await expect(section.locator(".pillarRoutine li[data-done]")).toHaveCount(4);
+  await expect(section.locator(".pillarDesktopNotice")).toContainText(
+    zh ? "AI 正在使用这台电脑" : "AI is using this computer",
+  );
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 

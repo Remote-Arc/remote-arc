@@ -1,4 +1,4 @@
-import { isBrowserRunnerTool } from "./device-tools.js";
+import { DESKTOP_TOOLS, isBrowserRunnerTool, isDesktopTool } from "./device-tools.js";
 import { type DeviceTaskPermissions } from "../../../types/app-types.js";
 
 export const legacyTaskPermissions: DeviceTaskPermissions = {
@@ -44,13 +44,34 @@ export const deviceAccessPreset = (
 ): DeviceAccessPreset => {
   const supported = (preset: readonly string[]) =>
     preset.filter((tool) => availableTools.includes(tool));
-  // browser_runner is switched separately and does not change the preset.
-  tools = tools.filter((tool) => !isBrowserRunnerTool(tool));
+  // browser_runner and desktop control have their own switches and do not
+  // change which preset a device shows.
+  tools = tools.filter((tool) => !isBrowserRunnerTool(tool) && !isDesktopTool(tool));
   if (sameToolSet(tools, supported(SAFE_DEVICE_TOOLS))) return "safe";
   if (sameToolSet(tools, supported(DEVELOPER_DEVICE_TOOLS))) return "developer";
   if (sameToolSet(tools, supported(DEVICE_TOOL_CATALOG))) return "full";
   return "custom";
 };
+/**
+ * The allowed-tool list a preset saves. The separate browser_runner switch is
+ * kept as it is; Developer and Full include desktop control where the
+ * computer offers it, and Safe never does.
+ */
+export function presetDeviceTools(
+  preset: Exclude<DeviceAccessPreset, "custom">,
+  allowed: readonly string[] | null | undefined,
+  advertised: readonly string[],
+): string[] {
+  const base =
+    preset === "safe"
+      ? SAFE_DEVICE_TOOLS
+      : preset === "developer"
+        ? DEVELOPER_DEVICE_TOOLS
+        : DEVICE_TOOL_CATALOG;
+  const keepRunner = (allowed || []).filter(isBrowserRunnerTool);
+  const offersDesktop = DESKTOP_TOOLS.every((tool) => advertised.includes(tool));
+  return [...base, ...keepRunner, ...(preset !== "safe" && offersDesktop ? DESKTOP_TOOLS : [])];
+}
 export const platformLabel = (platform?: string | null) => {
   if (platform === "win32") return "Windows";
   if (platform === "darwin") return "macOS";

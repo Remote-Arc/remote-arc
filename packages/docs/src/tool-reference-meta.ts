@@ -5,6 +5,7 @@ export type ToolGroup =
   | "processes"
   | "shared-tabs"
   | "browser-runner"
+  | "desktop"
   | "apps"
   | "tasks"
   | "goals";
@@ -15,6 +16,7 @@ export const TOOL_GROUPS: Record<ToolGroup, { en: string; zh: string }> = {
   processes: { en: "Commands and processes", zh: "命令与进程" },
   "shared-tabs": { en: "Shared browser tabs", zh: "共享浏览器标签页" },
   "browser-runner": { en: "Browser Runner", zh: "任务浏览器" },
+  desktop: { en: "Desktop control", zh: "桌面控制" },
   apps: { en: "Connected apps", zh: "连接的应用" },
   tasks: { en: "Tasks and schedules", zh: "任务与定时" },
   goals: { en: "Agent goals · experimental", zh: "Agent 目标 · 实验能力" },
@@ -24,6 +26,7 @@ export function toolGroup(name: string): ToolGroup {
   if (name === "list_agent_sessions") return "processes";
   if (name.startsWith("shared_tab_")) return "shared-tabs";
   if (name.startsWith("browser_runner_")) return "browser-runner";
+  if (name.startsWith("desktop_")) return "desktop";
   if (
     ["list_apps", "run_app_read_action", "run_app_write_action"].includes(name) ||
     /^(github|gmail)_/.test(name)
@@ -234,6 +237,16 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
   shared_tab_act: {
     zh: "在共享标签页执行受支持的浏览器动作。",
     summary: "Perform a supported action in a shared browser tab.",
+  },
+  desktop_snapshot: {
+    zh: "截取已开启桌面控制的 Windows 电脑屏幕，并读取前台窗口的控件与可见窗口。",
+    summary:
+      "Screenshot a Windows computer with desktop control on, with the foreground window's controls and the visible windows.",
+  },
+  desktop_act: {
+    zh: "按最近的截图点击、输入、按键、滚动或拖动；用户一动鼠标或键盘就会停下。",
+    summary:
+      "Click, type, press keys, scroll or drag on the latest screenshot; stops as soon as the person uses the mouse or keyboard.",
   },
   browser_runner_start: {
     zh: "为实际网页交互开始或恢复有站点范围限制的浏览器任务；技术任务优先使用 CLI/API。",

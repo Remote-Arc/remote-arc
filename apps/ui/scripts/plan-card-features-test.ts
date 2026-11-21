@@ -87,6 +87,7 @@ assert.deepEqual(maxRows, [
   "Parallel tasks: 5 · up to 60 minutes each",
   "3,000 Arc Credits / month · about 1,000 tasks",
   "Terminal, files, browser, Fleet and connected Apps",
+  "Computer use: AI sees the screen and uses mouse and keyboard on your Windows computers",
   "Your own ChatGPT, Claude or Codex, or Arc with Auto and named models",
 ]);
 // Pro lists the same terms in the same order, so each line compares with Max's.
@@ -136,23 +137,30 @@ assert.equal(
 );
 assert.deepEqual(planCardFeatures(free, catalog, en)[0], { text: "10,000 Connect calls / month" });
 assert.equal(rows(free, catalog, en)[3], "2 GB data transfer / month");
+// Every plan includes computer use, Free too.
+for (const plan of [free, pro, max])
+  assert.ok(
+    rows(plan, catalog, en).some((row) => row.startsWith("Computer use:")) &&
+      rows(plan, catalog, zh).some((row) => row.startsWith("Computer Use：")),
+    plan.label + " lists computer use",
+  );
 
 // The hosted models line names the families the relay reports as live, so a newly
 // configured provider shows up without a UI change; with none it keeps the generic line.
 const families = (hostedModelFamilies: string[]) => ({ ...catalog, hostedModelFamilies });
 assert.equal(
-  rows(max, families(["GPT"]), en)[6],
+  rows(max, families(["GPT"]), en).at(-1),
   "Your own ChatGPT, Claude or Codex, or Arc with Auto and GPT models",
 );
 assert.equal(
-  rows(max, families(["GPT", "Claude"]), en)[6],
+  rows(max, families(["GPT", "Claude"]), en).at(-1),
   "Your own ChatGPT, Claude or Codex, or Arc with Auto and GPT and Claude models",
 );
 assert.equal(
-  rows(max, families(["GPT", "Claude", "Gemini"]), zh)[6],
+  rows(max, families(["GPT", "Claude", "Gemini"]), zh).at(-1),
   "使用你自己的 ChatGPT、Claude 或 Codex，或使用 Arc（Auto 与 GPT、Claude 和 Gemini 模型）",
 );
-assert.equal(rows(max, families([]), en)[6], maxRows[6]);
+assert.equal(rows(max, families([]), en).at(-1), maxRows.at(-1));
 
 // Free and a Pro without Arc keep their own lists, without Credits.
 assert.ok(!rows(free, catalog, en).some((row) => row.includes("Credits")));

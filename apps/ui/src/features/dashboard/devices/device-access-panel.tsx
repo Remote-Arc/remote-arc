@@ -46,8 +46,12 @@ export function DeviceAccessPanel({
     runnerAdvertised,
     runnerEnabled,
     runnerVisible,
+    desktopAdvertised,
+    desktopEnabled,
+    desktopVisible,
   } = facts;
   const runnerText = deviceToolText("browser_runner", tr);
+  const desktopText = deviceToolText("desktop_control", tr);
   return (
     <section
       role="tabpanel"
@@ -107,8 +111,9 @@ export function DeviceAccessPanel({
           </span>
           <span>
             {allTools.filter((tool) => enabledTools.includes(tool)).length +
-              (runnerVisible && runnerEnabled ? 1 : 0)}{" "}
-            / {allTools.length + (runnerVisible ? 1 : 0)}
+              (runnerVisible && runnerEnabled ? 1 : 0) +
+              (desktopVisible && desktopEnabled ? 1 : 0)}{" "}
+            / {allTools.length + (runnerVisible ? 1 : 0) + (desktopVisible ? 1 : 0)}
             <ProductIcon name="chevron" size={14} />
           </span>
         </summary>
@@ -165,6 +170,34 @@ export function DeviceAccessPanel({
                 {tr("dashboard.devices.deviceAccessPanel.completeSignInVerificationCodesAnd")}
               </p>
             </div>
+          )}
+          {desktopVisible && (
+            <label
+              className={"toolToggle" + (!desktopAdvertised ? " unavailable" : "")}
+              key="desktop_control"
+            >
+              <input
+                type="checkbox"
+                checked={desktopEnabled}
+                disabled={!desktopAdvertised && !desktopEnabled}
+                onChange={(event) =>
+                  void updateDeviceTools(device, "desktop_act", event.target.checked)
+                }
+              />
+              <span className="skillLabel">
+                <strong>{desktopText.label}</strong>
+                <HelpTip
+                  label={tr("dashboard.devices.deviceAccessPanel.about", {
+                    tool: desktopText.label,
+                  })}
+                  text={
+                    desktopAdvertised
+                      ? desktopText.help
+                      : tr("dashboard.devices.deviceAccessPanel.desktopControlUnavailable")
+                  }
+                />
+              </span>
+            </label>
           )}
           {device.platform === "browser" && (
             <p className="runnerSetting browserAuthenticationNotice">

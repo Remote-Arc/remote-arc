@@ -27,6 +27,9 @@ type Policy struct {
 	// AllowPowerCommands is the owner's per-computer choice, made in the Dashboard,
 	// to let start_process shut down or restart this computer. Absent means off.
 	AllowPowerCommands bool `json:"allowPowerCommands,omitempty"`
+	// DesktopControlEnabled is the owner's per-computer choice to let AI see
+	// the screen and use the mouse and keyboard. Absent means off.
+	DesktopControlEnabled bool `json:"desktopControlEnabled,omitempty"`
 }
 
 func Normalize(p Policy) Policy {

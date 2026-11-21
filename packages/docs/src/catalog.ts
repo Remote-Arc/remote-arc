@@ -1,6 +1,7 @@
 import { reviewedDocTopics } from "./documentation-review.js";
 import { installAppSections } from "./guides/install-app.js";
 import { deviceFleetSections } from "./guides/device-fleet.js";
+import { computerUseSections } from "./guides/computer-use.js";
 import { appsSections } from "./guides/apps.js";
 import { tasksSections } from "./guides/tasks.js";
 import { skillsSections } from "./guides/skills.js";
@@ -154,6 +155,24 @@ export const DOC_TOPICS: DocTopic[] = [
           zh: "让 AI 在你允许的网站上操作你的浏览器，或只读共享单个标签页。",
         },
         legacyIds: ["browser"],
+      },
+      {
+        slug: "computer-use",
+        group: "work",
+        title: {
+          en: "Computer use",
+          zh: "Computer Use（桌面控制）",
+        },
+        description: {
+          en: "Let your AI see a computer's screen and use its mouse and keyboard, for apps with no other way in.",
+          zh: "让 AI 查看电脑屏幕并使用鼠标和键盘，完成没有其他接入方式的应用操作。",
+        },
+        sections: computerUseSections,
+        links: [
+          ["/docs/devices", "Devices and permissions", "设备与权限"],
+          ["/docs/browser", "Browser tabs", "浏览器标签页"],
+          ["/docs/tools?group=desktop", "Computer use tools", "Computer Use 工具"],
+        ],
       },
       {
         slug: "tasks",

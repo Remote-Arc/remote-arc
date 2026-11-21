@@ -10,6 +10,7 @@ import {
   WorkspacePreview,
 } from "../arc/arc-connected-previews.js";
 import { BrowserPreview } from "../arc/connected-browser-preview.js";
+import { DesktopControlPreview } from "../arc/connected-desktop-preview.js";
 import { HomeThreeSteps } from "../home/home-three-steps.js";
 import { SectionTitle } from "../home/section-title.js";
 import "../../../styles/marketing/use-cases/agent-use-cases.css";
@@ -58,6 +59,16 @@ export function AgentUseCases() {
       prompt: tr("marketing.useCases.agentUseCases.browserPrompt"),
       note: tr("marketing.useCases.agentUseCases.browserNote"),
       brands: ["browser"],
+    },
+    {
+      id: "desktop",
+      icon: "device",
+      name: tr("marketing.useCases.agentUseCases.computerUse"),
+      title: tr("marketing.useCases.agentUseCases.computerUseTitle"),
+      detail: tr("marketing.useCases.agentUseCases.computerUseDetail"),
+      prompt: tr("marketing.useCases.agentUseCases.computerUsePrompt"),
+      note: tr("marketing.useCases.agentUseCases.computerUseNote"),
+      brands: ["windows"],
     },
     {
       id: "video",
@@ -175,19 +186,30 @@ export function AgentUseCases() {
             <Icon name="chat" size={15} />
             <span>“{current.prompt}”</span>
           </div>
-          <a
-            className="agentConnectedAction"
-            href={arcChatHref(current.prompt, "homepage-connected:" + current.id)}
-          >
-            {tr("marketing.useCases.agentUseCases.tryItInArc")}
-            <Icon name="arrowUpRight" size={15} />
-          </a>
+          {/* Computer use runs from your own AI client, not Arc, so it links to its guide. */}
+          {current.id === "desktop" ? (
+            <a
+              className="agentConnectedAction"
+              href={localizedWebsiteHref("/docs/computer-use", locale)}
+            >
+              {tr("marketing.useCases.agentUseCases.howComputerUseWorks")}
+              <Icon name="arrowUpRight" size={15} />
+            </a>
+          ) : (
+            <a
+              className="agentConnectedAction"
+              href={arcChatHref(current.prompt, "homepage-connected:" + current.id)}
+            >
+              {tr("marketing.useCases.agentUseCases.tryItInArc")}
+              <Icon name="arrowUpRight" size={15} />
+            </a>
+          )}
         </div>
         <div className="agentConnectedVisual">
           <header>
             <span>
               <img src="/remote-arc.svg" alt="" width={18} height={18} />
-              {"Arc / " + current.name}
+              {(current.id === "desktop" ? "Connect / " : "Arc / ") + current.name}
             </span>
             <small>{tr("marketing.useCases.agentUseCases.exampleWorkspace")}</small>
           </header>
@@ -200,6 +222,8 @@ export function AgentUseCases() {
               <WorkspacePreview />
             ) : current.id === "browser" ? (
               <BrowserPreview />
+            ) : current.id === "desktop" ? (
+              <DesktopControlPreview />
             ) : (
               <VideoEditingPreview />
             )}

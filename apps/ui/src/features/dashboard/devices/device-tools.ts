@@ -13,7 +13,16 @@ export const BROWSER_RUNNER_TOOLS = [
 export const isBrowserRunnerTool = (tool: string) =>
   tool === "browser_runner_wait" || (BROWSER_RUNNER_TOOLS as readonly string[]).includes(tool);
 
-/** The allowed-tool list after switching one tool (or all of browser_runner). */
+// Desktop control (screen, mouse and keyboard) is one switch made of two
+// tools. Like browser_runner the Relay requires both to be listed explicitly.
+export const DESKTOP_TOOLS = ["desktop_snapshot", "desktop_act"] as const;
+
+export const isDesktopTool = (tool: string) => (DESKTOP_TOOLS as readonly string[]).includes(tool);
+
+/** Tools that a legacy device with no stored list never has. */
+const isExplicitOnlyTool = (tool: string) => isBrowserRunnerTool(tool) || isDesktopTool(tool);
+
+/** The allowed-tool list after switching one tool (or all of browser_runner or desktop control). */
 export function toggledDeviceTools(
   allowed: readonly string[] | null | undefined,
   baseline: readonly string[],
@@ -21,10 +30,12 @@ export function toggledDeviceTools(
   enabled: boolean,
 ): string[] {
   const current =
-    allowed == null ? baseline.filter((item) => !isBrowserRunnerTool(item)) : [...allowed];
+    allowed == null ? baseline.filter((item) => !isExplicitOnlyTool(item)) : [...allowed];
   const group: string[] = isBrowserRunnerTool(tool)
     ? [...BROWSER_RUNNER_TOOLS, "browser_runner_wait"]
-    : [tool];
+    : isDesktopTool(tool)
+      ? [...DESKTOP_TOOLS]
+      : [tool];
   return enabled
     ? Array.from(new Set([...current, ...group]))
     : current.filter((item) => !group.includes(item));
@@ -33,6 +44,10 @@ export function toggledDeviceTools(
 /** browser_runner is on only when every tool is listed explicitly, as the Relay requires. */
 export const browserRunnerEnabled = (allowed: readonly string[] | null | undefined) =>
   BROWSER_RUNNER_TOOLS.every((tool) => (allowed || []).includes(tool));
+
+/** Desktop control is on only when both tools are listed explicitly. */
+export const desktopControlEnabled = (allowed: readonly string[] | null | undefined) =>
+  DESKTOP_TOOLS.every((tool) => (allowed || []).includes(tool));
 
 // Tools that follow another switch, so they get none of their own (the Relay
 // checks the switch they follow, see devices/device-call.ts): tab opening and

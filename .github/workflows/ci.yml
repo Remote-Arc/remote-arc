@@ -279,6 +279,14 @@ jobs:
             go -C apps/agent test -race ./internal/browserrunner -run "TestStartup|TestE2E(Startup|CompactPassword|RepeatedShow|PageCannotPark|Handoff|ResumedUserHandoff|WindowsCoveredHandoff|HiddenWindowShowsAndHidesInPlace|DelayedChallengeHandoffAndWait)" -count=1 -v
           '
       - run: pnpm test:device
+      # Desktop control's real-window test takes the foreground and sends input,
+      # so it runs alone, after the parallel suite, never beside the browser
+      # runner's window tests.
+      - name: Desktop control against a real window
+        if: runner.os == 'Windows'
+        env:
+          REMOTEARC_DESKTOP_WINDOW_TEST: "1"
+        run: go -C apps/agent test ./internal/desktop -run TestWindowsDesktopAgainstARealWindow -count=1 -v
       - run: node scripts/go-device-soak.mjs --duration-seconds 60 --report work/benchmarks/soak.json
       - run: node benchmarks/agent.mjs --samples 20 --rounds 1 --profiles atomic --report work/benchmarks/agent-smoke.json
       - uses: actions/upload-artifact@v7

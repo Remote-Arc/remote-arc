@@ -82,6 +82,22 @@
       ]
     },
     {
+      "name": "desktop_act",
+      "title": "Use a computer's mouse and keyboard",
+      "group": "desktop",
+      "scopes": [
+        "computer:write"
+      ]
+    },
+    {
+      "name": "desktop_snapshot",
+      "title": "See a computer's screen",
+      "group": "desktop",
+      "scopes": [
+        "computer:read"
+      ]
+    },
+    {
       "name": "device_tools",
       "title": "List tools on a device",
       "group": "devices",

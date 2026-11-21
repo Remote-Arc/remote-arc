@@ -1353,6 +1353,161 @@
       "zh": "创建绑定文件版本、可过期或撤销的临时下载链接。"
     },
     {
+      "name": "desktop_act",
+      "title": "Use a computer's mouse and keyboard",
+      "description": "Do one thing on the screen of the latest desktop_snapshot (snapshot_id required). Pointer actions take ref=e# or x and y in that screenshot's pixels: click (button left, right or middle), double_click, right_click, move, scroll (direction up, down, left or right; amount 1-20 notches, default 3) and drag (to_x, to_y). type enters text (up to 2000 characters, \\n presses Enter) into the focused control; click the field first. key presses one key or a combination such as ctrl+s, alt+tab, enter or win+r (modifiers ctrl, alt, shift, win). focus_window brings ref=w# to the front. wait pauses ms (100-10000). Typing is refused when a different window came to the front since the snapshot (DESKTOP_FOCUS_CHANGED). snapshot=true returns the screen after the action, so the next step needs no separate desktop_snapshot. Use it when the task needs an app on that computer that has no API, CLI or file you can use instead, or when the user asks you to operate an app for them. Prefer files, start_process, Apps and browser_runner where they can do the job: they are faster and verifiable. The person at the computer always wins: if they move the mouse or type, input stops (DESKTOP_USER_TOOK_OVER or DESKTOP_USER_ACTIVE); wait, take a new snapshot and never fight them. Password managers and Windows security prompts are masked and never receive input (DESKTOP_APP_BLOCKED): ask the user to do that step. Never type passwords, codes or payment details; ask the user. Before anything that sends, buys, deletes or posts, tell the user what you are about to do.",
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "snapshot_id": {
+            "type": "string",
+            "pattern": "^d[1-9]\\d{0,8}$"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "click",
+              "double_click",
+              "right_click",
+              "move",
+              "scroll",
+              "drag",
+              "type",
+              "key",
+              "focus_window",
+              "wait"
+            ]
+          },
+          "ref": {
+            "type": "string",
+            "pattern": "^[ew][1-9]\\d{0,3}$"
+          },
+          "x": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "to_x": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "to_y": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "button": {
+            "type": "string",
+            "enum": [
+              "left",
+              "right",
+              "middle"
+            ]
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down",
+              "left",
+              "right"
+            ]
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "keys": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "ms": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 10000
+          },
+          "snapshot": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "device_id",
+          "snapshot_id",
+          "action"
+        ]
+      },
+      "scopes": [
+        "computer:write"
+      ],
+      "readOnly": false,
+      "group": "desktop",
+      "summary": "Click, type, press keys, scroll or drag on the latest screenshot; stops as soon as the person uses the mouse or keyboard.",
+      "zh": "按最近的截图点击、输入、按键、滚动或拖动；用户一动鼠标或键盘就会停下。"
+    },
+    {
+      "name": "desktop_snapshot",
+      "title": "See a computer's screen",
+      "description": "Take a screenshot of a linked Windows computer's display, with the foreground window's controls from the accessibility tree: elements with refs (e1, e2, ...), role, name, non-sensitive value, focus and rect [x, y, width, height] in screenshot pixels, plus the visible windows with refs (w1, w2, ...). Password fields never report a value. By default the display with the foreground window is captured; display picks another (display.count says how many). max_width (640-1920, default 1366) sets the screenshot width. include_image=false returns only the windows and controls. The snapshot_id is valid for two minutes. Use it when the task needs an app on that computer that has no API, CLI or file you can use instead, or when the user asks you to operate an app for them. Prefer files, start_process, Apps and browser_runner where they can do the job: they are faster and verifiable. The person at the computer always wins: if they move the mouse or type, input stops (DESKTOP_USER_TOOK_OVER or DESKTOP_USER_ACTIVE); wait, take a new snapshot and never fight them. Password managers and Windows security prompts are masked and never receive input (DESKTOP_APP_BLOCKED): ask the user to do that step. Never type passwords, codes or payment details; ask the user. Before anything that sends, buys, deletes or posts, tell the user what you are about to do.",
+      "inputSchema": {
+        "type": "object",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "display": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 15
+          },
+          "max_width": {
+            "type": "integer",
+            "minimum": 640,
+            "maximum": 1920
+          },
+          "max_elements": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 300
+          },
+          "include_image": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "device_id"
+        ]
+      },
+      "scopes": [
+        "computer:read"
+      ],
+      "readOnly": true,
+      "group": "desktop",
+      "summary": "Screenshot a Windows computer with desktop control on, with the foreground window's controls and the visible windows.",
+      "zh": "截取已开启桌面控制的 Windows 电脑屏幕，并读取前台窗口的控件与可见窗口。"
+    },
+    {
       "name": "device_tools",
       "title": "List tools on a device",
       "description": "Show the local MCP tools currently available on one linked device.",

@@ -1,4 +1,4 @@
-/* Home: the platform section. A short header, then three linked cards, each led
+/* Home: the platform section. A short header, then four linked cards, each led
  * by a small picture of that part working. */
 .homePlatformIntro {
   margin: 0 0 82px;
@@ -54,7 +54,7 @@
 
 .platformPillars {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -271,6 +271,103 @@
 .pillarRoutineNext {
   color: var(--site-muted);
   font-size: 11px;
+}
+
+/* Computer use: a window with the pointer on its button, under the notice. */
+.pillarDesktop {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  width: min(230px, 86%);
+}
+
+.pillarDesktopNotice {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  max-width: 100%;
+  padding: 4px 10px;
+  border: 2px solid #ffc400;
+  border-radius: 7px;
+  background: #6d28d9;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pillarDesktopNotice i {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff3b3b;
+}
+
+.pillarDesktopWindow {
+  display: grid;
+  gap: 7px;
+  width: 100%;
+  padding: 0 0 12px;
+  border: 1px solid var(--site-line);
+  border-radius: 11px;
+  background: var(--site-surface);
+  overflow: hidden;
+}
+
+.pillarDesktopBar {
+  display: flex;
+  gap: 5px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--site-line);
+  background: var(--site-subtle);
+}
+
+.pillarDesktopBar i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--site-line);
+}
+
+.pillarDesktopLine {
+  height: 7px;
+  margin-inline: 12px;
+  border-radius: 4px;
+  background: var(--site-subtle);
+}
+
+.pillarDesktopLine[data-short] {
+  width: 55%;
+}
+
+.pillarDesktopButton {
+  position: relative;
+  justify-self: end;
+  margin-right: 12px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: linear-gradient(120deg, #7dd3fc, #a78bfa);
+  color: #111114;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.pillarDesktopButton svg {
+  position: absolute;
+  right: -7px;
+  bottom: -11px;
+  fill: #fff;
+  stroke: #111114;
+  stroke-width: 1.2;
+}
+
+@media (max-width: 1180px) {
+  .platformPillars {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 900px) {

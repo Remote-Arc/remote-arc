@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/browserrunner"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/desktop"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/journal"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/machineid"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/service"
@@ -189,18 +191,22 @@ func TestAuthenticatedWebsocketToolCallsReconnectAndPrivateJournal(t *testing.T)
 				if reply["device"].(map[string]any)["id"] != cfg.DeviceID {
 					t.Fatal("device identity changed")
 				}
-				core, runner := 0, 0
+				core, runner, screen := 0, 0, 0
 				for _, name := range reply["tools"].([]any) {
-					if browserrunner.IsTool(name.(string)) {
+					switch {
+					case browserrunner.IsTool(name.(string)):
 						runner++
-					} else {
+					case slices.Contains(desktop.Tools, name.(string)):
+						screen++
+					default:
 						core++
 					}
 				}
-				// browser_runner tools are advertised only where a browser exists;
+				// browser_runner tools are advertised only where a browser exists,
+				// desktop tools only where the screen can be used;
 				// 23 core and Agent tools plus secret_prepare and secret_deliver.
-				if core != 25 || (runner != 0 && runner != len(browserrunner.Tools)) {
-					t.Fatalf("tool surface incomplete: core=%d runner=%d", core, runner)
+				if core != 25 || (runner != 0 && runner != len(browserrunner.Tools)) || (screen != 0 && screen != len(desktop.Tools)) {
+					t.Fatalf("tool surface incomplete: core=%d runner=%d desktop=%d", core, runner, screen)
 				}
 			} else if reply["error"] != nil {
 				t.Fatal("remote tool failed", reply["error"])

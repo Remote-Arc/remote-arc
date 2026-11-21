@@ -1987,7 +1987,7 @@
     "hooks.dashboard.useDeviceSettings.enableTerminal": "开启终端",
     "hooks.dashboard.useDeviceSettings.enableTerminalExecutionOn": "在 {name} 上开启终端执行？",
     "hooks.dashboard.useDeviceSettings.enterALocalPathOnExample": "输入 {name} 上的本地路径。示例：{example}",
-    "hooks.dashboard.useDeviceSettings.fullAccessEnablesTerminalExecutionAnd": "Full Access 会开启终端执行和后台进程管理。命令可能影响本地文件或外部服务，其中部分操作无法通过 Local Undo 撤销。",
+    "hooks.dashboard.useDeviceSettings.fullAccessEnablesTerminalExecutionAnd": "Full Access 会开启终端执行和后台进程管理。命令可能影响本地文件或外部服务，其中部分操作无法通过 Local Undo 撤销。如果这台电脑支持，Full Access 还会开启桌面控制：AI 可以查看屏幕并使用鼠标和键盘。",
     "hooks.dashboard.useDeviceSettings.letAiActOnWebsitesFrom": "允许 AI 在 {name} 上操作网站？",
     "hooks.dashboard.useDeviceSettings.pleaseTryAgain": "请重试。",
     "hooks.dashboard.useDeviceSettings.remoteArcCouldNotSaveThis": "Remote Arc 无法保存这台设备的技能策略，之前的权限仍然生效。",
@@ -2527,6 +2527,12 @@
     "dashboard.devices.powerCommands.confirmBody": "AI 的终端命令（包括定时任务）将可以关闭或重启这台电脑。关机后，电脑会一直离线，直到有人把它打开。擦除磁盘等其他安全守卫规则仍然有效。你可以随时关闭这个设置。",
     "dashboard.devices.powerCommands.confirmAction": "允许关机和重启",
     "dashboard.devices.powerCommands.notSaved": "设置未保存",
-    "dashboard.devices.powerCommands.notSavedBody": "无法确认这次改动。请刷新页面，确认当前设置后再试。"
+    "dashboard.devices.powerCommands.notSavedBody": "无法确认这次改动。请刷新页面，确认当前设置后再试。",
+    "dashboard.devices.deviceToolNames.desktopControl": "桌面控制",
+    "dashboard.devices.deviceAccessPanel.desktopControlHelp": "允许你的 AI 查看这台电脑的屏幕并使用鼠标和键盘，用于没有其他接入方式的应用。AI 查看或操作时，屏幕顶部会显示提示。你一动鼠标或按任意键，AI 会立即停下，并等你离开电脑后再继续。密码管理器和 Windows 安全提示不会出现在截图中，也不会收到任何输入。只能在你自己的 AI 客户端对话中使用，例行任务不能使用。目前仅支持 Windows。",
+    "dashboard.devices.deviceAccessPanel.desktopControlUnavailable": "需要 Windows 10 1607 或更高版本，且 Remote Arc Agent 处于终端模式。请在这台电脑上更新 Agent 后再开启。",
+    "hooks.dashboard.useDeviceSettings.letAiUseTheScreenOf": "允许 AI 查看并使用 {name} 的屏幕吗？",
+    "hooks.dashboard.useDeviceSettings.desktopControlWarning": "已连接的 AI 客户端将能截取这台电脑的屏幕，并像你一样在任何应用里点击、输入和按键。这和终端权限一样大：AI 可以打开终端并输入命令。控制权始终在你：AI 使用电脑时会显示提示，你的任何鼠标或键盘操作都会让它停下，密码管理器和 Windows 安全提示永远不会被截取或操作。Remote Arc 不保存截图。",
+    "hooks.dashboard.useDeviceSettings.enableDesktopControl": "开启桌面控制"
   }
 }

@@ -69,7 +69,35 @@ function RoutineVisual({ schedule, next }: { schedule: string; next: string }) {
   );
 }
 
-/** The home page's platform section: one line on what Remote Arc is, then its three
+/** Computer use: a window on screen, the pointer on its button, and the
+ * notice the Agent shows while AI is using the computer. */
+function DesktopVisual({ notice, button }: { notice: string; button: string }) {
+  return (
+    <div className="pillarDesktop">
+      <span className="pillarDesktopNotice">
+        <i />
+        {notice}
+      </span>
+      <div className="pillarDesktopWindow">
+        <span className="pillarDesktopBar">
+          <i />
+          <i />
+          <i />
+        </span>
+        <span className="pillarDesktopLine" />
+        <span className="pillarDesktopLine" data-short="" />
+        <span className="pillarDesktopButton">
+          {button}
+          <svg viewBox="0 0 16 22" width="13" height="18" aria-hidden="true">
+            <path d="M1 1v17l4.5-4.2 3 6.6 2.6-1.2-3-6.4H14L1 1Z" />
+          </svg>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** The home page's platform section: one line on what Remote Arc is, then its four
  * parts, each with a small picture of it working. */
 export function ProductFocus() {
   const { tr, locale } = useI18n();
@@ -97,6 +125,14 @@ export function ProductFocus() {
       href: "/arc",
       action: tr(`${P}meetArc`),
       visual: <RoutineVisual schedule={tr(`${P}routineSchedule`)} next={tr(`${P}routineNext`)} />,
+    },
+    {
+      label: tr(`${P}computerUse`),
+      title: tr(`${P}anyAppTheWayYouWould`),
+      text: tr(`${P}computerUseText`),
+      href: "/docs/computer-use",
+      action: tr(`${P}howComputerUseWorks`),
+      visual: <DesktopVisual notice={tr(`${P}desktopNotice`)} button={tr(`${P}desktopButton`)} />,
     },
   ];
   return (

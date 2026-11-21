@@ -1,8 +1,11 @@
 import {
   BROWSER_RUNNER_TOOLS,
+  DESKTOP_TOOLS,
   INTERNAL_DEVICE_TOOLS,
   browserRunnerEnabled,
+  desktopControlEnabled,
   isBrowserRunnerTool,
+  isDesktopTool,
 } from "./device-tools.js";
 import { DeviceCapacity } from "./device-fleet-overview.js";
 import { ProductIcon } from "../../../components/product-icon.js";
@@ -24,7 +27,10 @@ export function deviceFacts(device: Device, m: DashboardModel) {
   // Extension 0.4.0 tab opening and actions follow its click & fill switch.
   const allTools = Array.from(
     new Set([...DEVICE_TOOL_CATALOG, ...advertisedTools, ...enabledTools]),
-  ).filter((tool) => !isBrowserRunnerTool(tool) && !INTERNAL_DEVICE_TOOLS.has(tool));
+  ).filter(
+    (tool) =>
+      !isBrowserRunnerTool(tool) && !isDesktopTool(tool) && !INTERNAL_DEVICE_TOOLS.has(tool),
+  );
   const runnerAdvertised =
     device.status !== "online" ||
     BROWSER_RUNNER_TOOLS.every((tool) => advertisedTools.includes(tool));
@@ -34,6 +40,13 @@ export function deviceFacts(device: Device, m: DashboardModel) {
     (runnerEnabled ||
       BROWSER_RUNNER_TOOLS.some((tool) => advertisedTools.includes(tool)) ||
       device.status === "online");
+  // Desktop control is Windows-only for now: shown where the Agent offers it
+  // or where it is already on.
+  const desktopAdvertised = DESKTOP_TOOLS.every((tool) => advertisedTools.includes(tool));
+  const desktopEnabled = desktopControlEnabled(device.allowed_tools);
+  const desktopVisible =
+    device.platform === "win32" &&
+    (desktopEnabled || desktopAdvertised || device.status !== "online");
   const accessPreset = deviceAccessPreset(enabledTools, advertisedTools);
   const executionLog = executionLogsByDevice[device.id];
   const executionLogError = executionLogErrors[device.id];
@@ -59,6 +72,9 @@ export function deviceFacts(device: Device, m: DashboardModel) {
     runnerAdvertised,
     runnerEnabled,
     runnerVisible,
+    desktopAdvertised: desktopAdvertised || device.status !== "online",
+    desktopEnabled,
+    desktopVisible,
     accessPreset,
     executionLog,
     executionLogError,

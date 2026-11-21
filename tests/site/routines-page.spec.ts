@@ -179,7 +179,19 @@ test("Routines uses the same heading styles as Devices", async ({ page }) => {
   for (const workspace of ["connect", "agent"]) {
     await page.goto(`/dashboard/${workspace}/devices`);
     await expect(page.locator("main h1")).toBeVisible();
-    const expected = await headerStyles();
+    // The Devices page loads its own stylesheet after the heading appears; read
+    // its styles once they have settled, not the defaults before it arrives.
+    let expected = await headerStyles();
+    await expect
+      .poll(async () => {
+        const now = await headerStyles();
+        const settled = JSON.stringify(now) === JSON.stringify(expected);
+        expected = now;
+        return settled;
+      })
+      .toBe(true);
+    await page.waitForLoadState("networkidle");
+    expected = await headerStyles();
     await page.goto(`/dashboard/${workspace}/tasks`);
     const title = page.getByRole("heading", { level: 1, name: /^(Routines|例程)$/ });
     await expect(title).toBeVisible();

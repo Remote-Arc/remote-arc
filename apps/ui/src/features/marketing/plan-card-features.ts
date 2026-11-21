@@ -51,6 +51,7 @@ function arcPlanFeatures(plan: CatalogPlan, catalog: PlatformCatalog, tr: Transl
     plan.fleetRun === false
       ? tr("marketing.arcPublicPricing.terminalFilesBrowserAndConnectedApps")
       : tr("marketing.arcPublicPricing.terminalFilesBrowserFleetAndConnected"),
+    tr("marketing.arcPublicPricing.computerUseOnYourComputers"),
     hostedAiLine(catalog, tr),
   ].map(line);
 }
@@ -67,6 +68,7 @@ export function planCardFeatures(
       tr("marketing.arcPublicPricing.yourAgentsAtFullSpeedAll"),
       tr("marketing.arcPublicPricing.unlimitedComputersAndFileTransfer"),
       tr("marketing.arcPublicPricing.terminalFilesBrowserFleetAndConnected"),
+      tr("marketing.arcPublicPricing.computerUseOnYourComputers"),
       tr("marketing.arcPublicPricing.worksWithYourOwnChatgptClaude"),
     ].map(line);
   return [
@@ -93,6 +95,7 @@ export function planCardFeatures(
       tr("marketing.arcPublicPricing.upToComputers"),
       tr("marketing.arcPublicPricing.gbFileTransferMonth"),
       tr("marketing.arcPublicPricing.devicePermissionsAndLocalUndo"),
+      tr("marketing.arcPublicPricing.computerUseOnYourComputers"),
     ].map(line),
   ];
 }

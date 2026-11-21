@@ -104,6 +104,8 @@ export function PlanComparison({
     },
     { key: "marketing.planComparison.notifications", cell: (p) => included(p, "notifications") },
     { key: "marketing.planComparison.fleetRun", cell: (p) => included(p, "fleetRun") },
+    // Every plan includes computer use; each computer's owner turns it on.
+    { key: "marketing.planComparison.computerUse", cell: () => true },
     { key: "marketing.planComparison.safety", cell: () => true },
   ];
   return (

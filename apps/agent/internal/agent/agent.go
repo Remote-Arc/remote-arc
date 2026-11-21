@@ -18,6 +18,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/browserrunner"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/desktop"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/journal"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/machineid"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/power"
@@ -44,6 +45,7 @@ type Agent struct {
 	Client             *Client
 	Core               *execution.Core
 	Browser            *browserrunner.Manager // nil while paused (wake-only)
+	Desktop            *desktop.Manager       // nil while paused (wake-only)
 	Journal            *journal.Journal
 	Background         Background
 	Stop               func()
@@ -68,7 +70,7 @@ func New(cfg config.Config, version string, background bool, log *journal.Journa
 	if cfg.Mode == "safe" {
 		mode = "safe"
 	}
-	return &Agent{Config: cfg, Version: version, BackgroundProcess: background, Client: NewClient(), Core: execution.New(mode), Browser: browserrunner.New(), Journal: log, Background: service.New(version), Save: config.Save, Load: config.Load, capacity: &capacityProbe{}}
+	return &Agent{Config: cfg, Version: version, BackgroundProcess: background, Client: NewClient(), Core: execution.New(mode), Browser: browserrunner.New(), Desktop: desktop.New(), Journal: log, Background: service.New(version), Save: config.Save, Load: config.Load, capacity: &capacityProbe{}}
 }
 
 // NewWake connects to the same authenticated Relay using a minimal control
@@ -158,6 +160,9 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 		if a.browserRunnerReady() {
 			names = append(names, browserrunner.Tools...)
 		}
+		if a.desktopReady() {
+			names = append(names, desktop.Tools...)
+		}
 		if a.remoteUpdateReady() {
 			names = append(names, UpdateTool)
 		}
@@ -180,6 +185,9 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 			if a.Browser.VideoAvailable() {
 				capabilities = append(capabilities, "runner_video_v1")
 			}
+		}
+		if a.desktopReady() {
+			capabilities = append(capabilities, "desktop_control_v1")
 		}
 	}
 	device := map[string]any{"id": cfg.DeviceID, "name": cfg.DeviceName, "platform": protocol.Platform(runtime.GOOS), "arch": Arch(), "hostname": hostname, "agentVersion": a.Version, "pid": os.Getpid(), "backgroundProcess": a.BackgroundProcess, "executionPaused": a.WakeOnly || cfg.ExecutionPaused, "connectedAt": connectedAt, "connectionSequence": sequence, "recoveryEnabled": cfg.BackgroundEnabled != nil && *cfg.BackgroundEnabled && status.Enabled && status.Active, "supervisorActive": status.Active, "supervisorPid": status.PID, "supervisorService": status.Service, "recoveryVersion": status.Version, "capacity": a.fleetCapacity(ctx)}
@@ -209,6 +217,14 @@ func (a *Agent) secretsReady() bool {
 // browser installed. The Relay still requires the user to enable the tools.
 func (a *Agent) browserRunnerReady() bool {
 	return a.Browser != nil && a.Core != nil && a.Core.Mode != "safe" && a.Core.Mode != "developer" && a.Browser.Available()
+}
+
+// desktopReady advertises desktop control where the operating system
+// supports it, on an execution Agent in terminal mode: seeing the screen and
+// using the mouse and keyboard reach as far as the terminal does. The Relay
+// still requires the owner to enable it for this computer.
+func (a *Agent) desktopReady() bool {
+	return a.Desktop != nil && a.Core != nil && a.Core.Mode != "safe" && a.Core.Mode != "developer" && a.Desktop.Available()
 }
 func (a *Agent) heartbeat(ctx context.Context) error {
 	cfg := a.cfg()
@@ -312,6 +328,11 @@ func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.M
 			return nil, errors.New("browser_runner requires terminal mode on this device.")
 		}
 		return a.Browser.Call(ctx, call.Tool, args, call.Policy)
+	case "desktop_snapshot", "desktop_act":
+		if !a.desktopReady() {
+			return nil, errors.New("DESKTOP_UNSUPPORTED: desktop control needs a Windows computer in terminal mode.")
+		}
+		return a.Desktop.Call(ctx, call.Tool, args, call.Policy)
 	case "secret_prepare", "secret_deliver":
 		// The Relay sends these when the user is asked for a one-time secret;
 		// the AI never calls them and only holds the handle.

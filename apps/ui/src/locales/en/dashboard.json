@@ -1987,7 +1987,7 @@
     "hooks.dashboard.useDeviceSettings.enableTerminal": "Enable terminal",
     "hooks.dashboard.useDeviceSettings.enableTerminalExecutionOn": "Enable terminal execution on {name}?",
     "hooks.dashboard.useDeviceSettings.enterALocalPathOnExample": "Enter a local path on {name}. Example: {example}",
-    "hooks.dashboard.useDeviceSettings.fullAccessEnablesTerminalExecutionAnd": "Full Access enables terminal execution and managed background processes. Commands may affect local files or external services and can include actions Local Undo cannot reverse.",
+    "hooks.dashboard.useDeviceSettings.fullAccessEnablesTerminalExecutionAnd": "Full Access enables terminal execution and managed background processes. Commands may affect local files or external services and can include actions Local Undo cannot reverse. Where the computer offers it, Full Access also turns on desktop control: AI can see the screen and use the mouse and keyboard.",
     "hooks.dashboard.useDeviceSettings.letAiActOnWebsitesFrom": "Let AI act on websites from {name}?",
     "hooks.dashboard.useDeviceSettings.pleaseTryAgain": "Please try again.",
     "hooks.dashboard.useDeviceSettings.remoteArcCouldNotSaveThis": "Remote Arc could not save this device skill policy. The previous permissions are still in effect.",
@@ -2527,6 +2527,12 @@
     "dashboard.devices.powerCommands.confirmBody": "AI terminal commands, including scheduled tasks, will be able to turn this computer off or restart it. A computer that is shut down stays offline until someone turns it on. Disk erasure and the other Safety Guard rules still apply. You can turn this off at any time.",
     "dashboard.devices.powerCommands.confirmAction": "Allow shutdown and restart",
     "dashboard.devices.powerCommands.notSaved": "Setting not saved",
-    "dashboard.devices.powerCommands.notSavedBody": "The change was not confirmed. Refresh the page and check the setting before trying again."
+    "dashboard.devices.powerCommands.notSavedBody": "The change was not confirmed. Refresh the page and check the setting before trying again.",
+    "dashboard.devices.deviceToolNames.desktopControl": "Desktop control",
+    "dashboard.devices.deviceAccessPanel.desktopControlHelp": "Lets your AI see this computer's screen and use its mouse and keyboard, for apps that have no other way in. A notice at the top of the screen shows while AI is viewing or acting. Move the mouse or press a key and the AI stops at once; it waits until you leave the computer alone. Password managers and Windows security prompts are hidden from screenshots and never receive input. Works only in a conversation with your own AI client, never in routines. Windows only for now.",
+    "dashboard.devices.deviceAccessPanel.desktopControlUnavailable": "Needs Windows 10 version 1607 or later, with Remote Arc Agent in terminal mode. Update the Agent on this computer to enable it.",
+    "hooks.dashboard.useDeviceSettings.letAiUseTheScreenOf": "Let AI see and use the screen of {name}?",
+    "hooks.dashboard.useDeviceSettings.desktopControlWarning": "Connected AI clients will be able to take screenshots of this computer and click, type and press keys in any app on it, as you would. That reaches as far as terminal access: the AI could open a terminal and type a command. You stay in control: a notice shows while AI is using the computer, any mouse or keyboard input from you stops it, and password managers and Windows security prompts are never shown or touched. Screenshots are not stored by Remote Arc.",
+    "hooks.dashboard.useDeviceSettings.enableDesktopControl": "Enable desktop control"
   }
 }

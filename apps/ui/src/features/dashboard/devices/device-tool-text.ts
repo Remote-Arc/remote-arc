@@ -9,6 +9,7 @@ const names = "dashboard.devices.deviceToolNames." as const;
 // interface; a tool missing here still gets a readable fallback.
 export const DEVICE_TOOL_TEXT: Readonly<Record<string, ToolText>> = {
   browser_runner: { label: `${names}browserRunner`, help: `${panel}letsYourAiOpenReadAnd` },
+  desktop_control: { label: `${names}desktopControl`, help: `${panel}desktopControlHelp` },
   list_directory: { label: `${names}listDirectory`, help: `${names}listDirectoryHelp` },
   browse_directories: {
     label: `${names}browseDirectories`,

@@ -1,6 +1,8 @@
 import { canonicalErrorEnvelope } from "../../../../../packages/protocol/src/error-codes.js";
 import {
+  desktopControlEnabled,
   isBrowserRunnerTool,
+  isDesktopTool,
   toggledDeviceTools,
 } from "../../features/dashboard/devices/device-tools.js";
 import { useRef, useState } from "react";
@@ -16,11 +18,10 @@ import {
   type DirectoryBrowser,
 } from "../../types/app-types.js";
 import {
-  DEVELOPER_DEVICE_TOOLS,
   DEVICE_TOOL_CATALOG,
   type DeviceAccessPreset,
-  SAFE_DEVICE_TOOLS,
   legacyTaskPermissions,
+  presetDeviceTools,
 } from "../../features/dashboard/devices/device-presets.js";
 import type { DashboardDialogs } from "./use-dashboard-dialogs.js";
 
@@ -293,6 +294,7 @@ export function useDeviceSettings({
       );
       if (!confirmed) return;
     }
+    if (enabled && isDesktopTool(tool) && !(await confirmDesktopControl(device))) return;
     const advertised = device.available_tools || device.tools;
     const baseline =
       device.status === "online"
@@ -301,6 +303,15 @@ export function useDeviceSettings({
     await saveDeviceTools(
       device,
       toggledDeviceTools(device.allowed_tools, baseline, tool, enabled),
+    );
+  }
+
+  function confirmDesktopControl(device: Device) {
+    return askConfirm(
+      tr("hooks.dashboard.useDeviceSettings.letAiUseTheScreenOf", { name: device.name }),
+      tr("hooks.dashboard.useDeviceSettings.desktopControlWarning"),
+      tr("hooks.dashboard.useDeviceSettings.enableDesktopControl"),
+      "danger",
     );
   }
 
@@ -321,15 +332,19 @@ export function useDeviceSettings({
       );
       if (!confirmed) return;
     }
-    const presetTools =
-      preset === "safe"
-        ? SAFE_DEVICE_TOOLS
-        : preset === "developer"
-          ? DEVELOPER_DEVICE_TOOLS
-          : DEVICE_TOOL_CATALOG;
-    // Changing the file/terminal preset keeps the separate browser_runner switch.
-    const keepRunner = (device.allowed_tools || []).filter(isBrowserRunnerTool);
-    await saveDeviceTools(device, [...presetTools, ...keepRunner]);
+    const tools = presetDeviceTools(
+      preset,
+      device.allowed_tools,
+      device.available_tools || device.tools,
+    );
+    if (
+      preset === "developer" &&
+      tools.some(isDesktopTool) &&
+      !desktopControlEnabled(device.allowed_tools) &&
+      !(await confirmDesktopControl(device))
+    )
+      return;
+    await saveDeviceTools(device, tools);
   }
 
   async function saveDeviceTaskPermission(

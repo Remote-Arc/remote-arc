@@ -45,6 +45,9 @@ const goBrowserRunnerTools = [
   "browser_runner_close",
   "browser_runner_wait",
 ];
+// Desktop control is advertised only where the screen can be used: always on
+// Windows, never on a computer without a display.
+const goDesktopTools = ["desktop_snapshot", "desktop_act"];
 let stderr = "";
 const server = http.createServer((_req, res) => {
   res.writeHead(204);
@@ -153,7 +156,10 @@ try {
   assert.deepEqual(
     new Set(
       hello.tools.filter(
-        (tool: string) => tool !== "set_device_runtime" && !goBrowserRunnerTools.includes(tool),
+        (tool: string) =>
+          tool !== "set_device_runtime" &&
+          !goBrowserRunnerTools.includes(tool) &&
+          !goDesktopTools.includes(tool),
       ),
     ),
     new Set([
@@ -169,6 +175,15 @@ try {
       "secret_deliver",
     ]),
   );
+  const desktop = goDesktopTools.filter((tool) => hello.tools.includes(tool));
+  assert.equal(
+    desktop.length === goDesktopTools.length,
+    hello.capabilities.includes("desktop_control_v1"),
+    "desktop tools and their capability are advertised together",
+  );
+  assert.ok(desktop.length === 0 || desktop.length === goDesktopTools.length, "all or none");
+  if (process.platform === "win32")
+    assert.equal(desktop.length, goDesktopTools.length, "Windows offers desktop control");
   assert(hello.capabilities.includes("go_agent_v1"));
   assert(hello.capabilities.includes("one_time_secret_v1"));
   assert(hello.capabilities.includes("device_pause_v1"));

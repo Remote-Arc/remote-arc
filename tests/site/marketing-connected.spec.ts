@@ -164,6 +164,31 @@ test("Connected capabilities include a browser scene that waits before sending",
   expect(await section.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
 });
 
+// Computer use shows the on-screen notice and a desktop app being filled in, and
+// leads to its guide rather than Arc, which cannot use the screen.
+test("Connected capabilities include computer use, which leads to its guide", async ({
+  page,
+}, info) => {
+  const zh = info.project.metadata.language === "zh";
+  const section = page.locator("#agent-use-cases");
+  await section.scrollIntoViewIfNeeded();
+  await section.getByRole("tab", { name: "Computer Use", exact: false }).click();
+  const panel = section.locator(".agentConnectedPanel");
+  await expect(panel).toHaveAttribute("data-workflow", "desktop");
+  await expect(panel.locator(".connectedDesktopNotice")).toContainText(
+    zh ? "AI 正在使用这台电脑" : "AI is using this computer",
+  );
+  await expect(panel.locator(".connectedDesktopActions [data-target]")).toContainText(
+    zh ? "保存" : "Save",
+  );
+  await expect(panel.locator(".connectedDesktopSteps li")).toHaveCount(3);
+  await expect(panel.locator(".agentConnectedAction")).toHaveAttribute(
+    "href",
+    (zh ? "/zh" : "") + "/docs/computer-use",
+  );
+  expect(await section.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+});
+
 test("New previews have no horizontal overflow or missing images", async ({ page }) => {
   for (const selector of [".slackAgentPreview", "#agent-use-cases", ".homePricing"]) {
     const region = page.locator(selector);

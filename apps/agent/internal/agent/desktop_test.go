@@ -20,7 +20,8 @@ func hasTool(a *Agent, name string) bool {
 }
 
 // Desktop control reaches as far as the terminal, so it follows the same
-// mode and pause gates, and only Windows advertises it for now.
+// mode and pause gates, and is advertised only where the computer can serve
+// it (Windows, or Linux with an X11 display).
 func TestDesktopControlFollowsModePauseAndPlatform(t *testing.T) {
 	for _, mode := range []string{"safe", "developer", "managed"} {
 		t.Run(mode, func(t *testing.T) {
@@ -35,7 +36,7 @@ func TestDesktopControlFollowsModePauseAndPlatform(t *testing.T) {
 				a.Core.Mode = "developer"
 			}
 			advertised := hasTool(a, "desktop_snapshot")
-			if mode != "managed" || runtime.GOOS != "windows" {
+			if mode != "managed" || !a.Desktop.Available() {
 				if advertised {
 					t.Fatalf("%s mode on %s advertised desktop control", mode, runtime.GOOS)
 				}
@@ -46,7 +47,7 @@ func TestDesktopControlFollowsModePauseAndPlatform(t *testing.T) {
 				return
 			}
 			if !advertised {
-				t.Fatal("a Windows Agent in terminal mode advertises desktop control")
+				t.Fatal("an Agent in terminal mode on a computer that can serve it advertises desktop control")
 			}
 			// The owner's setting arrives with every call; without it nothing runs.
 			_, e := a.dispatch(context.Background(), protocol.Call{Tool: "desktop_snapshot", Arguments: map[string]any{}}, nil)

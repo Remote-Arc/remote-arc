@@ -155,13 +155,19 @@ jobs:
           cache-dependency-path: |
             apps/agent/go.sum
             packages/execution-core/go.sum
-      - name: Install real H264 encoder for video transport tests
+      - name: Install real H264 encoder for video transport tests, and an X11 session for desktop control
         uses: ./.github/actions/apt-install
         with:
-          packages: ffmpeg
+          packages: ffmpeg xvfb xauth openbox
       - run: ffmpeg -version
+      # Desktop control's Linux code needs a display and a window manager to be
+      # exercised, so the whole module is measured inside an X11 session.
       - name: Check Go coverage target and protected packages
-        run: node scripts/go-coverage.mjs --target
+        run: |
+          xvfb-run -a --server-args='-screen 0 1920x1080x24' bash -c '
+            openbox >"$RUNNER_TEMP/remotearc-window-manager.log" 2>&1 &
+            node scripts/go-coverage.mjs --target
+          '
       - name: Check synthetic takeover source fixtures
         run: python3 scripts/takeover-session-probe-test.py
       - name: Report this failure to the private pull request now
@@ -269,7 +275,7 @@ jobs:
         uses: ./.github/actions/apt-install
         with:
           packages: xvfb xauth openbox
-      - name: User handoff in a Linux desktop browser
+      - name: User handoff and desktop control in a Linux X11 session
         if: runner.os == 'Linux'
         env:
           REMOTEARC_E2E_REQUIRE_WINDOW: "1"
@@ -277,6 +283,7 @@ jobs:
           xvfb-run -a --server-args='-screen 0 1920x1080x24' bash -c '
             openbox >"$RUNNER_TEMP/remotearc-window-manager.log" 2>&1 &
             go -C apps/agent test -race ./internal/browserrunner -run "TestStartup|TestE2E(Startup|CompactPassword|RepeatedShow|PageCannotPark|Handoff|ResumedUserHandoff|WindowsCoveredHandoff|HiddenWindowShowsAndHidesInPlace|DelayedChallengeHandoffAndWait)" -count=1 -v
+            go -C apps/agent test -race ./internal/desktop ./internal/agent -run "TestX11|TestDesktopControl" -count=1 -v
           '
       - run: pnpm test:device
       # Desktop control's real-window test takes the foreground and sends input,

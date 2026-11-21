@@ -6,6 +6,7 @@ toolchain go1.25.5
 
 require (
 	github.com/gorilla/websocket v1.5.3
+	github.com/jezek/xgb v1.3.1
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/pion/webrtc/v4 v4.2.0
 	github.com/yaohuangguan/remote-arc/packages/execution-core v0.0.0

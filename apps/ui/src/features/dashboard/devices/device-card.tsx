@@ -40,13 +40,15 @@ export function deviceFacts(device: Device, m: DashboardModel) {
     (runnerEnabled ||
       BROWSER_RUNNER_TOOLS.some((tool) => advertisedTools.includes(tool)) ||
       device.status === "online");
-  // Desktop control is Windows-only for now: shown where the Agent offers it
-  // or where it is already on.
+  // Desktop control runs on Windows and Linux X11 sessions: shown where the
+  // Agent offers it or where it is already on, and on offline Windows
+  // computers, which offer it once their Agent is current.
   const desktopAdvertised = DESKTOP_TOOLS.every((tool) => advertisedTools.includes(tool));
   const desktopEnabled = desktopControlEnabled(device.allowed_tools);
   const desktopVisible =
-    device.platform === "win32" &&
-    (desktopEnabled || desktopAdvertised || device.status !== "online");
+    desktopEnabled ||
+    desktopAdvertised ||
+    (device.platform === "win32" && device.status !== "online");
   const accessPreset = deviceAccessPreset(enabledTools, advertisedTools);
   const executionLog = executionLogsByDevice[device.id];
   const executionLogError = executionLogErrors[device.id];
@@ -72,7 +74,8 @@ export function deviceFacts(device: Device, m: DashboardModel) {
     runnerAdvertised,
     runnerEnabled,
     runnerVisible,
-    desktopAdvertised: desktopAdvertised || device.status !== "online",
+    desktopAdvertised:
+      desktopAdvertised || (device.platform === "win32" && device.status !== "online"),
     desktopEnabled,
     desktopVisible,
     accessPreset,

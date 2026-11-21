@@ -60,8 +60,6 @@ type watcher struct {
 
 var theWatcher watcher
 
-var noticeText = "Remote Arc · AI is using this computer — move the mouse or press any key to take over"
-
 var (
 	mouseHookCallback = syscall.NewCallback(func(code, wparam, lparam uintptr) uintptr {
 		if int32(code) >= 0 {

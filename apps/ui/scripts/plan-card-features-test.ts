@@ -87,7 +87,7 @@ assert.deepEqual(maxRows, [
   "Parallel tasks: 5 · up to 60 minutes each",
   "3,000 Arc Credits / month · about 1,000 tasks",
   "Terminal, files, browser, Fleet and connected Apps",
-  "Computer use: AI sees the screen and uses mouse and keyboard on your Windows computers",
+  "Computer use: AI sees the screen and uses mouse and keyboard on your Windows and Linux computers",
   "Your own ChatGPT, Claude or Codex, or Arc with Auto and named models",
 ]);
 // Pro lists the same terms in the same order, so each line compares with Max's.

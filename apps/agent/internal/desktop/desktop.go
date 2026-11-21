@@ -46,6 +46,9 @@ const (
 	maxScreenshotSize = 1_500_000
 )
 
+// noticeText is shown on the computer's screen while AI views or uses it.
+const noticeText = "Remote Arc · AI is using this computer — move the mouse or press any key to take over"
+
 // userQuiet is how long the person must leave mouse and keyboard alone
 // before AI input starts again.
 var userQuiet = 5 * time.Second
@@ -69,6 +72,26 @@ var blockedApps = map[string]bool{
 	"lockapp.exe":            true,
 	"logonui.exe":            true,
 	"sechealthui.exe":        true,
+	// Linux: password managers, keyring and polkit prompts, screen lockers.
+	"keepassxc":                           true,
+	"1password":                           true,
+	"bitwarden":                           true,
+	"enpass":                              true,
+	"gcr-prompter":                        true,
+	"seahorse":                            true,
+	"pinentry":                            true,
+	"pinentry-gnome3":                     true,
+	"pinentry-gtk-2":                      true,
+	"pinentry-qt":                         true,
+	"polkit-gnome-authentication-agent-1": true,
+	"polkit-kde-authentication-agent-1":   true,
+	"polkit-mate-authentication-agent-1":  true,
+	"lxqt-policykit-agent":                true,
+	"xfce-polkit":                         true,
+	"i3lock":                              true,
+	"xsecurelock":                         true,
+	"xscreensaver":                        true,
+	"light-locker":                        true,
 }
 
 // Error codes start the error message so the Relay and the AI can branch on them.

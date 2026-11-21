@@ -40,8 +40,8 @@ export const computerUseSections: DocSection[] = [
       ordered: true,
       items: [
         {
-          en: "Update the Remote Arc Agent on a Windows 10 (version 1607 or later) or Windows 11 computer.",
-          zh: "在 Windows 10（1607 或更高版本）或 Windows 11 电脑上，把 Remote Arc Agent 更新到最新版本。",
+          en: "Update the Remote Arc Agent on a Windows 10 (version 1607 or later) or Windows 11 computer, or on Linux signed in to an X11 (Xorg) session. Wayland sessions are not supported yet.",
+          zh: "在 Windows 10（1607 或更高版本）、Windows 11，或登录在 X11（Xorg）会话下的 Linux 电脑上，把 Remote Arc Agent 更新到最新版本。暂不支持 Wayland 会话。",
         },
         {
           en: "In the Dashboard, open Devices, choose the computer and turn on Desktop control. The Developer and Full presets also turn it on; Safe turns it off.",
@@ -79,8 +79,8 @@ export const computerUseSections: DocSection[] = [
           zh: "如果截图后前台换成了别的窗口，输入会被拒绝，按键永远不会落到 AI 没看到的窗口里。",
         },
         {
-          en: "Password managers and Windows security and sign-in windows are painted over in screenshots, their titles and controls are never read, and they never receive input. Password fields never report their value.",
-          zh: "密码管理器以及 Windows 安全和登录窗口在截图中会被遮住，不会读取它们的标题和控件，也不会向它们发送任何输入。密码框永远不会返回内容。",
+          en: "Password managers, keyring and polkit prompts, screen lockers and Windows security and sign-in windows are painted over in screenshots, their titles and controls are never read, and they never receive input. Password fields never report their value.",
+          zh: "密码管理器、密钥环和 polkit 授权提示、锁屏程序，以及 Windows 安全和登录窗口在截图中会被遮住，不会读取它们的标题和控件，也不会向它们发送任何输入。密码框永远不会返回内容。",
         },
         {
           en: "A locked computer, the lock screen and UAC prompts are refused. Each screenshot can be acted on for two minutes.",
@@ -133,8 +133,8 @@ export const computerUseSections: DocSection[] = [
           zh: "网页更适合交给 Browser Runner，它直接读取网页内容，并且不会重复提交表单。",
         },
         {
-          en: "A screenshot shows one display; the AI can ask for another. macOS support is planned.",
-          zh: "一张截图只包含一个显示器，AI 可以指定其他显示器。macOS 支持正在计划中。",
+          en: "A screenshot shows one display; the AI can ask for another. On Linux the AI works from the screenshot and the window list, without the controls of the window in front. macOS support is planned.",
+          zh: "一张截图只包含一个显示器，AI 可以指定其他显示器。在 Linux 上，AI 依靠截图和窗口列表操作，不读取前台窗口的控件。macOS 支持正在计划中。",
         },
       ],
     },

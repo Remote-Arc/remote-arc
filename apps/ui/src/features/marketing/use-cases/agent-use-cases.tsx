@@ -68,7 +68,7 @@ export function AgentUseCases() {
       detail: tr("marketing.useCases.agentUseCases.computerUseDetail"),
       prompt: tr("marketing.useCases.agentUseCases.computerUsePrompt"),
       note: tr("marketing.useCases.agentUseCases.computerUseNote"),
-      brands: ["windows"],
+      brands: ["windows", "linux"],
     },
     {
       id: "video",

@@ -220,7 +220,7 @@ func (a *Agent) browserRunnerReady() bool {
 }
 
 // desktopReady advertises desktop control where the operating system
-// supports it, on an execution Agent in terminal mode: seeing the screen and
+// supports it (Windows, or Linux with an X11 display), on an execution Agent in terminal mode: seeing the screen and
 // using the mouse and keyboard reach as far as the terminal does. The Relay
 // still requires the owner to enable it for this computer.
 func (a *Agent) desktopReady() bool {
@@ -330,7 +330,7 @@ func (a *Agent) dispatch(ctx context.Context, call protocol.Call, awake *power.M
 		return a.Browser.Call(ctx, call.Tool, args, call.Policy)
 	case "desktop_snapshot", "desktop_act":
 		if !a.desktopReady() {
-			return nil, errors.New("DESKTOP_UNSUPPORTED: desktop control needs a Windows computer in terminal mode.")
+			return nil, errors.New("DESKTOP_UNSUPPORTED: desktop control needs a Windows computer or a Linux X11 session, with the Agent in terminal mode.")
 		}
 		return a.Desktop.Call(ctx, call.Tool, args, call.Policy)
 	case "secret_prepare", "secret_deliver":

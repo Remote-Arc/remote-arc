@@ -1466,7 +1466,7 @@
     {
       "name": "desktop_snapshot",
       "title": "See a computer's screen",
-      "description": "Take a screenshot of a linked Windows computer's display, with the foreground window's controls from the accessibility tree: elements with refs (e1, e2, ...), role, name, non-sensitive value, focus and rect [x, y, width, height] in screenshot pixels, plus the visible windows with refs (w1, w2, ...). Password fields never report a value. By default the display with the foreground window is captured; display picks another (display.count says how many). max_width (640-1920, default 1366) sets the screenshot width. include_image=false returns only the windows and controls. The snapshot_id is valid for two minutes. Use it when the task needs an app on that computer that has no API, CLI or file you can use instead, or when the user asks you to operate an app for them. Prefer files, start_process, Apps and browser_runner where they can do the job: they are faster and verifiable. The person at the computer always wins: if they move the mouse or type, input stops (DESKTOP_USER_TOOK_OVER or DESKTOP_USER_ACTIVE); wait, take a new snapshot and never fight them. Password managers and Windows security prompts are masked and never receive input (DESKTOP_APP_BLOCKED): ask the user to do that step. Never type passwords, codes or payment details; ask the user. Before anything that sends, buys, deletes or posts, tell the user what you are about to do.",
+      "description": "Take a screenshot of a linked Windows or Linux (X11) computer's display, with the foreground window's controls from the accessibility tree (Windows only; Linux returns the screenshot and windows): elements with refs (e1, e2, ...), role, name, non-sensitive value, focus and rect [x, y, width, height] in screenshot pixels, plus the visible windows with refs (w1, w2, ...). Password fields never report a value. By default the display with the foreground window is captured; display picks another (display.count says how many). max_width (640-1920, default 1366) sets the screenshot width. include_image=false returns only the windows and controls. The snapshot_id is valid for two minutes. Use it when the task needs an app on that computer that has no API, CLI or file you can use instead, or when the user asks you to operate an app for them. Prefer files, start_process, Apps and browser_runner where they can do the job: they are faster and verifiable. The person at the computer always wins: if they move the mouse or type, input stops (DESKTOP_USER_TOOK_OVER or DESKTOP_USER_ACTIVE); wait, take a new snapshot and never fight them. Password managers and Windows security prompts are masked and never receive input (DESKTOP_APP_BLOCKED): ask the user to do that step. Never type passwords, codes or payment details; ask the user. Before anything that sends, buys, deletes or posts, tell the user what you are about to do.",
       "inputSchema": {
         "type": "object",
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -1504,8 +1504,8 @@
       ],
       "readOnly": true,
       "group": "desktop",
-      "summary": "Screenshot a Windows computer with desktop control on, with the foreground window's controls and the visible windows.",
-      "zh": "截取已开启桌面控制的 Windows 电脑屏幕，并读取前台窗口的控件与可见窗口。"
+      "summary": "Screenshot a Windows or Linux (X11) computer with desktop control on, with the foreground window's controls and the visible windows.",
+      "zh": "截取已开启桌面控制的 Windows 或 Linux（X11）电脑屏幕，并读取前台窗口的控件与可见窗口。"
     },
     {
       "name": "device_tools",

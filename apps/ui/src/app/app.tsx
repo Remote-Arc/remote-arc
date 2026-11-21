@@ -81,6 +81,12 @@ const ComputerUsePage = React.lazy(() =>
   })),
 );
 
+const AgentOrchestrationPage = React.lazy(() =>
+  import("../features/marketing/product/agent-orchestration-page.js").then((module) => ({
+    default: module.AgentOrchestrationPage,
+  })),
+);
+
 const ChromeExtensionPage = React.lazy(() =>
   import("../features/install/chrome-extension-page.js").then((module) => ({
     default: module.ChromeExtensionPage,
@@ -330,6 +336,20 @@ export function App() {
           }
         >
           <ComputerUsePage />
+        </React.Suspense>
+      </PublicLayout>
+    );
+  if (routePath === "/agent-orchestration")
+    return (
+      <PublicLayout user={user === undefined ? null : user}>
+        <React.Suspense
+          fallback={
+            <main className="featurePage">
+              <WorkspaceLoading label={tr("marketing.agentOrchestration.title")} />
+            </main>
+          }
+        >
+          <AgentOrchestrationPage />
         </React.Suspense>
       </PublicLayout>
     );

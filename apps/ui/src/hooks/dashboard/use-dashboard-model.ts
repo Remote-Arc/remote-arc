@@ -252,13 +252,17 @@ export function useDashboardModel({
           ["overview", labels.overview],
           ["devices", labels.devices],
           ["automations", labels.tasks],
+          ["orchestration", labels.orchestration],
           ["apps", labels.apps],
           ["connect", labels.aiClients],
           ["security", labels.securityAccess],
         ];
 
   const mobileNavItems = navItems
-    .filter(([id]) => !["agent-activity", "agent-skills", "agent-devices"].includes(id))
+    // A phone's bottom bar fits five Connect tabs. Agent Orchestration takes the
+    // place of Apps there: agents are checked on the go, while App connections
+    // are set up at a desk and stay a tap away on Overview.
+    .filter(([id]) => !["agent-activity", "agent-skills", "agent-devices", "apps"].includes(id))
     .slice(0, workspace === "connect" ? 5 : 4);
 
   if (workspace === "connect") mobileNavItems.push(["security", labels.security]);

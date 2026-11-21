@@ -41,7 +41,8 @@
     "agentCardTitle": "Connect this computer",
     "agentCardBody": "Install the desktop agent and your AI can work here, with the access you choose.",
     "downloadForPlatform": "Download for {platform}",
-    "allPlatforms": "All platforms"
+    "allPlatforms": "All platforms",
+    "agentOrchestration": "Agent Orchestration"
   },
   "dashboard": {
     "chat": "Chat",
@@ -70,7 +71,9 @@
     "terms": "Terms",
     "support": "Support",
     "home": "Home",
-    "clients": "Clients"
+    "clients": "Clients",
+    "orchestration": "Agent Orchestration",
+    "orchestrationShort": "Agents"
   },
   "admin": {
     "sections": {

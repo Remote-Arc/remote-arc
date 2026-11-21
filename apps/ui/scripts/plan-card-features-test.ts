@@ -88,6 +88,7 @@ assert.deepEqual(maxRows, [
   "3,000 Arc Credits / month · about 1,000 tasks",
   "Terminal, files, browser, Fleet and connected Apps",
   "Computer use: AI sees the screen and uses mouse and keyboard on your Windows and Linux computers",
+  "Agent Orchestration: up to 5 coding agents per launch, across your computers",
   "Your own ChatGPT, Claude or Codex, or Arc with Auto and named models",
 ]);
 // Pro lists the same terms in the same order, so each line compares with Max's.
@@ -169,6 +170,9 @@ assert.equal(
   "使用你自己的 ChatGPT、Claude 或 Codex，或使用 Arc（Auto 与 GPT、Claude 和 Gemini 模型）",
 );
 assert.equal(rows(max, families([]), en).at(-1), maxRows.at(-1));
+// Every plan names Agent Orchestration; Free runs one agent at a time.
+assert.equal(rows(free, catalog, en).at(-1), "Agent Orchestration: one coding agent at a time");
+assert.equal(rows(free, catalog, zh).at(-1), "Agent 编排：一次运行 1 个编程 Agent");
 
 // Background commands at once follow the computers line (on Arc cards, the
 // parallel tasks line after it) on every card, with no

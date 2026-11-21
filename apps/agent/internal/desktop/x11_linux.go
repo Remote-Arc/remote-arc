@@ -39,6 +39,7 @@ type x11Platform struct {
 	// The server's idle timer cannot tell the Agent's XTEST input from a
 	// person's, so input seen well after it is the person's.
 	lastInjected atomic.Int64
+	injecting    atomic.Int32
 	lastUser     atomic.Int64
 	watching     sync.Once
 }
@@ -117,12 +118,21 @@ func (p *x11Platform) Start() error {
 }
 
 func (p *x11Platform) sampleUserInput() {
-	info, err := screensaver.QueryInfo(p.conn, xproto.Drawable(p.root)).Reply()
-	if err != nil {
+	// A reading taken while the Agent's own input was on its way to the server
+	// may already count it, so it is dropped.
+	injected := p.lastInjected.Load()
+	if p.injecting.Load() > 0 {
 		return
 	}
-	last := time.Now().Add(-time.Duration(info.MsSinceUserInput) * time.Millisecond)
-	if last.UnixNano() > p.lastInjected.Load()+int64(injectionGrace) && last.UnixNano() > p.lastUser.Load() {
+	// Counting back from when the question was asked never places input later
+	// than it happened, however long the reply takes.
+	asked := time.Now()
+	info, err := screensaver.QueryInfo(p.conn, xproto.Drawable(p.root)).Reply()
+	if err != nil || p.injecting.Load() > 0 || p.lastInjected.Load() != injected {
+		return
+	}
+	last := asked.Add(-time.Duration(info.MsSinceUserInput) * time.Millisecond)
+	if last.UnixNano() > injected+int64(injectionGrace) && last.UnixNano() > p.lastUser.Load() {
 		p.lastUser.Store(last.UnixNano())
 	}
 }

@@ -41,7 +41,8 @@
     "agentCardTitle": "连接这台电脑",
     "agentCardBody": "安装桌面 Agent，你的 AI 就能在这里工作，权限由你决定。",
     "downloadForPlatform": "下载 {platform} 版",
-    "allPlatforms": "全部平台"
+    "allPlatforms": "全部平台",
+    "agentOrchestration": "Agent 编排"
   },
   "dashboard": {
     "chat": "对话",
@@ -70,7 +71,9 @@
     "terms": "条款",
     "support": "支持",
     "home": "首页",
-    "clients": "客户端"
+    "clients": "客户端",
+    "orchestration": "Agent 编排",
+    "orchestrationShort": "编排"
   },
   "admin": {
     "sections": {

@@ -2,6 +2,7 @@ import { reviewedDocTopics } from "./documentation-review.js";
 import { installAppSections } from "./guides/install-app.js";
 import { deviceFleetSections } from "./guides/device-fleet.js";
 import { computerUseSections } from "./guides/computer-use.js";
+import { agentOrchestrationSections } from "./guides/agent-orchestration.js";
 import { appsSections } from "./guides/apps.js";
 import { tasksSections } from "./guides/tasks.js";
 import { skillsSections } from "./guides/skills.js";
@@ -172,6 +173,24 @@ export const DOC_TOPICS: DocTopic[] = [
           ["/docs/devices", "Devices and permissions", "设备与权限"],
           ["/docs/browser", "Browser tabs", "浏览器标签页"],
           ["/docs/tools?group=desktop", "Computer use tools", "Computer Use 工具"],
+        ],
+      },
+      {
+        slug: "agent-orchestration",
+        group: "work",
+        title: {
+          en: "Agent Orchestration",
+          zh: "Agent 编排",
+        },
+        description: {
+          en: "Run Claude Code and Codex on your computers from the Dashboard, several at once, each in its own Git worktree.",
+          zh: "在 Dashboard 中把 Claude Code 和 Codex 运行在你的电脑上，可以同时运行多个，每个都在独立的 Git worktree 中。",
+        },
+        sections: agentOrchestrationSections,
+        links: [
+          ["/agent-orchestration", "Agent Orchestration", "Agent 编排"],
+          ["/docs/devices", "Devices and permissions", "设备与权限"],
+          ["/docs/usage-and-costs", "Usage and costs", "用量与费用"],
         ],
       },
       {

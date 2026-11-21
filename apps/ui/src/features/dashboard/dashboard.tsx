@@ -5,6 +5,7 @@ import { WorkspaceLoading } from "../../components/workspace-loading.js";
 import { AppsManager } from "../apps/apps-manager.js";
 import { ArcWorkWorkspace } from "../arc/workspace/arc-workspace.js";
 import { RoutinesPage } from "../routines/routines-page.js";
+import { OrchestrationPage } from "../agents/orchestration-page.js";
 import { ConnectTasksErrorBoundary } from "../tasks/connect-tasks-error-boundary.js";
 import { ProductIcon, type ProductIconName } from "../../components/product-icon.js";
 import { WorkspacePicker } from "./workspace-picker.js";
@@ -48,6 +49,7 @@ function DashboardNavIcon({ tab }: { tab: DashboardTab }) {
     "agent-skills": "spark",
     "agent-activity": "activity",
     automations: "tasks",
+    orchestration: "spark",
   };
   return <ProductIcon name={names[tab] || "settings"} />;
 }
@@ -269,6 +271,8 @@ export function Dashboard(props: DashboardProps) {
           </ConnectTasksErrorBoundary>
         )}
 
+        {active === "orchestration" && <OrchestrationPage devices={devices} />}
+
         {active === "agent-activity" && (
           <ArcWorkWorkspace view="activity" tr={tr} onChat={openArcChat} />
         )}
@@ -349,9 +353,11 @@ export function Dashboard(props: DashboardProps) {
                 ? labels.home
                 : id === "connect"
                   ? labels.clients
-                  : id === "agent-chat"
-                    ? labels.home
-                    : label}
+                  : id === "orchestration"
+                    ? labels.orchestrationShort
+                    : id === "agent-chat"
+                      ? labels.home
+                      : label}
             </small>
           </button>
         ))}

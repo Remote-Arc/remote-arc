@@ -20,6 +20,7 @@ export function PublicFooter({ brand }: { brand: React.ReactNode }) {
         link("/arc", "Arc"),
         link("/chrome-extension", labels.browserProduct),
         link("/computer-use", labels.computerUse),
+        link("/agent-orchestration", labels.agentOrchestration),
         link("/integrations", labels.apps),
         link("/pricing", labels.pricing),
         link("/downloads", labels.downloads),

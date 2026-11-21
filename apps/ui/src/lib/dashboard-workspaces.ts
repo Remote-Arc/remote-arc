@@ -4,6 +4,7 @@ export type DashboardTab =
   | "overview"
   | "devices"
   | "automations"
+  | "orchestration"
   | "apps"
   | "connect"
   | "security"
@@ -23,6 +24,7 @@ export const DASHBOARD_PATHS: Record<DashboardTab, string> = {
   overview: "/dashboard/connect/overview",
   devices: "/dashboard/connect/devices",
   automations: "/dashboard/connect/tasks",
+  orchestration: "/dashboard/connect/orchestration",
   apps: "/dashboard/connect/apps",
   connect: "/dashboard/connect/clients",
   security: "/dashboard/connect/security",

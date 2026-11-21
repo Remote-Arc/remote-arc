@@ -224,7 +224,9 @@ test("Dashboard headings stay in place when switching tabs", async ({ page }) =>
     await expect(heading).toBeVisible();
   };
 
-  for (const tab of ["automations", "apps", "connect", "settings", "overview", "devices"]) {
+  // A phone's bottom bar has Agent Orchestration where the sidebar also has Apps.
+  const second = (test.info().project.use.viewport?.width ?? 1440) < 821 ? "orchestration" : "apps";
+  for (const tab of ["automations", second, "connect", "settings", "overview", "devices"]) {
     await openTab(tab);
     await expect.poll(readPosition).toEqual(baseline);
   }

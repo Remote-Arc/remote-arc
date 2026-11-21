@@ -116,54 +116,63 @@ func (p *x11Platform) Send(steps []Step, abort func() bool) (int, error) {
 		if abort() || moved() {
 			return sent, nil
 		}
-		p.lastInjected.Store(time.Now().UnixNano())
-		var err error
-		switch step.Kind {
-		case StepPause:
-			time.Sleep(step.Pause)
-		case StepMove:
-			err = p.fake(xproto.MotionNotify, 0, int16(step.X), int16(step.Y))
-			p.conn.Sync()
-			placed, atX, atY = true, step.X, step.Y
-		case StepButtonDown, StepButtonUp:
-			button := map[string]byte{"left": 1, "middle": 2, "right": 3}[step.Button]
-			if button == 0 {
-				return sent, fmt.Errorf("unknown mouse button %q", step.Button)
-			}
-			err = p.fake(map[bool]byte{true: xproto.ButtonPress, false: xproto.ButtonRelease}[step.Kind == StepButtonDown], button, 0, 0)
-		case StepWheel:
-			button, notches := byte(4), step.DY // up
-			switch {
-			case step.DY < 0:
-				button, notches = 5, -step.DY
-			case step.DX > 0:
-				button, notches = 7, step.DX
-			case step.DX < 0:
-				button, notches = 6, -step.DX
-			}
-			for n := 0; n < notches && err == nil; n++ {
-				if err = p.fake(xproto.ButtonPress, button, 0, 0); err == nil {
-					err = p.fake(xproto.ButtonRelease, button, 0, 0)
+		// While a step is on its way to the server, the idle timer may count it
+		// before lastInjected does: sampleUserInput ignores what it reads then.
+		if step.Kind != StepPause {
+			p.injecting.Add(1)
+		}
+		err := func() (err error) {
+			switch step.Kind {
+			case StepPause:
+				time.Sleep(step.Pause)
+			case StepMove:
+				err = p.fake(xproto.MotionNotify, 0, int16(step.X), int16(step.Y))
+				p.conn.Sync()
+				placed, atX, atY = true, step.X, step.Y
+			case StepButtonDown, StepButtonUp:
+				button := map[string]byte{"left": 1, "middle": 2, "right": 3}[step.Button]
+				if button == 0 {
+					return fmt.Errorf("unknown mouse button %q", step.Button)
 				}
+				err = p.fake(map[bool]byte{true: xproto.ButtonPress, false: xproto.ButtonRelease}[step.Kind == StepButtonDown], button, 0, 0)
+			case StepWheel:
+				button, notches := byte(4), step.DY // up
+				switch {
+				case step.DY < 0:
+					button, notches = 5, -step.DY
+				case step.DX > 0:
+					button, notches = 7, step.DX
+				case step.DX < 0:
+					button, notches = 6, -step.DX
+				}
+				for n := 0; n < notches && err == nil; n++ {
+					if err = p.fake(xproto.ButtonPress, button, 0, 0); err == nil {
+						err = p.fake(xproto.ButtonRelease, button, 0, 0)
+					}
+				}
+			case StepKeyDown, StepKeyUp:
+				sym, ok := x11Keysyms[step.Key]
+				code, _, found := p.keymap.find(sym)
+				if !ok || !found {
+					return fmt.Errorf("this keyboard layout has no key for %q", step.Key)
+				}
+				err = p.fake(map[bool]byte{true: xproto.KeyPress, false: xproto.KeyRelease}[step.Kind == StepKeyDown], byte(code), 0, 0)
+			case StepChar:
+				// A UTF-16 surrogate pair is one character: type it on its first unit.
+				r, ok := runes[i]
+				if !ok {
+					break
+				}
+				borrowed, err = p.typeRune(r, borrowed)
+			default:
+				err = fmt.Errorf("unknown input step %d", step.Kind)
 			}
-		case StepKeyDown, StepKeyUp:
-			sym, ok := x11Keysyms[step.Key]
-			code, _, found := p.keymap.find(sym)
-			if !ok || !found {
-				return sent, fmt.Errorf("this keyboard layout has no key for %q", step.Key)
-			}
-			err = p.fake(map[bool]byte{true: xproto.KeyPress, false: xproto.KeyRelease}[step.Kind == StepKeyDown], byte(code), 0, 0)
-		case StepChar:
-			// A UTF-16 surrogate pair is one character: type it on its first unit.
-			r, ok := runes[i]
-			if !ok {
-				break
-			}
-			if borrowed, err = p.typeRune(r, borrowed); err != nil {
-				return sent, err
-			}
-		default:
-			return sent, fmt.Errorf("unknown input step %d", step.Kind)
+			return err
+		}()
+		if step.Kind != StepPause {
+			p.conn.Sync()
+			p.lastInjected.Store(time.Now().UnixNano())
+			p.injecting.Add(-1)
 		}
 		if err != nil {
 			return sent, err

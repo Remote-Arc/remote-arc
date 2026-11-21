@@ -17,6 +17,7 @@ export const chinesePages = new Set([
   "/connect-ai",
   "/chrome-extension",
   "/computer-use",
+  "/agent-orchestration",
   "/",
   "/install/chatgpt",
   "/install/claude",

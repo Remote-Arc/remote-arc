@@ -3,8 +3,11 @@
 package desktop
 
 import (
+	"bufio"
 	"image"
 	"os"
+	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -61,7 +64,85 @@ func fixtureX11Window(t *testing.T) (*xgb.Conn, xproto.Window, chan xgb.Event) {
 	return conn, window, events
 }
 
+// ownX11Display starts an X server and window manager for this test alone,
+// when Xvfb and openbox are installed. Other tests in the same job open
+// browser windows on the shared display, and those take focus and cover the
+// fixture. Without them, the test uses DISPLAY as it is.
+func ownX11Display(t *testing.T) {
+	t.Helper()
+	xvfb, err := exec.LookPath("Xvfb")
+	if err != nil {
+		return
+	}
+	openbox, err := exec.LookPath("openbox")
+	if err != nil {
+		return
+	}
+	read, write, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := exec.Command(xvfb, "-displayfd", "3", "-screen", "0", "1280x800x24", "-nolisten", "tcp")
+	server.ExtraFiles = []*os.File{write}
+	if err := server.Start(); err != nil {
+		t.Fatal(err)
+	}
+	write.Close()
+	t.Cleanup(func() { server.Process.Kill(); server.Wait() })
+	number, err := bufio.NewReader(read).ReadString('\n')
+	read.Close()
+	if err != nil {
+		t.Fatalf("Xvfb did not report its display: %v", err)
+	}
+	t.Setenv("DISPLAY", ":"+strings.TrimSpace(number))
+	manager := exec.Command(openbox)
+	if err := manager.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { manager.Process.Kill(); manager.Wait() })
+	// openbox names itself on the root window a moment before it manages new
+	// windows, so it is ready once it lists a probe window: mapped again each
+	// half second, in case the first map came too early.
+	conn, err := xgb.NewConn()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	screen := xproto.Setup(conn).DefaultScreen(conn)
+	probe, _ := xproto.NewWindowId(conn)
+	xproto.CreateWindow(conn, screen.RootDepth, probe, screen.Root, 0, 0, 10, 10, 0, xproto.WindowClassInputOutput, screen.RootVisual, 0, nil)
+	name := "_NET_CLIENT_LIST"
+	list, _ := xproto.InternAtom(conn, false, uint16(len(name)), name).Reply()
+	listed := func() bool {
+		reply, err := xproto.GetProperty(conn, false, screen.Root, list.Atom, xproto.AtomWindow, 0, 1024).Reply()
+		for i := 0; err == nil && i+4 <= len(reply.Value); i += 4 {
+			if xproto.Window(xgb.Get32(reply.Value[i:])) == probe {
+				return true
+			}
+		}
+		return false
+	}
+	for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline); {
+		xproto.UnmapWindow(conn, probe)
+		xproto.MapWindow(conn, probe)
+		for tries := 0; tries < 10 && !listed(); tries++ {
+			time.Sleep(50 * time.Millisecond)
+		}
+		if listed() {
+			// The fixture's connection may be given the probe's id, so the
+			// probe must be gone from the list first.
+			xproto.DestroyWindow(conn, probe)
+			for tries := 0; tries < 100 && listed(); tries++ {
+				time.Sleep(50 * time.Millisecond)
+			}
+			return
+		}
+	}
+	t.Fatal("openbox did not start managing windows on the test's own display")
+}
+
 func TestX11DesktopAgainstARealWindow(t *testing.T) {
+	ownX11Display(t)
 	if os.Getenv("DISPLAY") == "" {
 		t.Skip("needs an X11 display; CI runs this under Xvfb with a window manager")
 	}
@@ -98,14 +179,22 @@ func TestX11DesktopAgainstARealWindow(t *testing.T) {
 	// The screenshot sees the red window, but never the notice.
 	p.Indicate(true)
 	defer p.Indicate(false)
-	cx, cy := fixture.Bounds.X+200, fixture.Bounds.Y+120
-	// A window another test opened a moment ago may still be on top: raise the
-	// fixture until the screenshot shows it, for up to two seconds.
+	var cx, cy int
+	// A window another test opened a moment ago may still be on top, and on a
+	// busy machine the window manager may still be placing the fixture: raise
+	// it and read where it is until the screenshot shows it, for up to two seconds.
 	var img *image.RGBA
 	for deadline := time.Now().Add(2 * time.Second); ; {
 		xproto.ConfigureWindow(fixtureConn, window, xproto.ConfigWindowStackMode, []uint32{xproto.StackModeAbove})
 		fixtureConn.Sync()
 		time.Sleep(100 * time.Millisecond)
+		windows, _ := p.Windows()
+		for _, w := range windows {
+			if w.Handle == uintptr(window) {
+				fixture = w
+			}
+		}
+		cx, cy = fixture.Bounds.X+200, fixture.Bounds.Y+120
 		if img, err = p.Capture(displays[0].Bounds); err != nil {
 			t.Fatal(err)
 		}

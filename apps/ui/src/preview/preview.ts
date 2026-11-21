@@ -1068,6 +1068,8 @@ export function installUiPreviewFetchMock(mcpEndpoint: string) {
             "keep_awake",
           ],
         },
+        // ?plan=free previews a plan without computer use.
+        computerUseIncluded: new URL(location.href).searchParams.get("plan") !== "free",
         usage: previewUsage(new URL(location.href).searchParams.get("quota")),
         ...(proTrialOn()
           ? {

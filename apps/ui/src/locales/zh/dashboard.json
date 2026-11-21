@@ -2533,6 +2533,11 @@
     "dashboard.devices.deviceAccessPanel.desktopControlUnavailable": "需要 Windows 10 1607 或更高版本，或 X11（Xorg）会话下的 Linux，且 Remote Arc Agent 处于终端模式。请在这台电脑上更新 Agent 后再开启。",
     "hooks.dashboard.useDeviceSettings.letAiUseTheScreenOf": "允许 AI 查看并使用 {name} 的屏幕吗？",
     "hooks.dashboard.useDeviceSettings.desktopControlWarning": "已连接的 AI 客户端将能截取这台电脑的屏幕，并像你一样在任何应用里点击、输入和按键。这和终端权限一样大：AI 可以打开终端并输入命令。控制权始终在你：AI 使用电脑时会显示提示，你的任何鼠标或键盘操作都会让它停下，密码管理器和 Windows 安全提示永远不会被截取或操作。Remote Arc 不保存截图。",
-    "hooks.dashboard.useDeviceSettings.enableDesktopControl": "开启桌面控制"
+    "hooks.dashboard.useDeviceSettings.enableDesktopControl": "开启桌面控制",
+    "hooks.dashboard.useDeviceSettings.computerUseNeedsPro": "Computer Use 包含在 Pro 和 Max 套餐中",
+    "hooks.dashboard.useDeviceSettings.computerUseNeedsProDetail": "升级到 Pro 或开始 Pro 试用后，AI 才能查看这台电脑的屏幕并使用鼠标和键盘。",
+    "dashboard.devices.deviceAccessPanel.desktopControlNeedsPro": "Computer Use 包含在 Pro 和 Max 套餐中。",
+    "dashboard.devices.deviceAccessPanel.startProTrial": "开始 Pro 试用",
+    "dashboard.devices.deviceAccessPanel.seePro": "了解 Pro"
   }
 }

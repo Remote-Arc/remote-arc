@@ -91,6 +91,8 @@ export function useDashboardModel({
     showNotice,
     askConfirm,
     askPrompt,
+    // Until the status arrives, the Relay still decides each call.
+    computerUseIncluded: status?.computerUseIncluded !== false,
   });
   const powerCommands = usePowerCommands({ tr, refreshAll, showNotice, askConfirm });
   const storeExtensionVersion = useBrowserExtensionVersion(

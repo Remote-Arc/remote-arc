@@ -46,6 +46,7 @@ import "./styles/workspace-design.css";
 import "./styles/marketing/marketing-design.css";
 import "./styles/dashboard/device-fleet-design.css";
 import "./styles/dashboard/devices/device-recovery.css";
+import "./styles/dashboard/devices/desktop-plan.css";
 import "./styles/product-typography.css";
 import "./styles/arc-product-polish.css";
 import "./styles/components/brand-wordmark.css";

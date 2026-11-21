@@ -34,8 +34,11 @@ export function useDeviceSettings({
   showNotice,
   askConfirm,
   askPrompt,
+  computerUseIncluded,
 }: {
   devices: Device[];
+  /** Whether the plan includes computer use; presets and the switch follow it. */
+  computerUseIncluded: boolean;
   tr: Translate;
   refreshAll: () => Promise<void>;
   showNotice: DashboardDialogs["showNotice"];
@@ -294,6 +297,13 @@ export function useDeviceSettings({
       );
       if (!confirmed) return;
     }
+    if (enabled && isDesktopTool(tool) && !computerUseIncluded) {
+      await showNotice(
+        tr("hooks.dashboard.useDeviceSettings.computerUseNeedsPro"),
+        tr("hooks.dashboard.useDeviceSettings.computerUseNeedsProDetail"),
+      );
+      return;
+    }
     if (enabled && isDesktopTool(tool) && !(await confirmDesktopControl(device))) return;
     const advertised = device.available_tools || device.tools;
     const baseline =
@@ -336,6 +346,7 @@ export function useDeviceSettings({
       preset,
       device.allowed_tools,
       device.available_tools || device.tools,
+      computerUseIncluded,
     );
     if (
       preset === "developer" &&

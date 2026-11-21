@@ -191,6 +191,8 @@ export type ProductStatus = {
     plan: "free" | "connect" | "plus";
     features: string[];
   };
+  /** Computer use (desktop control) is a Pro and Max feature. */
+  computerUseIncluded?: boolean;
 };
 export type DashboardDialog = {
   kind: "notice" | "confirm" | "prompt";

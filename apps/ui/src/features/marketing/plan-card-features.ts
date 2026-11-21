@@ -35,6 +35,17 @@ function hostedAiLine(catalog: PlatformCatalog, tr: Translate) {
     : tr("marketing.arcPublicPricing.yourAiOrArcAutoAndNamed");
 }
 
+/** Whether a plan includes computer use: what the catalog says, or, from an older
+ * response, every paid plan and not Free. */
+export const includesComputerUse = (plan: CatalogPlan) => plan.computerUse ?? plan.id !== "free";
+
+/** The computer use line, only on a plan that includes it. */
+function computerUseLine(plan: CatalogPlan, tr: Translate) {
+  return includesComputerUse(plan)
+    ? [tr("marketing.arcPublicPricing.computerUseOnYourComputers")]
+    : [];
+}
+
 /** Every plan with Arc lists the same terms in the same order, so Pro and Max can
  * be compared line by line: what never stops first, then routines, then the
  * capacity terms, with Credits after them. */
@@ -66,7 +77,7 @@ function arcPlanFeatures(plan: CatalogPlan, catalog: PlatformCatalog, tr: Transl
     plan.fleetRun === false
       ? tr("marketing.arcPublicPricing.terminalFilesBrowserAndConnectedApps")
       : tr("marketing.arcPublicPricing.terminalFilesBrowserFleetAndConnected"),
-    tr("marketing.arcPublicPricing.computerUseOnYourComputers"),
+    ...computerUseLine(plan, tr),
     hostedAiLine(catalog, tr),
   ].map(line);
 }
@@ -84,7 +95,7 @@ export function planCardFeatures(
       tr("marketing.arcPublicPricing.unlimitedComputersAndFileTransfer"),
       ...backgroundLine(plan, tr),
       tr("marketing.arcPublicPricing.terminalFilesBrowserFleetAndConnected"),
-      tr("marketing.arcPublicPricing.computerUseOnYourComputers"),
+      ...computerUseLine(plan, tr),
       tr("marketing.arcPublicPricing.worksWithYourOwnChatgptClaude"),
     ].map(line);
   return [
@@ -112,7 +123,7 @@ export function planCardFeatures(
       ...backgroundLine(plan, tr),
       tr("marketing.arcPublicPricing.gbFileTransferMonth"),
       tr("marketing.arcPublicPricing.devicePermissionsAndLocalUndo"),
-      tr("marketing.arcPublicPricing.computerUseOnYourComputers"),
+      ...computerUseLine(plan, tr),
     ].map(line),
   ];
 }

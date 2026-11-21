@@ -33,8 +33,8 @@ export const computerUseSections: DocSection[] = [
   {
     heading: { en: "Turn it on for a computer", zh: "为一台电脑开启" },
     text: {
-      en: "Computer use is a separate permission for each computer, and it is off until you turn it on.",
-      zh: "Computer Use 是每台电脑单独的权限，在你开启之前一直是关闭的。",
+      en: "Computer use is included with Pro and Max, and the Pro trial. It is a separate permission for each computer, and it is off until you turn it on.",
+      zh: "Computer Use 包含在 Pro 和 Max 套餐（以及 Pro 试用）中。它是每台电脑单独的权限，在你开启之前一直是关闭的。",
     },
     list: {
       ordered: true,

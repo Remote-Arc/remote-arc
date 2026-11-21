@@ -22,8 +22,10 @@ export function useDeviceActions({
   showNotice,
   askConfirm,
   askPrompt,
+  computerUseIncluded,
 }: {
   devices: Device[];
+  computerUseIncluded: boolean;
   tr: Translate;
   refreshAll: () => Promise<void>;
   showNotice: DashboardDialogs["showNotice"];
@@ -37,6 +39,7 @@ export function useDeviceActions({
     showNotice,
     askConfirm,
     askPrompt,
+    computerUseIncluded,
   });
   const agentUpdate = useAgentUpdate({ refreshAll });
   const activity = useDeviceActivity({

@@ -2533,6 +2533,11 @@
     "dashboard.devices.deviceAccessPanel.desktopControlUnavailable": "Needs Windows 10 version 1607 or later, or Linux in an X11 (Xorg) session, with Remote Arc Agent in terminal mode. Update the Agent on this computer to enable it.",
     "hooks.dashboard.useDeviceSettings.letAiUseTheScreenOf": "Let AI see and use the screen of {name}?",
     "hooks.dashboard.useDeviceSettings.desktopControlWarning": "Connected AI clients will be able to take screenshots of this computer and click, type and press keys in any app on it, as you would. That reaches as far as terminal access: the AI could open a terminal and type a command. You stay in control: a notice shows while AI is using the computer, any mouse or keyboard input from you stops it, and password managers and Windows security prompts are never shown or touched. Screenshots are not stored by Remote Arc.",
-    "hooks.dashboard.useDeviceSettings.enableDesktopControl": "Enable desktop control"
+    "hooks.dashboard.useDeviceSettings.enableDesktopControl": "Enable desktop control",
+    "hooks.dashboard.useDeviceSettings.computerUseNeedsPro": "Computer use is included with Pro and Max",
+    "hooks.dashboard.useDeviceSettings.computerUseNeedsProDetail": "Upgrade to Pro, or start the Pro trial, to let AI see this computer's screen and use its mouse and keyboard.",
+    "dashboard.devices.deviceAccessPanel.desktopControlNeedsPro": "Computer use is included with Pro and Max.",
+    "dashboard.devices.deviceAccessPanel.startProTrial": "Start the Pro trial",
+    "dashboard.devices.deviceAccessPanel.seePro": "See Pro"
   }
 }

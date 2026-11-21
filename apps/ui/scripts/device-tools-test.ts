@@ -73,7 +73,12 @@ console.log("PASS: Browser Runner device switch");
     assert.equal(
       desktopControlEnabled(presetDeviceTools(preset, ["read_file"], ["read_file"])),
       false,
-      "a Mac or Linux computer never gets the switch",
+      "a computer that does not offer it never gets the switch",
+    );
+    assert.equal(
+      desktopControlEnabled(presetDeviceTools(preset, ["read_file"], offers, false)),
+      false,
+      "a plan without computer use never gets it from a preset",
     );
   }
 }

@@ -55,12 +55,13 @@ export const deviceAccessPreset = (
 /**
  * The allowed-tool list a preset saves. The separate browser_runner switch is
  * kept as it is; Developer and Full include desktop control where the
- * computer offers it, and Safe never does.
+ * computer offers it and the plan includes it, and Safe never does.
  */
 export function presetDeviceTools(
   preset: Exclude<DeviceAccessPreset, "custom">,
   allowed: readonly string[] | null | undefined,
   advertised: readonly string[],
+  includesComputerUse = true,
 ): string[] {
   const base =
     preset === "safe"
@@ -70,7 +71,8 @@ export function presetDeviceTools(
         : DEVICE_TOOL_CATALOG;
   const keepRunner = (allowed || []).filter(isBrowserRunnerTool);
   const offersDesktop = DESKTOP_TOOLS.every((tool) => advertised.includes(tool));
-  return [...base, ...keepRunner, ...(preset !== "safe" && offersDesktop ? DESKTOP_TOOLS : [])];
+  const desktop = preset !== "safe" && offersDesktop && includesComputerUse;
+  return [...base, ...keepRunner, ...(desktop ? DESKTOP_TOOLS : [])];
 }
 export const platformLabel = (platform?: string | null) => {
   if (platform === "win32") return "Windows";

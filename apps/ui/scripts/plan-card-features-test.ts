@@ -137,13 +137,21 @@ assert.equal(
 );
 assert.deepEqual(planCardFeatures(free, catalog, en)[0], { text: "10,000 Connect calls / month" });
 assert.equal(rows(free, catalog, en)[3], "2 GB data transfer / month");
-// Every plan includes computer use, Free too.
-for (const plan of [free, pro, max])
+// Computer use is a Pro and Max feature: their cards list it and Free's does not,
+// whether or not the catalog response carries the term, and a version can turn it off.
+const listsComputerUse = (plan: typeof free) =>
+  rows(plan, catalog, en).some((row) => row.startsWith("Computer use:")) &&
+  rows(plan, catalog, zh).some((row) => row.startsWith("Computer Use："));
+for (const plan of [pro, max]) {
+  assert.ok(listsComputerUse(plan), plan.label + " lists computer use");
   assert.ok(
-    rows(plan, catalog, en).some((row) => row.startsWith("Computer use:")) &&
-      rows(plan, catalog, zh).some((row) => row.startsWith("Computer Use：")),
-    plan.label + " lists computer use",
+    listsComputerUse({ ...plan, computerUse: undefined }),
+    plan.label + " from an older response",
   );
+  assert.ok(!listsComputerUse({ ...plan, computerUse: false }), plan.label + " with it turned off");
+}
+assert.ok(!listsComputerUse(free), "Free does not list computer use");
+assert.ok(!listsComputerUse({ ...free, computerUse: undefined }), "nor from an older response");
 
 // The hosted models line names the families the relay reports as live, so a newly
 // configured provider shows up without a UI change; with none it keeps the generic line.

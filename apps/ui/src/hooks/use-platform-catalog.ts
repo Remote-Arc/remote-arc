@@ -14,6 +14,9 @@ export type CatalogPlan = {
   /** Connect background commands running at once across the account's computers;
    * null is no limit. Absent in responses from before the term existed. */
   backgroundTasks?: number | null;
+  /** Whether the plan includes computer use. Absent in responses from before the
+   * term existed, when paid plans include it and Free does not. */
+  computerUse?: boolean;
   maxSeconds: number;
   deviceLimit: number | null;
   /** Published by every current catalog version; the plan details leave out a

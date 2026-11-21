@@ -1,0 +1,21 @@
+/* Computer use is a Pro and Max feature: the desktop control switch says so on Free. */
+.desktopPlanBadge {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.14);
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 700;
+}
+.desktopPlanNote {
+  grid-column: 1 / -1;
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.desktopPlanNote a {
+  color: var(--text);
+  font-weight: 600;
+}

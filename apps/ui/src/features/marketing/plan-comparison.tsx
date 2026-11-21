@@ -1,3 +1,4 @@
+import { includesComputerUse } from "./plan-card-features.js";
 import { CONNECT_FREE_OVERFLOW } from "@remotearc/protocol";
 import type { MessageKey } from "../../locales/locale-catalog.js";
 import { useI18n } from "../../hooks/use-i18n.js";
@@ -113,8 +114,8 @@ export function PlanComparison({
     },
     { key: "marketing.planComparison.notifications", cell: (p) => included(p, "notifications") },
     { key: "marketing.planComparison.fleetRun", cell: (p) => included(p, "fleetRun") },
-    // Every plan includes computer use; each computer's owner turns it on.
-    { key: "marketing.planComparison.computerUse", cell: () => true },
+    // Computer use is a Pro and Max feature; each computer's owner turns it on.
+    { key: "marketing.planComparison.computerUse", cell: (p) => includesComputerUse(p) },
     { key: "marketing.planComparison.safety", cell: () => true },
   ];
   return (

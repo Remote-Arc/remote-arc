@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { CONNECT_UNLIMITED_PLAN_ID } from "@remotearc/protocol";
+import { PRO_TRIAL_CHECKOUT_HREF, checkoutHref } from "../../billing/arc-billing-client.js";
 import { RunnerAttentionSetting } from "../../browser-runner/runner-view.js";
 import { deviceToolText } from "./device-tool-text.js";
 import { PowerCommandsSetting } from "./power-commands-setting.js";
@@ -21,6 +23,8 @@ export function DeviceAccessPanel({
   facts: DeviceFacts;
 }) {
   const [runnerSettingsOpen, setRunnerSettingsOpen] = useState(false);
+  // Computer use is a Pro and Max feature; until the status arrives the Relay decides.
+  const computerUseIncluded = m.status?.computerUseIncluded !== false;
   const {
     addPolicyPath,
     applyDevicePreset,
@@ -173,31 +177,50 @@ export function DeviceAccessPanel({
           )}
           {desktopVisible && (
             <label
-              className={"toolToggle" + (!desktopAdvertised ? " unavailable" : "")}
+              className={
+                "toolToggle" + (!desktopAdvertised || !computerUseIncluded ? " unavailable" : "")
+              }
               key="desktop_control"
+              data-plan-locked={!computerUseIncluded || undefined}
             >
               <input
                 type="checkbox"
                 checked={desktopEnabled}
-                disabled={!desktopAdvertised && !desktopEnabled}
+                // A plan without computer use can still turn an earlier switch off.
+                disabled={(!desktopAdvertised || !computerUseIncluded) && !desktopEnabled}
                 onChange={(event) =>
                   void updateDeviceTools(device, "desktop_act", event.target.checked)
                 }
               />
               <span className="skillLabel">
                 <strong>{desktopText.label}</strong>
+                {!computerUseIncluded && <span className="desktopPlanBadge">Pro</span>}
                 <HelpTip
                   label={tr("dashboard.devices.deviceAccessPanel.about", {
                     tool: desktopText.label,
                   })}
                   text={
-                    desktopAdvertised
-                      ? desktopText.help
-                      : tr("dashboard.devices.deviceAccessPanel.desktopControlUnavailable")
+                    !computerUseIncluded
+                      ? tr("dashboard.devices.deviceAccessPanel.desktopControlNeedsPro")
+                      : desktopAdvertised
+                        ? desktopText.help
+                        : tr("dashboard.devices.deviceAccessPanel.desktopControlUnavailable")
                   }
                 />
               </span>
             </label>
+          )}
+          {desktopVisible && !computerUseIncluded && (
+            <p className="desktopPlanNote">
+              {tr("dashboard.devices.deviceAccessPanel.desktopControlNeedsPro")}{" "}
+              <a href={PRO_TRIAL_CHECKOUT_HREF}>
+                {tr("dashboard.devices.deviceAccessPanel.startProTrial")}
+              </a>
+              {" · "}
+              <a href={checkoutHref(CONNECT_UNLIMITED_PLAN_ID)}>
+                {tr("dashboard.devices.deviceAccessPanel.seePro")}
+              </a>
+            </p>
           )}
           {device.platform === "browser" && (
             <p className="runnerSetting browserAuthenticationNotice">

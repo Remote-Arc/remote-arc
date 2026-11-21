@@ -1,7 +1,7 @@
 import { test, expect } from "./fixtures";
 
 // The computer use page: what it is, the notice the person sees, how to start,
-// and that every plan includes it, with the trial and plan links.
+// and that Pro and Max include it, with the trial and plan links.
 test("The computer use page explains the feature and links the trial and plans", async ({
   page,
 }, info) => {
@@ -22,6 +22,7 @@ test("The computer use page explains the feature and links the trial and plans",
   ).toHaveAttribute("href", /\/docs\/computer-use$/);
   const plans = page.locator(".featurePlanCard");
   await expect(plans).toHaveCount(3);
+  await expect(plans.nth(0)).toContainText(zh ? "不包含" : "Not included");
   await expect(
     plans.nth(1).getByRole("link", { name: zh ? /开始 Pro 试用/ : /Start the Pro trial/ }),
   ).toHaveAttribute("href", /\/checkout\?product=pro&trial=1$/);

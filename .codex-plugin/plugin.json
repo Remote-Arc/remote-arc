@@ -1,0 +1,26 @@
+{
+  "interface": {
+    "displayName": "Remote Arc",
+    "shortDescription": "Controlled remote access to your computers.",
+    "longDescription": "Remote Arc connects AI clients to Windows, macOS, and Linux computers you explicitly pair. Inspect files, run approved development commands, use explicitly shared browser tabs, and manage deterministic durable tasks under per-device permissions and local safety boundaries. Continuous autonomous AI reasoning after a chat ends is not currently a production capability.",
+    "websiteURL": "https://remotearc.app",
+    "brandColor": "#38BDF8",
+    "logo": "../assets/plugin-logo.svg",
+    "composerIcon": "../assets/plugin-logo.svg",
+    "defaultPrompt": "Help me set up Remote Arc. Check my paired computers first; if none are paired, give me the native download link without Node.js, then the general setup guide and device Dashboard, with command-line alternatives if needed.",
+    "developerName": "Remote Arc",
+    "category": "Other",
+    "capabilities": []
+  },
+  "name": "remote-arc",
+  "version": "0.4.8",
+  "description": "Controlled remote computer access for AI across computers you authorize.",
+  "author": {
+    "name": "Remote Arc"
+  },
+  "keywords": ["remote-computer", "mcp", "developer-tools"],
+  "homepage": "https://remotearc.app",
+  "repository": "https://github.com/Remote-Arc/remote-arc",
+  "license": "Proprietary",
+  "mcpServers": "../.mcp.json"
+}

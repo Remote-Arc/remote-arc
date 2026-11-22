@@ -1,0 +1,231 @@
+name: Publish remotelink
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "remotelink-v*"
+    branches:
+      - "release/remotelink-v*"
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: remotelink-release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    # Client workflow: runs in the public repository only, never in the private one.
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: apps/agent/go.mod
+          cache-dependency-path: apps/agent/go.sum
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Sync release docs from CHANGELOG
+        run: pnpm release:sync
+
+      - name: Verify release ref
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
+          if [[ "$GITHUB_REF" == refs/heads/release/remotelink-v* ]]; then
+            REF_VERSION="${GITHUB_REF_NAME#release/remotelink-v}"
+          else
+            REF_VERSION="${GITHUB_REF_NAME#remotelink-v}"
+          fi
+          test "$CLI_VERSION" = "$REF_VERSION" || {
+            echo "Release ref version $REF_VERSION does not match package version $CLI_VERSION"
+            exit 1
+          }
+
+      - name: Verify
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const pkg=JSON.parse(fs.readFileSync("packages/cli/package.json","utf8"));
+            const actual=pkg.repository.url.replace(/^git\+/,"").replace(/\.git$/,"");
+            const expected="https://github.com/"+process.env.GITHUB_REPOSITORY;
+            if(actual!==expected)throw new Error("Package repository must match the publishing workflow for npm provenance");
+          '
+          pnpm --filter remotelink typecheck
+
+      - name: Build CLI and native Go distribution
+        run: pnpm build:device --release
+
+      - name: Verify native distribution and Homebrew formula
+        run: |
+          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
+          if [[ "$CLI_VERSION" == *-* ]]; then
+            node scripts/verify-device-artifacts.mjs --candidate
+          else
+            node scripts/verify-device-artifacts.mjs
+          fi
+
+      - name: Publish and verify native Go release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
+          GO_TAG="remotelink-v$CLI_VERSION"
+          node scripts/sync-release-docs.mjs --notes "$CLI_VERSION" > /tmp/go-release-notes.md
+          RELEASE_ARGS=(--latest=false)
+          if [[ "$CLI_VERSION" == *-* ]]; then RELEASE_ARGS+=(--prerelease); fi
+          if ! gh release view "$GO_TAG" >/dev/null 2>&1; then
+            gh release create "$GO_TAG" \
+              work/go-device/remotelink-v"$CLI_VERSION"-* \
+              work/go-device/SHA256SUMS work/go-device/go-binaries.json work/go-device/remotelink.rb work/go-device/remotelink-go.rb \
+              --target "$GITHUB_SHA" --title "Remote Arc $CLI_VERSION" \
+              --notes-file /tmp/go-release-notes.md "${RELEASE_ARGS[@]}"
+          fi
+          VERIFY_DIR="$(mktemp -d)"
+          gh release download "$GO_TAG" --dir "$VERIFY_DIR" \
+            --pattern "remotelink-v$CLI_VERSION-*" \
+            --pattern SHA256SUMS --pattern go-binaries.json --pattern remotelink.rb --pattern remotelink-go.rb
+          cmp work/go-device/go-binaries.json "$VERIFY_DIR/go-binaries.json"
+          cmp work/go-device/SHA256SUMS "$VERIFY_DIR/SHA256SUMS"
+          if [[ "$CLI_VERSION" == *-* ]]; then
+            # Candidate formula is published as an artifact only, not installed into the stable tap.
+            cmp work/go-device/remotelink.rb "$VERIFY_DIR/remotelink.rb"
+            cmp work/go-device/remotelink-go.rb "$VERIFY_DIR/remotelink-go.rb"
+          else
+            cmp Formula/remotelink.rb "$VERIFY_DIR/remotelink.rb"
+            cmp Formula/remotelink-go.rb "$VERIFY_DIR/remotelink-go.rb"
+          fi
+          (cd "$VERIFY_DIR" && sha256sum --check SHA256SUMS)
+
+      - name: Verify publish artifact
+        run: |
+          test -f packages/cli/dist/index.js
+          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
+          grep -q "$CLI_VERSION" packages/cli/dist/index.js
+          grep -q 'releases/download/remotelink-v' packages/cli/dist/index.js
+          ! grep -qi 'desktop.commander\|wonderwhy' packages/cli/dist/index.js
+
+      - name: Smoke-test packed CLI
+        run: |
+          set -euo pipefail
+          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
+          PACK_JSON="$(cd packages/cli && npm pack --json --ignore-scripts)"
+          TARBALL="$(PACK_JSON="$PACK_JSON" node -e 'const p=JSON.parse(process.env.PACK_JSON); process.stdout.write(p[0].filename)')"
+          TMP_DIR="$(mktemp -d)"
+          cd "$TMP_DIR"
+          npm init -y >/dev/null 2>&1
+          npm install "$GITHUB_WORKSPACE/packages/cli/$TARBALL" --ignore-scripts >/dev/null
+          ACTUAL="$(./node_modules/.bin/remotelink --version)"
+          test "$ACTUAL" = "$CLI_VERSION" || {
+            echo "Packed CLI reported $ACTUAL, expected $CLI_VERSION"
+            exit 1
+          }
+          # This must download and execute the public, checksum-pinned Go asset.
+          GO_ACTUAL="$(REMOTEARC_HOME="$TMP_DIR/go-home" ./node_modules/.bin/remotelink --version)"
+          test "$GO_ACTUAL" = "$CLI_VERSION" || {
+            echo "Packed Go CLI reported $GO_ACTUAL, expected $CLI_VERSION"
+            exit 1
+          }
+
+          # The retired TypeScript runtime must fail instead of falling back.
+          if ./node_modules/.bin/remotelink --ts --version; then
+            echo "Packed CLI accepted the retired --ts flag"
+            exit 1
+          fi
+
+      - name: Check whether version is already published
+        id: npm_version
+        run: |
+          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
+          if npm view "remotelink@$CLI_VERSION" version >/dev/null 2>&1; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "remotelink@$CLI_VERSION already exists; skipping npm publish."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish
+        if: steps.npm_version.outputs.publish == 'true'
+        working-directory: packages/cli
+        run: |
+          CLI_VERSION="$(node -p "require('./package.json').version")"
+          if [[ "$CLI_VERSION" == *-* ]]; then
+            npm publish --access public --provenance --tag rc
+          else
+            npm publish --access public --provenance
+          fi
+
+      - name: Create GitHub Release
+        # A manual (workflow_dispatch) run only updates the release when it
+        # actually published this version, so re-running an old commit can
+        # never move the Latest marker backwards.
+        if: github.event_name != 'workflow_dispatch' || steps.npm_version.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            TAG_NAME="remotelink-v$(node -p "require('./packages/cli/package.json').version")"
+          elif [[ "$GITHUB_REF" == refs/heads/release/remotelink-v* ]]; then
+            TAG_NAME="${GITHUB_REF_NAME#release/}"
+          else
+            TAG_NAME="$GITHUB_REF_NAME"
+          fi
+          CLI_VERSION="${TAG_NAME#remotelink-v}"
+          node scripts/sync-release-docs.mjs --notes "$CLI_VERSION" > /tmp/release-notes.md
+          RELEASE_ARGS=(--latest)
+          if [[ "$CLI_VERSION" == *-* ]]; then RELEASE_ARGS=(--prerelease --latest=false); fi
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release edit "$TAG_NAME" \
+              --title "remotelink $CLI_VERSION" \
+              --notes-file /tmp/release-notes.md "${RELEASE_ARGS[@]}"
+          else
+            gh release create "$TAG_NAME" \
+              --target "$GITHUB_SHA" \
+              --title "remotelink $CLI_VERSION" \
+              --notes-file /tmp/release-notes.md "${RELEASE_ARGS[@]}"
+          fi
+
+      - name: Warm the Remote Arc download mirror
+        # The mirror copies each file from this GitHub release once, after
+        # checking it against go-binaries.json, so later installs do not depend
+        # on GitHub downloads. It also fills itself on first download, so a
+        # failure here is a warning and never undoes a published release.
+        run: |
+          CLI_VERSION="$(node -p "require('./packages/cli/package.json').version")"
+          BASE="https://remotearc.app/api/downloads/release"
+          warm() {
+            curl --proto '=https' --tlsv1.2 -fsS --retry 3 --retry-all-errors --max-time 120 -o /dev/null "$BASE/$1" ||
+              echo "::warning::The download mirror could not copy $1; it will retry on first download."
+          }
+          for file in go-binaries.json SHA256SUMS $(cd work/go-device && ls remotelink-v"$CLI_VERSION"-*); do
+            warm "remotelink-v$CLI_VERSION/$file"
+          done
+          if [[ "$CLI_VERSION" != *-* ]]; then warm latest/go-binaries.json; fi
+
+  public-install:
+    if: ${{ !contains(github.ref_name, '-rc.') && !contains(github.ref_name, '-beta.') }}
+    needs: publish
+    uses: ./.github/workflows/verify-public-install.yml
+    permissions:
+      contents: read

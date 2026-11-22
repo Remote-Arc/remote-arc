@@ -1,0 +1,343 @@
+name: CI
+
+# Public client CI. This repository receives exported commits from the private
+# main repository: `main` (or `master`) is the published client, and `sync/pr-*`
+# branches mirror the client part of private pull requests before they merge.
+on:
+  push:
+    branches: [main, master, "sync/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/heads/sync/') }}
+
+jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - name: Report this failure to the private pull request now
+        if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
+        uses: ./.github/actions/report-public-failure
+        with:
+          job: code-quality
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          private-repository: ${{ vars.PRIVATE_REPOSITORY }}
+
+  media-intelligence:
+    runs-on: ubuntu-latest
+    # Allow a cold cache download and the bounded real-media integration to finish.
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Caption parsing, budgets, failures and evidence validation
+        run: node --test scripts/media-intelligence-test.mjs
+      - name: Install real FFmpeg and FFprobe for the integration test
+        uses: ./.github/actions/apt-install
+        with:
+          packages: ffmpeg
+      - run: ffmpeg -version && ffprobe -version
+      - name: Real yt-dlp, HTTP captions, bounded FFmpeg and cited report
+        run: node scripts/media-intelligence-integration.mjs --workspace "$RUNNER_TEMP/ra-media-intelligence"
+      - name: Report this failure to the private pull request now
+        if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
+        uses: ./.github/actions/report-public-failure
+        with:
+          job: media-intelligence
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          private-repository: ${{ vars.PRIVATE_REPOSITORY }}
+
+  browser-extension:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Browser extension in a real Chromium
+        run: pnpm test:browser && pnpm test:browser:e2e
+      - name: Report this failure to the private pull request now
+        if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
+        uses: ./.github/actions/report-public-failure
+        with:
+          job: browser-extension
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          private-repository: ${{ vars.PRIVATE_REPOSITORY }}
+
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.17.1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: apps/agent/go.mod
+          cache-dependency-path: |
+            apps/agent/go.sum
+            packages/execution-core/go.sum
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run ci
+      - run: pnpm test:recovery
+      - name: Report this failure to the private pull request now
+        if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
+        uses: ./.github/actions/report-public-failure
+        with:
+          job: verify
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          private-repository: ${{ vars.PRIVATE_REPOSITORY }}
+
+  go-coverage:
+    # Both full Go modules enforce 90%, including command entrypoints.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: apps/agent/go.mod
+          cache-dependency-path: |
+            apps/agent/go.sum
+            packages/execution-core/go.sum
+      - name: Install real H264 encoder for video transport tests, and an X11 session for desktop control
+        uses: ./.github/actions/apt-install
+        with:
+          packages: ffmpeg xvfb xauth openbox
+      - run: ffmpeg -version
+      # Desktop control's Linux code needs a display and a window manager to be
+      # exercised, so the whole module is measured inside an X11 session.
+      - name: Check Go coverage target and protected packages
+        run: |
+          xvfb-run -a --server-args='-screen 0 1920x1080x24' bash -c '
+            openbox >"$RUNNER_TEMP/remotearc-window-manager.log" 2>&1 &
+            node scripts/go-coverage.mjs --target
+          '
+      - name: Check synthetic takeover source fixtures
+        run: python3 scripts/takeover-session-probe-test.py
+      - name: Report this failure to the private pull request now
+        if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
+        uses: ./.github/actions/report-public-failure
+        with:
+          job: go-coverage
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          private-repository: ${{ vars.PRIVATE_REPOSITORY }}
+
+  go-distribution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: apps/agent/go.mod
+          cache-dependency-path: |
+            apps/agent/go.sum
+            packages/execution-core/go.sum
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:device --release
+      # Every CI rebuild is unpublished, even while package.json retains the
+      # stable version. Verify its checksums independently of released binaries.
+      # The publish workflow still requires exact committed/generated equality.
+      - name: Verify source artifacts and preserve published Homebrew formulas
+        run: |
+          node scripts/verify-device-artifacts.mjs --candidate
+          node scripts/verify-published-formulas-test.mjs
+          node scripts/verify-published-formulas.mjs
+      - uses: actions/upload-artifact@v7
+        with:
+          name: go-device-binaries
+          path: work/go-device/*
+          retention-days: 3
+      - name: Report this failure to the private pull request now
+        if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
+        uses: ./.github/actions/report-public-failure
+        with:
+          job: go-distribution
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          private-repository: ${{ vars.PRIVATE_REPOSITORY }}
+
+  go-device:
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.17.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: apps/agent/go.mod
+          cache-dependency-path: |
+            apps/agent/go.sum
+            packages/execution-core/go.sum
+      - run: pnpm install --frozen-lockfile
+      # Hosted images can carry different Chrome majors or update Chrome during
+      # a test. Use one immutable stable browser for native window acceptance.
+      - name: Install pinned Chrome for native macOS acceptance
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          chrome_version="156.0.8078.47"
+          chrome_platform="mac-arm64"
+          if [[ "$(uname -m)" == "x86_64" ]]; then
+            chrome_platform="mac-x64"
+          fi
+          chrome_root="$RUNNER_TEMP/remotearc-test-chrome"
+          chrome_zip="$RUNNER_TEMP/remotearc-test-chrome.zip"
+          curl --fail --location --retry 3 --output "$chrome_zip" "https://storage.googleapis.com/chrome-for-testing-public/$chrome_version/$chrome_platform/chrome-$chrome_platform.zip"
+          ditto -x -k "$chrome_zip" "$chrome_root"
+          chrome_binary="$chrome_root/chrome-$chrome_platform/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+          "$chrome_binary" --version
+          printf 'REMOTEARC_BROWSER_PATH=%s\n' "$chrome_binary" >> "$GITHUB_ENV"
+      - name: Minimized macOS live-view regression
+        if: runner.os == 'macOS'
+        run: go -C apps/agent test -race ./internal/browserrunner -run 'TestStaticLiveView|TestViewJPEG|TestLiveViewSlow|TestE2EWaitConditionsAndLiveView' -count=3
+      - name: User handoff in a visible desktop browser
+        if: runner.os != 'Linux'
+        env:
+          REMOTEARC_E2E_REQUIRE_WINDOW: "1"
+        run: go -C apps/agent test -race ./internal/browserrunner -run 'TestStartup|TestE2E(Startup|CompactPassword|RepeatedShow|PageCannotPark|Handoff|ResumedUserHandoff|WindowsCoveredHandoff|HiddenWindowShowsAndHidesInPlace|DelayedChallengeHandoffAndWait)' -count=1 -v
+      - name: Install the Linux desktop window manager
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/apt-install
+        with:
+          packages: xvfb xauth openbox
+      - name: User handoff and desktop control in a Linux X11 session
+        if: runner.os == 'Linux'
+        env:
+          REMOTEARC_E2E_REQUIRE_WINDOW: "1"
+        run: |
+          xvfb-run -a --server-args='-screen 0 1920x1080x24' bash -c '
+            openbox >"$RUNNER_TEMP/remotearc-window-manager.log" 2>&1 &
+            go -C apps/agent test -race ./internal/browserrunner -run "TestStartup|TestE2E(Startup|CompactPassword|RepeatedShow|PageCannotPark|Handoff|ResumedUserHandoff|WindowsCoveredHandoff|HiddenWindowShowsAndHidesInPlace|DelayedChallengeHandoffAndWait)" -count=1 -v
+            go -C apps/agent test -race ./internal/desktop ./internal/agent -run "TestX11|TestDesktopControl" -count=1 -v
+          '
+      - run: pnpm test:device
+      # Desktop control's real-window test takes the foreground and sends input,
+      # so it runs alone, after the parallel suite, never beside the browser
+      # runner's window tests.
+      - name: Desktop control against a real window
+        if: runner.os == 'Windows'
+        env:
+          REMOTEARC_DESKTOP_WINDOW_TEST: "1"
+        run: go -C apps/agent test ./internal/desktop -run TestWindowsDesktopAgainstARealWindow -count=1 -v
+      - run: node scripts/go-device-soak.mjs --duration-seconds 60 --report work/benchmarks/soak.json
+      - run: node benchmarks/agent.mjs --samples 20 --rounds 1 --profiles atomic --report work/benchmarks/agent-smoke.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: agent-validation-${{ matrix.os }}
+          path: work/benchmarks/*.json
+          retention-days: 7
+      - name: Report this failure to the private pull request now
+        if: failure() && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != ''
+        uses: ./.github/actions/report-public-failure
+        with:
+          job: go-device (${{ matrix.os }})
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          private-repository: ${{ vars.PRIVATE_REPOSITORY }}
+
+  # A sync/pr-<number> branch mirrors a private pull request. Report this run's
+  # result to the private commit it came from (the Source-Commit line) as the
+  # `public-ci` status, so the private pull request shows the client tests.
+  # Needs the export App: variables EXPORT_APP_ID and PRIVATE_REPOSITORY, secret
+  # EXPORT_APP_PRIVATE_KEY. Without them, or for a cancelled run, it reports nothing.
+  report:
+    needs:
+      [
+        code-quality,
+        media-intelligence,
+        browser-extension,
+        verify,
+        go-coverage,
+        go-distribution,
+        go-device,
+      ]
+    if: ${{ !cancelled() && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/report-public-status.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ vars.PRIVATE_REPOSITORY }}
+      - env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          MESSAGE: ${{ github.event.head_commit.message }}
+          # Decides the result and names the failed jobs, so the final status keeps
+          # saying what broke after a job already reported its own failure.
+          NEEDS: ${{ toJSON(needs) }}
+          PRIVATE_REPOSITORY: ${{ vars.PRIVATE_REPOSITORY }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: >-
+          node scripts/report-public-status.mjs --context public-ci
+          --passed "Client tests passed in the public repository"
+          --failed "Client tests failed in the public repository"

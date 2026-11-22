@@ -1,0 +1,2 @@
+{"type":"user","sessionId":"synthetic-claude-basic","cwd":"__WORKSPACE__","uuid":"synthetic-user-1","parentUuid":null,"message":{"role":"user","content":"Synthetic task: inspect a sample counter."}}
+{"type":"assistant","sessionId":"synthetic-claude-basic","cwd":"__WORKSPACE__","uuid":"synthetic-assistant-1","parentUuid":"synthetic-user-1","message":{"role":"assistant","content":[{"type":"text","text":"A synthetic observation is available; task completion remains unverified."}]}}

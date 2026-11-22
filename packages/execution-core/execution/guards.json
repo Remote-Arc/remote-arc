@@ -1,0 +1,27 @@
+[
+  {
+    "pattern": "(?i)(?:^|(?:&&|\\|\\||[;&|])\\s*|(?:-Command|-c)\\s+[\"']?\\s*)(?:sudo\\s+)?(?:mkfs(?:\\.\\w+)?|wipefs|fdisk|parted)\\b",
+    "reason": "disk or filesystem destructive operation"
+  },
+  {
+    "pattern": "(?i)\\bdd\\b[^\\n]*\\bof=/dev/(?:sd|nvme|vd|xvd|mmcblk)",
+    "reason": "raw disk overwrite"
+  },
+  {
+    "pattern": "(?i)\\bdiskutil\\s+erase(?:disk|volume)\\b",
+    "reason": "disk erase"
+  },
+  {
+    "pattern": "(?i)(?:^|(?:&&|\\|\\||[;&|])\\s*|(?:-Command|-c)\\s+[\"']?\\s*)(?:format(?:\\.com)?\\s+[a-z]:|diskpart\\b|clear-disk\\b|initialize-disk\\b)",
+    "reason": "Windows disk destructive operation"
+  },
+  {
+    "pattern": "(?i)(?:^|(?:&&|\\|\\||[;&|])\\s*|(?:-Command|-c)\\s+[\"']?\\s*)(?:sudo\\s+)?(?:shutdown(?:\\.exe)?|reboot|halt|poweroff|(?:systemctl|loginctl)\\s+(?:-\\S+\\s+)*(?:poweroff|reboot|halt|kexec)|(?:tel)?init\\s+[06]|stop-computer|restart-computer)\\b",
+    "reason": "system shutdown or reboot",
+    "liftedBy": "allowPowerCommands"
+  },
+  {
+    "pattern": ":\\(\\)\\s*\\{\\s*:\\|:&\\s*\\};\\s*:",
+    "reason": "fork bomb"
+  }
+]

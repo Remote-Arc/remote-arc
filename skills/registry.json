@@ -1,0 +1,351 @@
+{
+  "schemaVersion": 1,
+  "defaultMode": "guidance-only",
+  "provider": "Remote Arc curated original workflows, external executors optional",
+  "skills": [
+    {
+      "id": "browser-operator",
+      "name": "Browser Operator",
+      "priority": "P0",
+      "category": "browser",
+      "description": "Operate an authorized browser using DOM snapshots and repeatable actions.",
+      "engine": "agent-browser + Microsoft Playwright MCP",
+      "requires": [
+        "agent-browser"
+      ],
+      "scopes": [
+        "browser:read",
+        "browser:interact"
+      ],
+      "upstream": "https://github.com/vercel-labs/agent-browser",
+      "license": "Apache-2.0",
+      "optIn": false
+    },
+    {
+      "id": "autonomous-browser",
+      "name": "Autonomous Browser",
+      "priority": "P0",
+      "category": "browser",
+      "description": "Plan multi-step browser work using browser-use with an approved model budget.",
+      "engine": "browser-use Python library",
+      "requires": [
+        "browser-use"
+      ],
+      "scopes": [
+        "browser:read",
+        "browser:interact"
+      ],
+      "upstream": "https://github.com/browser-use/browser-use",
+      "license": "MIT",
+      "optIn": true
+    },
+    {
+      "id": "desktop-operator",
+      "name": "Desktop Operator",
+      "priority": "P0",
+      "category": "desktop",
+      "description": "Move pointer, drag, type and click in a permitted local desktop session.",
+      "engine": "PyAutoGUI / native OS accessibility",
+      "requires": [
+        "python3"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/asweigart/pyautogui",
+      "license": "BSD-3-Clause",
+      "optIn": true
+    },
+    {
+      "id": "video-creator",
+      "name": "Video Creator",
+      "priority": "P0",
+      "category": "media",
+      "description": "Choose Remotion, HyperFrames or OpenFilm for finished local videos; prepare ordinary dependencies automatically and ask before large Qwen TTS/ACE-Step downloads.",
+      "engine": "Remotion 4.0.538 / HyperFrames 0.8.193 / OpenFilm 0.2.5 + FFmpeg",
+      "requires": [
+        "node",
+        "ffmpeg",
+        "git"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/openfilm/openfilm",
+      "license": "MIT; generated media follows each provider's terms",
+      "optIn": false
+    },
+    {
+      "id": "image-studio",
+      "name": "Image Studio",
+      "priority": "P1",
+      "category": "media",
+      "description": "Draw posters, illustrations and seeded generative art with local code; optionally synthesize, retouch and upscale through a user-hosted ComfyUI backend.",
+      "engine": "Canvas/Python + p5.js; optional ComfyUI",
+      "requires": [
+        "node or python3"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/Comfy-Org/ComfyUI",
+      "license": "GPL-3.0; weights separate",
+      "optIn": true
+    },
+    {
+      "id": "ui-inspector",
+      "name": "UI Inspector",
+      "priority": "P1",
+      "category": "desktop",
+      "description": "Understand screenshot controls with DOM first and optional OmniParser vision.",
+      "engine": "OmniParser / screenshot tooling",
+      "requires": [
+        "python3"
+      ],
+      "scopes": [
+        "computer:read"
+      ],
+      "upstream": "https://github.com/microsoft/OmniParser",
+      "license": "Review repository and model terms",
+      "optIn": true
+    },
+    {
+      "id": "transcribe-subtitles",
+      "name": "Transcribe & Subtitles",
+      "priority": "P1",
+      "category": "media",
+      "description": "Transcribe audio/video into finished SRT/VTT subtitles locally; automatically install whisper.cpp, FFmpeg and the base multilingual model when needed.",
+      "engine": "whisper.cpp + FFmpeg",
+      "requires": [
+        "ffmpeg"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/ggml-org/whisper.cpp",
+      "license": "MIT; model weights separate",
+      "optIn": false
+    },
+    {
+      "id": "research-reports",
+      "name": "Research & Reports",
+      "priority": "P0",
+      "category": "productivity",
+      "description": "Gather cited evidence from authorized sources and create reproducible reports.",
+      "engine": "Browser Operator + existing file tools",
+      "requires": [],
+      "scopes": [
+        "browser:read",
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/microsoft/playwright-mcp",
+      "license": "RA authored skill instructions",
+      "optIn": false
+    },
+    {
+      "id": "safe-cleanup",
+      "name": "Safe Cleanup",
+      "priority": "P0",
+      "category": "productivity",
+      "description": "Safely reclaim disk space: preview a hash-approved deletion plan, then permanently delete only the unchanged files the user approved, never following links or touching protected folders.",
+      "engine": "Packaged Node helper (scripts/safe-cleanup.mjs) via Remote Arc start_process",
+      "requires": [],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://remotearc.app",
+      "license": "RA authored skill instructions",
+      "optIn": false
+    },
+    {
+      "id": "agent-playbook",
+      "name": "Agent Playbook",
+      "priority": "P0",
+      "category": "development",
+      "description": "Follow step-by-step engineering procedures when writing, fixing, refactoring, testing or reviewing code: small files, grouped folders, interface text in message catalogs, shared permission hooks, verified results.",
+      "engine": "Guidance only, using existing file and process tools",
+      "requires": [],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/yaohuangguan/agent-playbook",
+      "license": "MIT",
+      "optIn": false
+    },
+    {
+      "id": "authentic-thinking-expression",
+      "name": "Authentic Thinking & Expression",
+      "priority": "P1",
+      "category": "cognition",
+      "description": "Preserve genuine personal voice and independently grounded judgment in emails, cover letters, academic outreach and other personal writing; reject generic AI templates and invented motivation.",
+      "engine": "Guidance only (no runtime dependencies)",
+      "requires": [],
+      "scopes": [],
+      "upstream": "https://remotearc.app",
+      "license": "Remote Arc-authored guidance",
+      "optIn": false
+    },
+    {
+      "id": "scheduled-routines",
+      "name": "Scheduled Routines",
+      "priority": "P0",
+      "category": "productivity",
+      "description": "Create repeatable, bounded, resumable tasks using the existing Remote Arc scheduler.",
+      "engine": "Remote Arc automation runtime",
+      "requires": [],
+      "scopes": [
+        "automation:read",
+        "automation:write"
+      ],
+      "upstream": "https://remotearc.app",
+      "license": "RA authored skill instructions",
+      "optIn": false
+    },
+    {
+      "id": "remotion-video",
+      "name": "Remotion Video",
+      "priority": "P0",
+      "category": "media",
+      "description": "Core local video skill: React scenes, Three.js cameras, particles, data animation and beat-aligned editing with Remotion.",
+      "engine": "Remotion 4.0.538 / React / Three.js + FFmpeg",
+      "requires": [
+        "node",
+        "npm",
+        "ffmpeg"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/remotion-dev/remotion",
+      "license": "RA-authored workflow; Remotion software license applies",
+      "optIn": false
+    },
+    {
+      "id": "hyperframes-video",
+      "name": "HyperFrames Video",
+      "priority": "P0",
+      "category": "media",
+      "description": "Local HTML/SVG/Canvas and GSAP videos for interface demos, motion typography, diagrams and layered explainers.",
+      "engine": "HyperFrames 0.8.193 / GSAP + FFmpeg",
+      "requires": [
+        "node",
+        "npm",
+        "ffmpeg"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/heygen-com/hyperframes",
+      "license": "RA-authored workflow; upstream engine terms apply",
+      "optIn": false
+    },
+    {
+      "id": "openfilm-video",
+      "name": "OpenFilm Video",
+      "priority": "P0",
+      "category": "media",
+      "description": "Local shot-based video assembly with original code graphics, owned clips, transitions and timed audio.",
+      "engine": "OpenFilm 0.2.5 + FFmpeg",
+      "requires": [
+        "node",
+        "npm",
+        "ffmpeg"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/openfilm/openfilm",
+      "license": "MIT; RA-authored workflow",
+      "optIn": false
+    },
+    {
+      "id": "map-creator",
+      "name": "Map Creator",
+      "priority": "P1",
+      "category": "media",
+      "description": "Create real SVG maps and animated geographic scenes locally with D3 and attributed Natural Earth geometry.",
+      "engine": "D3 / Natural Earth + local video engines",
+      "requires": [
+        "node",
+        "npm"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://www.naturalearthdata.com/",
+      "license": "RA-authored workflow; Natural Earth public-domain data",
+      "optIn": false
+    },
+    {
+      "id": "manim-video",
+      "name": "Manim Video",
+      "priority": "P1",
+      "category": "media",
+      "description": "Local mathematical, geometric, algorithm and data-explanation animation with precise visual derivations and editable Python scenes.",
+      "engine": "Manim 0.22.0 / Cairo / Python + FFmpeg",
+      "requires": [
+        "python3",
+        "node",
+        "ffmpeg"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/ManimCommunity/manim",
+      "license": "RA-authored workflow; Manim MIT license",
+      "optIn": false
+    },
+    {
+      "id": "blender-mcp",
+      "name": "Blender MCP",
+      "priority": "P1",
+      "category": "media",
+      "description": "Real local MCP connection to Blender for 3D modeling, materials, lighting, product visualization and camera animation; editable blend projects and rendered assets.",
+      "engine": "Blender 4.5.15 LTS / mcp-for-blender 2.2.4 / MCP 1.26.0",
+      "requires": [
+        "python3",
+        "node",
+        "desktop GUI",
+        "Blender"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/ahujasid/mcp-for-blender",
+      "license": "RA-authored workflow; MCP integration MIT; Blender GPL",
+      "optIn": false
+    },
+    {
+      "id": "media-intelligence",
+      "name": "Media Intelligence",
+      "priority": "P0",
+      "category": "media",
+      "description": "Analyze public videos with yt-dlp: captions first, bounded audio/video and sampled frames only when needed, with original timestamps and source-backed reports.",
+      "engine": "yt-dlp 2026.10.26 + FFmpeg; optional local Whisper",
+      "requires": [
+        "node",
+        "python3 >=3.11"
+      ],
+      "scopes": [
+        "computer:read",
+        "computer:write"
+      ],
+      "upstream": "https://github.com/yt-dlp/yt-dlp",
+      "license": "RA-authored workflow; yt-dlp Unlicense and bundled dependency terms apply",
+      "optIn": false
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+name: Real client MCP qualification
+
+on:
+  push:
+    paths:
+      - ".github/workflows/client-mcp-qualification.yml"
+      - "apps/agent/internal/onboarding/**"
+      - "apps/agent/internal/codexsetup/**"
+      - "apps/agent/internal/claudesetup/**"
+      - "scripts/automatic-client-mcp-*.py"
+  pull_request:
+    paths:
+      - ".github/workflows/client-mcp-qualification.yml"
+      - "apps/agent/internal/onboarding/**"
+      - "apps/agent/internal/codexsetup/**"
+      - "apps/agent/internal/claudesetup/**"
+      - "scripts/automatic-client-mcp-*.py"
+  workflow_dispatch:
+    inputs:
+      public_version:
+        description: Published remotelink candidate to qualify
+        type: string
+        # 0.7.1 or later: earlier npm launchers download from the pre-split
+        # repository address, which no longer serves releases.
+        default: "0.7.1"
+
+permissions:
+  contents: read
+
+jobs:
+  real-clients:
+    # Client workflow: runs in the public repository only, never in the private one.
+    if: ${{ !github.event.repository.private }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: apps/agent/go.mod
+          cache-dependency-path: |
+            apps/agent/go.sum
+            packages/execution-core/go.sum
+      - name: Install pinned official clients without lifecycle scripts
+        run: npm install --prefix work/client-npm --ignore-scripts --no-audit --no-fund --package-lock=false @openai/codex@0.163.0-alpha.11 @anthropic-ai/claude-code@2.1.118
+      - name: Install the real Windows global npm layout, including nested optional dependencies
+        if: runner.os == 'Windows'
+        run: npm install --global --prefix work/client-global --ignore-scripts --no-audit --no-fund @openai/codex@0.163.0-alpha.11 @anthropic-ai/claude-code@2.1.118
+      - name: Install the public Remote Link candidate
+        shell: bash
+        env:
+          REMOTEARC_QUALIFICATION_VERSION: ${{ inputs.public_version || '0.7.1' }}
+        run: npm install --prefix work/public-cli --ignore-scripts --no-audit --no-fund --package-lock=false "remotelink@$REMOTEARC_QUALIFICATION_VERSION"
+      - name: Build source under qualification
+        run: go -C apps/agent build -ldflags "-X main.version=0.6.2-rc.4-dev.npm-254" -o ../../work/remotelink-source${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/remotelink
+      - name: Verify source discovery, published native and published npm entry points
+        run: python scripts/automatic-client-mcp-qualification.py --client-prefix work/client-npm --source-binary work/remotelink-source${{ runner.os == 'Windows' && '.exe' || '' }} --npm-prefix work/public-cli --report-dir work/client-mcp ${{ runner.os == 'Windows' && '--global-client-prefix work/client-global' || '' }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: real-client-mcp-${{ matrix.os }}
+          path: work/client-mcp/*.json
+          retention-days: 14
+
+  # A sync/pr-<number> branch mirrors a private pull request. ci.yml's `public-ci`
+  # does not wait for this workflow, so report its result to the private commit
+  # as its own `public-client-mcp` status. It is not a required check: path
+  # filters mean most pull requests never run it. Needs the export App, like
+  # ci.yml's report job; a cancelled run reports nothing.
+  report:
+    needs: real-clients
+    if: ${{ !cancelled() && !github.event.repository.private && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/sync/') && vars.EXPORT_APP_ID != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/report-public-status.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.EXPORT_APP_ID }}
+          private-key: ${{ secrets.EXPORT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ vars.PRIVATE_REPOSITORY }}
+      - env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          MESSAGE: ${{ github.event.head_commit.message }}
+          PRIVATE_REPOSITORY: ${{ vars.PRIVATE_REPOSITORY }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: >-
+          node scripts/report-public-status.mjs --context public-client-mcp
+          --passed "Real MCP clients qualified in the public repository"
+          --failed "Real MCP client qualification failed in the public repository"

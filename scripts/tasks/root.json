@@ -1,0 +1,67 @@
+{
+  "cwd": ".",
+  "tasks": {
+    "test": [
+      ["pnpm", "build:device"],
+      ["go", "-C", "packages/execution-core", "test", "./..."],
+      ["pnpm", "--filter", "remotelink", "exec", "tsx", "scripts/go-launcher-test.ts"],
+      ["pnpm", "--filter", "remotelink", "exec", "tsx", "scripts/attached-terminal-test.ts"],
+      ["pnpm", "--filter", "@remotearc/mcp", "test:smoke"],
+      ["pnpm", "test:browser"]
+    ],
+    "test:recovery": [
+      ["go", "-C", "apps/agent", "test", "./internal/service", "./internal/lease"],
+      ["pnpm", "build:device"],
+      ["pnpm", "--filter", "remotelink", "exec", "tsx", "scripts/attached-terminal-test.ts"]
+    ],
+    "ci": [
+      ["pnpm", "release:check"],
+      ["pnpm", "test:wiring"],
+      ["pnpm", "test:installer"],
+      ["pnpm", "test:skills"],
+      ["pnpm", "typecheck"],
+      ["pnpm", "test:agent-log"],
+      ["pnpm", "test"],
+      ["go", "-C", "apps/agent", "test", "./internal/workspace"]
+    ],
+    "test:wiring": [
+      ["node", "scripts/test-wiring-check-test.mjs"],
+      ["node", "scripts/test-wiring-check.mjs"],
+      ["node", "--test", "scripts/task-runner-test.mjs"]
+    ],
+    "build:device": [
+      ["pnpm", "build:cli"],
+      ["node", "scripts/build-device.mjs"]
+    ],
+    "test:device": [
+      ["pnpm", "build:device"],
+      ["node", "scripts/test-device.mjs"]
+    ],
+    "benchmark:core": [
+      ["node", "benchmarks/build.mjs"],
+      ["node", "benchmarks/run.mjs"]
+    ],
+    "benchmark:agent": [
+      ["pnpm", "build:device"],
+      ["node", "benchmarks/agent.mjs"]
+    ],
+    "check": [
+      ["pnpm", "format:check"],
+      ["pnpm", "lint"],
+      ["pnpm", "typecheck"]
+    ],
+    "test:skills": [
+      ["node", "scripts/generate-builtin-skills.mjs", "--check"],
+      ["node", "packages/skills/scripts/generate-community.mjs", "--check"],
+      [
+        "node",
+        "--test",
+        "scripts/local-media-test.mjs",
+        "scripts/local-creative-test.mjs",
+        "scripts/media-intelligence-test.mjs",
+        "scripts/safe-cleanup-test.mjs"
+      ],
+      ["node", "scripts/skill-artifacts-qa.mjs"]
+    ]
+  }
+}

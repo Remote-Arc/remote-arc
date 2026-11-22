@@ -1,0 +1,612 @@
+package cli
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/agent"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/control"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/journal"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/lease"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/localmcp"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/onboarding"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/service"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/takeover"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/vault"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core/config"
+	"github.com/yaohuangguan/remote-arc/packages/execution-core/execution"
+)
+
+// RetiredTSRuntime is the only answer to --ts. There is no fallback runtime.
+const RetiredTSRuntime = "The TypeScript runtime was retired. Remove --ts to run the Go Agent."
+
+const Help = `Remote Arc Go device agent
+Usage: remotelink [options]
+  setup             Inspect/install/check/repair/remove local coding-agent tools
+  takeover          Discover local Codex/Claude sessions for a project directory
+  vault             Save sign-ins Browser Runner fills on their own sites (remotelink vault --help)
+  --go              Select the complete Go runtime (also accepted natively)
+  --safe            Hard local read-only cap
+  --developer       Legacy alias for dashboard-managed capabilities
+  --foreground      Stay attached without installing recovery
+  --background      Enable native process recovery and stay attached
+  --no-background   Disable future recovery; preserve current execution
+  --reset           Remove pairing after gracefully stopping this Go agent
+  --status          Print the active Go agent and recovery status
+  --stop            Disable recovery and gracefully stop this Go agent
+  --force-update    Replace the running Go agent even if it is busy or not older
+  --logs            Print the last 100 local operation log entries
+  --mcp             Serve local MCP over stdio (default mode: safe)
+  --mcp-workspace=<absolute-dir>  Restrict MCP to selected workspace file reads
+  --origin=<url>    Relay origin used for a new pairing
+  --version, -v     Print version
+  --help, -h        Show help
+`
+
+type Options struct {
+	Safe, Developer, Foreground, Background, NoBackground, Reset, Status, Stop, Logs, MCP, Agent, Supervise, Help, Version, ForceUpdate bool
+	// UpdateHandoff is set only by a remote update (update_agent on macOS and
+	// Windows): take over from the older Agent, install this release's background
+	// service and exit, so the service runs the new release. Not in --help.
+	UpdateHandoff        bool
+	Origin, MCPWorkspace string
+	MCPWorkspaceID       string
+}
+
+func Parse(args []string) (Options, error) {
+	var o Options
+	for _, s := range args {
+		switch s {
+		case "--go":
+		case "--ts":
+			return o, errors.New(RetiredTSRuntime)
+		case "--safe":
+			o.Safe = true
+		case "--developer":
+			o.Developer = true
+		case "--foreground":
+			o.Foreground = true
+		case "--background":
+			o.Background = true
+		case "--no-background":
+			o.NoBackground = true
+		case "--reset":
+			o.Reset = true
+		case "--status":
+			o.Status = true
+		case "--stop":
+			o.Stop = true
+		case "--force-update":
+			o.ForceUpdate = true
+		case "--update-handoff":
+			o.UpdateHandoff = true
+		case "--logs":
+			o.Logs = true
+		case "--mcp":
+			o.MCP = true
+		case "--agent":
+			o.Agent = true
+		case "--supervise":
+			o.Supervise = true
+		case "--help", "-h":
+			o.Help = true
+		case "--version", "-v":
+			o.Version = true
+		default:
+			if strings.HasPrefix(s, "--mcp-workspace-id=") {
+				o.MCPWorkspaceID = strings.TrimPrefix(s, "--mcp-workspace-id=")
+				if o.MCPWorkspaceID == "" {
+					return o, errors.New("--mcp-workspace-id requires a directory identity.")
+				}
+			} else if strings.HasPrefix(s, "--mcp-workspace=") {
+				o.MCPWorkspace = strings.TrimPrefix(s, "--mcp-workspace=")
+				if strings.TrimSpace(o.MCPWorkspace) == "" {
+					return o, errors.New("--mcp-workspace requires an absolute directory.")
+				}
+			} else if strings.HasPrefix(s, "--origin=") {
+				o.Origin = strings.TrimPrefix(s, "--origin=")
+			} else {
+				return o, fmt.Errorf("Unknown Go agent option: %s", s)
+			}
+		}
+	}
+	if (o.Safe && o.Developer) || (o.Background && o.NoBackground) || (o.Agent && o.Supervise) || (o.Foreground && o.Background) {
+		return o, errors.New("Conflicting Go agent options.")
+	}
+	if o.MCPWorkspace != "" && (!o.MCP || o.Developer || o.Foreground || o.Background || o.NoBackground || o.Reset || o.Status || o.Stop || o.Logs || o.Agent || o.Supervise || o.Origin != "") {
+		return o, errors.New("--mcp-workspace requires --mcp and cannot be combined with device or developer options.")
+	}
+	if o.ForceUpdate && (o.Safe || o.Developer || o.Foreground || o.NoBackground || o.Reset || o.Status || o.Stop || o.Logs || o.MCP || o.Agent || o.Supervise) {
+		return o, errors.New("--force-update can only be combined with --background or --origin.")
+	}
+	if o.UpdateHandoff && (!o.Background || o.ForceUpdate || o.Safe || o.Developer || o.Reset || o.Status || o.Stop || o.Logs || o.MCP || o.Agent || o.Supervise) {
+		return o, errors.New("--update-handoff is used by remote updates and only with --background.")
+	}
+	if o.MCPWorkspaceID != "" && o.MCPWorkspace == "" {
+		return o, errors.New("--mcp-workspace-id requires --mcp-workspace.")
+	}
+	if o.Origin != "" {
+		var e error
+		o.Origin, e = agent.Origin(o.Origin)
+		if e != nil {
+			return o, e
+		}
+	}
+	return o, nil
+}
+
+type synchronizedWriter struct {
+	sync.Mutex
+	io.Writer
+	colored bool
+}
+
+func (s *synchronizedWriter) TerminalColor() bool { return s.colored }
+
+func (s *synchronizedWriter) Write(b []byte) (int, error) {
+	s.Lock()
+	defer s.Unlock()
+	return s.Writer.Write(b)
+}
+func enabled() bool {
+	c, e := config.Load()
+	return e == nil && c.BackgroundEnabled != nil && *c.BackgroundEnabled
+}
+
+var startClientIntegrations = onboarding.StartAutomatic
+
+func Main(ctx context.Context, args []string, version string, input *os.File, output, errorOutput io.Writer) error {
+	// Local inspection never pairs, changes policy or acquires execution.
+	if len(args) > 1 && args[0] == "--go" && (args[1] == "takeover" || args[1] == "setup" || args[1] == "vault") {
+		args = args[1:]
+	}
+	if len(args) > 0 && args[0] == "takeover" {
+		return takeover.Run(ctx, args, output)
+	}
+	if len(args) > 0 && args[0] == "setup" {
+		return onboarding.Run(ctx, args, version, output)
+	}
+	if len(args) > 0 && args[0] == "vault" {
+		return vault.Command(args[1:], input, output)
+	}
+	o, e := Parse(args)
+	if e != nil {
+		return e
+	}
+	if o.Help {
+		_, e = fmt.Fprint(output, Help)
+		return e
+	}
+	if o.Version {
+		_, e = fmt.Fprintln(output, version)
+		return e
+	}
+	if o.MCP {
+		if o.MCPWorkspace != "" {
+			fmt.Fprintln(errorOutput, "Remote Arc Local MCP uses read-only workspace file tools.")
+			return localmcp.RunWorkspaceWithIdentity(ctx, execution.New("safe"), version, o.MCPWorkspace, o.MCPWorkspaceID)
+		}
+		mode := os.Getenv("REMOTEARC_MODE")
+		if mode == "" {
+			mode = os.Getenv("REMOTE_LINK_MODE")
+		}
+		if mode == "" {
+			mode = "safe"
+		}
+		if o.Safe {
+			mode = "safe"
+		}
+		if o.Developer {
+			mode = "developer"
+		}
+		if mode != "safe" && mode != "developer" && mode != "managed" && mode != "full" {
+			return errors.New("Invalid local MCP mode.")
+		}
+		fmt.Fprintln(errorOutput, "Remote Arc Local MCP started in "+mode+" mode using the Go execution core")
+		return localmcp.Run(ctx, execution.New(mode), version)
+	}
+	out := &synchronizedWriter{Writer: output, colored: output == os.Stdout && isOutputTerminal() && os.Getenv("NO_COLOR") == ""}
+	dir := filepath.Join(config.Dir(), "agent")
+	log := &journal.Journal{Dir: filepath.Join(config.Dir(), "logs"), Output: out, Color: out.TerminalColor()}
+	bg := service.New(version)
+	if o.Logs {
+		return json.NewEncoder(output).Encode(log.Tail(100))
+	}
+	if o.Status {
+		active, err := control.Request(ctx, dir, "GET", "/status")
+		if err != nil {
+			active = map[string]any{"engine": "go", "active": false}
+		}
+		return json.NewEncoder(output).Encode(map[string]any{"agent": active, "recovery": bg.Status(ctx)})
+	}
+	if o.Stop || o.Reset {
+		if lease.Active(dir, "execution") {
+			status, err := control.Request(ctx, dir, "GET", "/status")
+			if err != nil || status["engine"] != "go" {
+				return errors.New("A retired TypeScript agent owns this device. Stop it locally before changing the Go runtime.")
+			}
+		}
+		if c, err := config.Load(); err == nil {
+			off := false
+			c.BackgroundEnabled = &off
+			c.ExecutionPaused = false
+			if err = config.Save(c); err != nil {
+				return err
+			}
+		}
+		_ = bg.Disable(ctx)
+		if lease.Active(dir, "execution") {
+			if _, err := control.Request(ctx, dir, "POST", "/stop"); err != nil {
+				return err
+			}
+		}
+		deadline := time.Now().Add(15 * time.Second)
+		for lease.Active(dir, "execution") {
+			if time.Now().After(deadline) {
+				return errors.New("Go agent is still draining operations; pairing has been preserved.")
+			}
+			if e = wait(ctx, 100*time.Millisecond); e != nil {
+				return e
+			}
+		}
+		bg.StopSupervision(ctx)
+		if o.Reset {
+			return config.Reset()
+		}
+		return nil
+	}
+	// Refuse a foreign execution owner before mutating pairing, mode or recovery.
+	if !o.Agent && !o.Supervise && lease.Active(dir, "execution") {
+		status, err := control.Request(ctx, dir, "GET", "/status")
+		if err != nil || status["engine"] != "go" {
+			if !o.Background {
+				return errors.New("A retired TypeScript agent owns execution. Disable its recovery with npx remotelink@0.6.5 --ts --no-background, stop that agent locally, then launch again. No commands were replayed.")
+			}
+			// Background startup after a forced exit must wait until
+			// the previous execution lease expires. Never take a live lease.
+			log.Log("warn", "Waiting for previous Agent execution lease to release before restoring Go background recovery.")
+			if e := waitForPriorOwnerRelease(ctx, dir); e != nil {
+				return e
+			}
+		} else if running, _ := status["version"].(string); !o.Foreground && !o.Safe && !o.Developer && !o.NoBackground && (o.ForceUpdate || olderRelease(running, version)) {
+			// A plain launch (or --background) of a newer release replaces
+			// an older, idle Go Agent instead of only following its log.
+			// Busy, unknown or same/newer Agents need --force-update or an
+			// explicit yes in the terminal.
+			if e := replaceRunningAgent(ctx, o, dir, bg, log, status, running, version, input, out); e != nil {
+				return e
+			}
+		} else {
+			if o.NoBackground {
+				cfg, err := config.Load()
+				if err != nil {
+					return err
+				}
+				no := false
+				cfg.BackgroundEnabled = &no
+				if err = config.Save(cfg); err != nil {
+					return err
+				}
+				if err = bg.Disable(ctx); err != nil {
+					return err
+				}
+			}
+			if o.Safe || o.Developer || o.Background {
+				return errors.New("A Go agent already owns execution. Change recovery in Dashboard, or use --go --stop before changing its local profile.")
+			}
+		}
+	}
+	if o.UpdateHandoff {
+		return installUpdatedService(ctx, dir, bg, log, version)
+	}
+	if o.Supervise {
+		return supervise(ctx, version, log)
+	}
+	if !o.Agent {
+		stopClientSetup := startClientIntegrations(ctx, version, log.Log)
+		defer stopClientSetup()
+	}
+	if log.Color && !o.Agent {
+		fmt.Fprintf(out, "\n\x1b[1mRemote Arc\x1b[0m  \x1b[2mv%s\x1b[0m\n\x1b[2mControlled remote access for AI\x1b[0m\n\x1b[36m●\x1b[0m  Native Go runtime  ·  Dashboard-managed permissions\n\n", version)
+	}
+	client := agent.NewClient()
+	ask := terminalAsk(input, out)
+	// Nobody can answer a prompt or see a pairing code promptly when Remote Arc
+	// runs in a container, a service or with redirected output.
+	unattended := !attendedTerminal(input)
+	pair := client.Pair
+	if unattended {
+		pair = client.PairUnattended
+	}
+	for ctx.Err() == nil {
+		cfg, err := config.Load()
+		if err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("Cannot read saved pairing: %w", err)
+			}
+			if o.Agent {
+				return nil
+			}
+			origin := o.Origin
+			if origin == "" {
+				origin = os.Getenv("REMOTEARC_ORIGIN")
+			}
+			if origin == "" {
+				origin = os.Getenv("REMOTE_LINK_ORIGIN")
+			}
+			if origin == "" {
+				origin = config.DefaultOrigin
+			}
+			mode := "managed"
+			if o.Safe {
+				mode = "safe"
+			}
+			cfg, e = pair(ctx, origin, mode, out, openBrowser)
+			if e != nil {
+				return e
+			}
+		}
+		origin, err := agent.Origin(cfg.Origin)
+		if err != nil {
+			return err
+		}
+		if origin != cfg.Origin {
+			cfg.Origin = origin
+			if e = config.Save(cfg); e != nil {
+				return e
+			}
+		}
+		if o.Agent && !enabled() {
+			return nil
+		}
+		if !o.Agent && errors.Is(client.Validate(ctx, cfg), agent.ErrRevoked) {
+			if lease.Active(dir, "execution") {
+				return errors.New("The active agent's pairing was revoked; stop that agent before pairing again.")
+			}
+			_ = bg.Disable(ctx)
+			bg.StopSupervision(ctx)
+			if e = config.Reset(); e != nil {
+				return e
+			}
+			if unattended {
+				// Re-pairing here would show codes nobody approves. Staying
+				// up also keeps a restart-on-exit supervisor from looping.
+				log.Log("warn", "This computer's pairing was revoked in the Dashboard. Restart Remote Arc to pair it again.")
+				<-ctx.Done()
+				return nil
+			}
+			log.Log("warn", "Pairing revoked; starting a fresh device pairing.")
+			continue
+		}
+		var owned *lease.Lease
+		var cursor *int64
+		announced := false
+		stopApprovals := func() {}
+		approvalSignals := make(chan struct{}, 1)
+		signalApproval := func() {
+			select {
+			case approvalSignals <- struct{}{}:
+			default: // a check is already queued
+			}
+		}
+		if !o.Agent && isTerminal(input) && isOutputTerminal() {
+			approvalCtx, cancelApprovals := context.WithCancel(ctx)
+			stopped := make(chan struct{})
+			go func() { defer close(stopped); client.PollApprovals(approvalCtx, cfg, out, ask, approvalSignals) }()
+			stopApprovals = func() { cancelApprovals(); <-stopped }
+			defer stopApprovals()
+		}
+		for ctx.Err() == nil {
+			if o.Agent && !enabled() {
+				return nil
+			}
+			owned, e = lease.Acquire(dir, "execution")
+			if e != nil {
+				return e
+			}
+			if owned != nil {
+				break
+			}
+			if !o.Agent {
+				status, err := control.Request(ctx, dir, "GET", "/status")
+				if err != nil || status["engine"] != "go" {
+					return errors.New("Another runtime owns execution; stop it locally before launching Go.")
+				}
+				if !announced {
+					log.Log("info", "A Go agent owns execution. Following its operation log; Ctrl+C closes this viewer.")
+					if running, _ := status["version"].(string); running != "" && !olderRelease(running, version) {
+						log.Log("info", keptAgentMessage(running, version))
+					}
+					announced = true
+				}
+				next, text := log.Read(cursor)
+				cursor = &next
+				if text != "" {
+					fmt.Fprint(out, journal.FormatHistory(text, log.Color))
+					// The owning Agent logs a Relay approval signal; this
+					// viewer asks from its own terminal without polling.
+					if strings.Contains(text, agent.ApprovalPendingLog) {
+						signalApproval()
+					}
+				}
+			}
+			if e = wait(ctx, 500*time.Millisecond); e != nil {
+				return e
+			}
+		}
+		if owned == nil {
+			return ctx.Err()
+		}
+		err = runOwned(ctx, o, cfg, version, owned, bg, log, client, out, ask, input, signalApproval)
+		stopApprovals()
+		if errors.Is(err, agent.ErrRevoked) {
+			_ = bg.Disable(ctx)
+			if o.Agent {
+				off := false
+				cfg.BackgroundEnabled = &off
+				_ = config.Save(cfg)
+				return config.Reset()
+			}
+			bg.StopSupervision(ctx)
+			if e = config.Reset(); e != nil {
+				return e
+			}
+			continue
+		}
+		if o.Agent && enabled() {
+			return errors.New("Go worker ended while recovery is enabled.")
+		}
+		return err
+	}
+	return ctx.Err()
+}
+func runOwned(parent context.Context, o Options, cfg config.Config, version string, owned *lease.Lease, bg *service.Controller, log *journal.Journal, client *agent.Client, out io.Writer, ask agent.Ask, input *os.File, approvalPending func()) error {
+	defer owned.Release()
+	// A supervisor may have spawned this worker while the old foreground
+	// owner held the lease. Re-read the durable pause state *after* takeover.
+	latest, err := config.Load()
+	if err != nil {
+		return err
+	}
+	cfg = latest
+	ctx, cancel := context.WithCancel(parent)
+	defer cancel()
+	go func() {
+		select {
+		case <-owned.Lost():
+			log.Log("error", "Execution lease lost; stopping the Go agent.")
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+	if o.Safe {
+		cfg.Mode = "safe"
+	}
+	if o.Developer {
+		cfg.Mode = "managed"
+	}
+	if o.Background {
+		yes := true
+		cfg.BackgroundEnabled = &yes
+	}
+	if o.NoBackground {
+		no := false
+		cfg.BackgroundEnabled = &no
+	}
+	if e := config.Save(cfg); e != nil {
+		return e
+	}
+	var a *agent.Agent
+	if cfg.ExecutionPaused {
+		if !o.Agent {
+			log.Log("info", "Device is paused; joining the wake-only channel.")
+		}
+		a = agent.NewWake(cfg, version, log)
+		log.Log("info", "Paused device wake channel ready. Execution tools are not loaded.")
+	} else {
+		a = agent.New(cfg, version, o.Agent, log)
+		log.Log("info", "Go device runtime "+version+" · local mode "+a.Core.Mode)
+		log.Log("info", fmt.Sprintf("File writes: %s · Undo: %s · device state: durable", config.FileDurability(), config.UndoDurability()))
+		log.Log("info", fmt.Sprintf("Local tools ready: %d execution tools and 5 device tools.", len(a.Core.ListTools())))
+	}
+	a.Stop = cancel
+	a.Client = client
+	a.ApprovalPending = approvalPending
+	if cfg.BackgroundEnabled == nil {
+		log.Log("info", "Background connection is not configured yet · finish setup in Dashboard → Devices.")
+	}
+	local, e := control.Start(filepath.Join(config.Dir(), "agent"), version, func() any { return a.Status() }, cancel)
+	if e != nil {
+		if a.Core != nil {
+			a.Core.Close()
+		}
+		return e
+	}
+	defer local.Close()
+	if o.NoBackground {
+		if e = bg.Disable(ctx); e != nil {
+			log.Log("warn", "Could not disable future recovery.")
+		}
+	}
+	if !o.Agent && !o.Foreground && enabled() {
+		status, err := bg.Enable(ctx)
+		if err != nil {
+			log.Log("warn", "Could not enable recovery; foreground connection remains available: "+err.Error())
+		}
+		if warning := status.LogoutWarning(); warning != "" {
+			log.Log("warn", warning)
+		}
+	}
+	return a.Run(ctx)
+}
+func wait(ctx context.Context, d time.Duration) error {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.C:
+		return nil
+	}
+}
+func terminalAsk(input *os.File, output io.Writer) agent.Ask {
+	var once sync.Once
+	answers := make(chan string)
+	return func(ctx context.Context, prompt string) (string, error) {
+		once.Do(func() {
+			go func() {
+				defer close(answers)
+				scanner := bufio.NewScanner(input)
+				for scanner.Scan() {
+					answers <- scanner.Text()
+				}
+			}()
+		})
+		fmt.Fprint(output, prompt)
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case answer, ok := <-answers:
+			if !ok {
+				return "", io.EOF
+			}
+			return answer, nil
+		}
+	}
+}
+func isTerminal(f *os.File) bool {
+	s, e := f.Stat()
+	return e == nil && s.Mode()&os.ModeCharDevice != 0
+}
+func isOutputTerminal() bool { return isTerminal(os.Stdout) }
+
+// attendedTerminal reports whether a person is at the terminal. Tests replace it.
+var attendedTerminal = func(input *os.File) bool { return isTerminal(input) && isOutputTerminal() }
+
+func openBrowser(link string) error {
+	u, e := url.Parse(link)
+	if e != nil || (u.Scheme != "https" && u.Scheme != "http") || u.User != nil || u.Host == "" {
+		return errors.New("Invalid browser authorization URL.")
+	}
+	return launchBrowser(u.String())
+}
+
+// keptAgentMessage explains why a launch did not replace the running Agent.
+// When this command is older, the usual cause is an old global npm install that
+// npx prefers over the registry, so lead with @latest; a rollback stays explicit.
+func keptAgentMessage(running, invoked string) string {
+	if running == invoked {
+		return fmt.Sprintf("Agent v%s is already running and was kept. To restart it with this version anyway, run npx remotelink@%s --force-update.", running, invoked)
+	}
+	return fmt.Sprintf("This command is remotelink v%s, older than the running Agent v%s, so the Agent was kept. An old global install can make npx run an old version: use npx remotelink@latest, or update it with npm install -g remotelink@latest. To roll back on purpose, run npx remotelink@%s --force-update.", invoked, running, invoked)
+}

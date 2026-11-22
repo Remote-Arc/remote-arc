@@ -1,0 +1,3 @@
+{"type":"session_meta","payload":{"id":"synthetic-codex-basic","cwd":"__WORKSPACE__","cli_version":"0.163.0-alpha.11"}}
+{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Synthetic task: inspect a sample counter."}]}}
+{"type":"response_item","payload":{"type":"function_call_output","call_id":"synthetic-call","output":"{\"exit_code\":0}"}}

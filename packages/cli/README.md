@@ -63,7 +63,7 @@ On first run, `remotelink`:
 3. asks you to sign in and approve the device;
 4. stores a device credential locally in `~/.remotearc/config.json`;
 5. connects in the foreground while you choose device permissions;
-6. if Background connection remains selected, installs a user-level login service only after you finish browser setup.
+6. turns on the background connection by default: it installs a user-level login service so the computer stays online after you close the terminal. Turn it off in Dashboard → Devices or with `--no-background`; that choice is kept. `--foreground` never installs it.
 
 No public IP, VPN, router port forwarding, repository clone, or manual token
 copy is required.

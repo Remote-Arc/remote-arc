@@ -234,6 +234,11 @@ func TestPlainLaunchOfNewerReleaseReplacesOlderGoAgent(t *testing.T) {
 	if stops != 1 || e != nil || saved.DeviceToken != "private" || !saved.ExecutionPaused || saved.BackgroundEnabled != nil {
 		t.Fatalf("stops=%d saved=%+v err=%v", stops, saved, e)
 	}
+	// Background is on by default, but with no service manager it must not be
+	// recorded as on, and the terminal says why.
+	if !strings.Contains(out.String(), "Background connection is unavailable here") {
+		t.Fatalf("missing unavailable-background notice:\n%s", out.String())
+	}
 }
 
 type syncBuffer struct {

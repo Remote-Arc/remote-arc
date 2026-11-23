@@ -165,6 +165,10 @@ func enabled() bool {
 
 var startClientIntegrations = onboarding.StartAutomatic
 
+// newBackground builds the OS service controller. Tests replace it so no test
+// installs a real launchd, systemd or Windows login service.
+var newBackground = service.New
+
 func Main(ctx context.Context, args []string, version string, input *os.File, output, errorOutput io.Writer) error {
 	// Local inspection never pairs, changes policy or acquires execution.
 	if len(args) > 1 && args[0] == "--go" && (args[1] == "takeover" || args[1] == "setup" || args[1] == "vault") {
@@ -218,7 +222,7 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 	out := &synchronizedWriter{Writer: output, colored: output == os.Stdout && isOutputTerminal() && os.Getenv("NO_COLOR") == ""}
 	dir := filepath.Join(config.Dir(), "agent")
 	log := &journal.Journal{Dir: filepath.Join(config.Dir(), "logs"), Output: out, Color: out.TerminalColor()}
-	bg := service.New(version)
+	bg := newBackground(version)
 	if o.Logs {
 		return json.NewEncoder(output).Encode(log.Tail(100))
 	}
@@ -503,6 +507,7 @@ func runOwned(parent context.Context, o Options, cfg config.Config, version stri
 		no := false
 		cfg.BackgroundEnabled = &no
 	}
+	defaulted := defaultBackgroundOn(o, &cfg)
 	if e := config.Save(cfg); e != nil {
 		return e
 	}
@@ -540,15 +545,48 @@ func runOwned(parent context.Context, o Options, cfg config.Config, version stri
 	}
 	if !o.Agent && !o.Foreground && enabled() {
 		status, err := bg.Enable(ctx)
-		if err != nil {
-			log.Log("warn", "Could not enable recovery; foreground connection remains available: "+err.Error())
-		}
-		if warning := status.LogoutWarning(); warning != "" {
-			log.Log("warn", warning)
+		if defaulted && (err != nil || !status.Supported || !status.Enabled) {
+			// The default never leaves a computer recorded as "on" when no
+			// service could be installed, for example in a container. The
+			// Agent re-reads this saved choice before each connection.
+			cfg.BackgroundEnabled = nil
+			if e = config.Save(cfg); e != nil {
+				return e
+			}
+			detail := status.Detail
+			if err != nil {
+				detail = err.Error()
+			}
+			log.Log("info", "Background connection is unavailable here, so this computer goes offline when Remote Arc exits: "+detail)
+		} else {
+			if err != nil {
+				log.Log("warn", "Could not enable recovery; foreground connection remains available: "+err.Error())
+			} else if defaulted {
+				log.Log("info", "Background connection is on by default, so this computer stays connected after Remote Arc exits. Turn it off in Dashboard → Devices or with --no-background.")
+			}
+			if warning := status.LogoutWarning(); warning != "" {
+				log.Log("warn", warning)
+			}
 		}
 	}
 	return a.Run(ctx)
 }
+
+// defaultBackgroundOn turns background recovery on for a computer that has
+// never chosen, so closing the terminal does not take it offline. A choice made
+// in Dashboard → Devices or with --no-background is saved and kept. It applies
+// to every launcher of the Go Agent (npx, a native binary or a desktop client),
+// whether or not a terminal is attached; --foreground and the background
+// worker itself never change it.
+func defaultBackgroundOn(o Options, cfg *config.Config) bool {
+	if cfg.BackgroundEnabled != nil || o.Agent || o.Foreground || o.NoBackground {
+		return false
+	}
+	on := true
+	cfg.BackgroundEnabled = &on
+	return true
+}
+
 func wait(ctx context.Context, d time.Duration) error {
 	t := time.NewTimer(d)
 	defer t.Stop()

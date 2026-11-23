@@ -178,3 +178,32 @@ func TestNativeForegroundCLIHardCapAndLocalControl(t *testing.T) {
 		t.Fatal("CLI operation log invalid")
 	}
 }
+
+func TestBackgroundIsOnByDefaultUntilTheUserChooses(t *testing.T) {
+	on, off := true, false
+	for _, tc := range []struct {
+		name    string
+		options Options
+		saved   *bool
+		want    *bool
+	}{
+		{"new computer", Options{}, nil, &on},
+		{"new computer with --safe", Options{Safe: true}, nil, &on},
+		{"turned off in Dashboard", Options{}, &off, &off},
+		{"already on", Options{}, &on, &on},
+		{"--foreground", Options{Foreground: true}, nil, nil},
+		{"--no-background", Options{NoBackground: true}, nil, nil},
+		{"background worker", Options{Agent: true}, nil, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := config.Config{BackgroundEnabled: tc.saved}
+			changed := defaultBackgroundOn(tc.options, &cfg)
+			if (tc.want == nil) != (cfg.BackgroundEnabled == nil) || (tc.want != nil && *tc.want != *cfg.BackgroundEnabled) {
+				t.Fatalf("BackgroundEnabled=%v, want %v", cfg.BackgroundEnabled, tc.want)
+			}
+			if changed != (tc.saved == nil && tc.want != nil) {
+				t.Fatalf("changed=%v for saved=%v want=%v", changed, tc.saved, tc.want)
+			}
+		})
+	}
+}

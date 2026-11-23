@@ -16,6 +16,23 @@ the Agent's existing Relay reconnect/backoff and ping watchdog.
 - A running background connection and an autostart switch describe different
   things; a false switch may coexist with a live process.
 
+## Default on (2026-11-23)
+
+Background recovery is on by default. A normal launch of the Go Agent whose
+configuration has never recorded a choice turns it on and installs the user
+service, whatever starts it: npx, a native binary or a desktop client without a
+terminal. A choice made in Dashboard or with `--no-background` is saved and
+kept; `--foreground` and the background worker never change it. When no service
+can be installed (for example in a container), the choice stays unrecorded and
+the Agent says the computer goes offline when it exits.
+
+The pairing page has no switch for it. It shows the background connection's
+state, read only after the Agent's hello (the Relay lists a device as online
+when its socket opens, before the hello, and a poll in that gap used to turn
+the default off). Finishing setup turns it on for an Agent that did not turn it
+on itself; when that fails, setup still finishes and the next step says the
+computer goes offline when the terminal closes. It is turned off in Devices.
+
 ## Implementation contract
 
 1. Normal `npx remotelink` stays attached. Enable/disable does not terminate a

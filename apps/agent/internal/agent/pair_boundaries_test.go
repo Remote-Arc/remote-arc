@@ -262,3 +262,44 @@ func TestPairingSlowsPollingWhenTheRelayRateLimits(t *testing.T) {
 		t.Fatalf("polling did not slow down after 429: %s", gap)
 	}
 }
+
+func TestPairingForTheDesktopAppPrintsTheCodeAsJSONAndOpensNoBrowser(t *testing.T) {
+	t.Setenv("REMOTEARC_HOME", t.TempDir())
+	t.Setenv(PairingJSONEnv, "1")
+	previous := pairingSecond
+	pairingSecond = time.Millisecond
+	t.Cleanup(func() { pairingSecond = previous })
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/device/start":
+			_ = json.NewEncoder(w).Encode(PairingStart{DeviceCode: "code", DeviceSecret: "private", UserCode: "ABCD-EFGH", VerificationURI: "https://example.test/pair", ExpiresIn: 600, Interval: 2})
+		case "/api/device/token":
+			_ = json.NewEncoder(w).Encode(PairingToken{DeviceID: "dev-1", DeviceToken: "token-1"})
+		}
+	}))
+	defer server.Close()
+	var output bytes.Buffer
+	opened := false
+	cfg, err := NewClient().Pair(context.Background(), server.URL, "managed", &output, func(string) error { opened = true; return nil })
+	if err != nil || cfg.DeviceID != "dev-1" {
+		t.Fatal("desktop pairing failed", err, cfg)
+	}
+	if opened {
+		t.Fatal("desktop pairing opened a browser")
+	}
+	var line struct {
+		Pairing struct {
+			UserCode  string `json:"user_code"`
+			ExpiresIn int    `json:"expires_in"`
+		} `json:"remotearc_pairing"`
+	}
+	found := false
+	for _, text := range strings.Split(output.String(), "\n") {
+		if strings.HasPrefix(text, "{") && json.Unmarshal([]byte(text), &line) == nil && line.Pairing.UserCode != "" {
+			found = true
+		}
+	}
+	if !found || line.Pairing.UserCode != "ABCD-EFGH" || line.Pairing.ExpiresIn != 600 || strings.Contains(output.String(), "private") {
+		t.Fatal("desktop pairing line missing, wrong or leaked the device secret", output.String())
+	}
+}

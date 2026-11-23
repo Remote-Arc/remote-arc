@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -40,6 +41,10 @@ type PairingToken struct {
 
 // errPairingExpired ends one pairing code that was not approved in time.
 var errPairingExpired = errors.New("Pairing cancelled or expired; run remotelink again to retry.")
+
+// PairingJSONEnv, set to "1" by the desktop app that bundles this Agent, makes
+// pairing print the code as one JSON line instead of opening a browser.
+const PairingJSONEnv = "REMOTEARC_PAIRING_JSON"
 
 // pairingSecond is the unit of the relay's expires_in and interval. Tests
 // shorten it; it is always time.Second in a release.
@@ -113,6 +118,13 @@ func (c *Client) pairOnce(ctx context.Context, origin, mode string, output io.Wr
 		return saved, errors.New("Pairing response did not include an authorization URL.")
 	}
 	fmt.Fprintf(output, "Pair this computer: %s\nCode: %s\n", link, start.UserCode)
+	if os.Getenv(PairingJSONEnv) == "1" {
+		// The desktop app started this Agent and approves the code with its
+		// own sign-in: one machine-readable line, and no browser window.
+		line, _ := json.Marshal(map[string]any{"remotearc_pairing": map[string]any{"user_code": start.UserCode, "expires_in": start.ExpiresIn}})
+		fmt.Fprintf(output, "%s\n", line)
+		open = nil
+	}
 	if open != nil {
 		_ = open(link)
 	}

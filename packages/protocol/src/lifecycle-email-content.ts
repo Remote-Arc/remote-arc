@@ -1,3 +1,4 @@
+import { AI_CLIENT_NAME_MATCH } from "./ai-client-names.js";
 import {
   AGENT_INSTALL_COMMANDS,
   EMAIL_ACCENT,
@@ -53,12 +54,7 @@ export type LifecycleContent = {
 };
 
 /** How each AI client with a setup guide names itself when it registers. */
-const CLIENT_NAME_MATCH = {
-  chatgpt: /chatgpt|openai/i,
-  claude: /claude|anthropic/i,
-  gemini: /gemini/i,
-  cursor: /cursor/i,
-} as const;
+const CLIENT_NAME_MATCH = AI_CLIENT_NAME_MATCH;
 const AI_CLIENTS = EMAIL_AI_CLIENTS.map((client) => ({
   ...client,
   match: CLIENT_NAME_MATCH[client.slug],

@@ -45,7 +45,7 @@ Remote Arc lets ChatGPT, Claude, Codex, Cursor and other MCP clients work on Win
 
 Arc keeps a delegated responsibility together: its sources, instructions, conversation and run history, with fresh bounded judgment when scheduled and checks against actual results. Start with a daily work brief, project check-in, delivery verification or change follow-up. The [use-case catalog](https://remotearc.app/use-cases) also keeps Arc and Connect paths for all 15 concrete workflows.
 
-Every plan includes every Connect tool. **Free** has monthly Connect call and file-transfer allowances and up to 2 computers. **Pro**, formerly Connect Unlimited, removes the monthly Connect call cap. **Pro** and **Max** include the computers, Arc-hosted AI and monthly Credits shown at checkout and in billing settings. Existing subscriptions retain their purchased terms until explicitly changed. Every account can activate a one-time 7-day Arc trial. Users never supply a model API key. Current prices and allowances are on the [pricing page](https://remotearc.app/pricing); third-party App charges are separate. Preview environments use simulated data.
+**Free** has monthly Connect call and data-transfer allowances and up to 2 computers. **Pro** and **Max** add computer use, more computers, Arc-hosted AI and monthly Arc Credits, and either can be tried for 7 days. Existing subscriptions keep their purchased terms until changed. Users never supply a model API key. Current prices and allowances are on the [pricing page](https://remotearc.app/pricing); third-party App charges are separate. Preview environments use simulated data.
 <!-- product-overview:end -->
 
 ## Add Remote Arc to your AI client
@@ -75,7 +75,7 @@ A background Agent from 0.7.1 on can also be updated from Dashboard → Devices 
 <!-- native-install:start -->
 ### Native downloads and Homebrew
 
-Standalone 0.7.3 needs no Node.js or Go compiler. [Installation and upgrade guide](https://remotearc.app/downloads).
+Standalone 0.8.0 needs no Node.js or Go compiler. [Installation and upgrade guide](https://remotearc.app/downloads).
 
 On macOS or Linux (including WSL), install without Node.js:
 
@@ -87,14 +87,14 @@ The script verifies SHA256 and installs to ~/.local/bin without sudo. On a first
 
 | Platform | Download |
 | --- | --- |
-| macOS Apple Silicon | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.3/remotelink-v0.7.3-darwin-arm64) |
-| macOS Intel | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.3/remotelink-v0.7.3-darwin-amd64) |
-| Windows x64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.3/remotelink-v0.7.3-windows-amd64.exe) |
-| Windows ARM64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.3/remotelink-v0.7.3-windows-arm64.exe) |
-| Linux x64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.3/remotelink-v0.7.3-linux-amd64) |
-| Linux ARM64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.3/remotelink-v0.7.3-linux-arm64) |
+| macOS Apple Silicon | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.8.0/remotelink-v0.8.0-darwin-arm64) |
+| macOS Intel | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.8.0/remotelink-v0.8.0-darwin-amd64) |
+| Windows x64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.8.0/remotelink-v0.8.0-windows-amd64.exe) |
+| Windows ARM64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.8.0/remotelink-v0.8.0-windows-arm64.exe) |
+| Linux x64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.8.0/remotelink-v0.8.0-linux-amd64) |
+| Linux ARM64 | [remotelink](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.8.0/remotelink-v0.8.0-linux-arm64) |
 
-[SHA256SUMS](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.7.3/SHA256SUMS) · [Release notes](https://github.com/Remote-Arc/remote-arc/releases/tag/remotelink-v0.7.3)
+[SHA256SUMS](https://github.com/Remote-Arc/remote-arc/releases/download/remotelink-v0.8.0/SHA256SUMS) · [Release notes](https://github.com/Remote-Arc/remote-arc/releases/tag/remotelink-v0.8.0)
 
 ```bash
 brew tap remote-arc/remote-arc https://github.com/Remote-Arc/remote-arc

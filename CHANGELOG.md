@@ -2,6 +2,37 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.8.0 - 2026-11-23
+
+### Agent
+
+- Computer use: with the owner's per-computer switch on, an AI client can see the screen and use the mouse and keyboard through `desktop_snapshot` and `desktop_act`, on Windows, on Linux in an X11 session, and on macOS. The person always wins: moving the mouse or typing stops the AI, a locked screen or screen saver is refused, and an "AI is using this computer" notice stays on screen and out of screenshots. Password managers and system sign-in prompts are protected.
+- On a Mac, computer use needs Screen Recording and Accessibility for the Agent; the first call asks macOS to show both in System Settings. Text is pasted and the clipboard put back, so Chinese, emoji, line breaks and tabs type correctly with any keyboard layout or input method.
+- Agent Orchestration: the Agent runs Claude Code, Codex and Gemini CLI conversations for the Dashboard, in a worktree of their own or in a trusted folder itself, answers their permission questions as you decide, continues sessions already on the computer, and stops a session after two idle hours or when the Agent stops.
+- Background commands report separately from foreground ones, and the Agent keeps to the plan's limit on background commands running at once, refusing more with `BACKGROUND_TASK_LIMIT` before anything starts.
+- An Agent started by the desktop app prints its pairing code for the app to approve with its own sign-in, instead of opening a browser.
+- The background connection is on by default for every way of starting the Agent (npx, the native binary and the desktop apps), so a computer stays online after its terminal closes. Turning it off in Dashboard → Devices or with `--no-background` is kept; `--foreground` never turns it on. Before, a Mac paired from the browser could finish setup with it off.
+
+### Desktop app
+
+- Remote Arc for Windows: an app for this computer with the Agent inside. Sign in once and it sets the computer up by itself; it shows the computer's state, load, approvals and work, changes its access and trusted folders, and opens Claude or ChatGPT, or their setup guide when Remote Arc is not connected there yet. Its installer, `Remote-Arc-Setup-windows-x64.exe`, is attached to this release. It is not code-signed yet, so Windows SmartScreen asks you to confirm the first run.
+
+### Cloud service
+
+- `desktop_snapshot` and `desktop_act` are offered to MCP clients for computers whose owner turned computer use on, with screenshots returned as images. Routines, Arc runs and file links cannot use them, because nobody is there to take over. Computer use is a Pro and Max feature.
+- Plans set how many background commands run at once across an account's computers; Free runs one.
+- Agent Orchestration in the Dashboard: agents side by side, with their replies, tool calls, approvals, usage and pull requests.
+- Gmail and Google Drive Apps use their own Google sign-in, separate from Remote Arc's Google login.
+- Failure records and alerts name the API route that failed.
+
+### Website, Dashboard and billing
+
+- Computer use and Agent Orchestration product pages, guides and plan lines; the home page answers what Remote Arc adds to ChatGPT and Claude, and has a new layout.
+- New routine offers two ways to make a routine.
+- Install commands recommend the curl installer first, and the first pairing steps are smoother.
+- The pairing page shows the background connection's state instead of a switch, has clearer permission cards and one guide button per AI client, and fits phones better. The theme switch has sun and moon icons.
+- Card-backed trials show in Admin, and trial emails follow the card-backed Pro trial.
+
 ## 0.7.3 - 2026-11-16
 
 ### Agent

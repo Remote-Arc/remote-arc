@@ -1,4 +1,4 @@
-//go:build !(windows && (amd64 || arm64)) && !linux
+//go:build !(windows && (amd64 || arm64)) && !linux && !darwin
 
 package desktop
 
@@ -14,7 +14,7 @@ type unsupported struct{}
 
 func newPlatform() platform { return unsupported{} }
 
-var errUnsupported = errors.New("desktop control is available on Windows and Linux (X11) computers for now")
+var errUnsupported = errors.New("desktop control is available on Windows, macOS and Linux (X11) computers for now")
 
 func (unsupported) Ready() error                                  { return errUnsupported }
 func (unsupported) Start() error                                  { return errUnsupported }

@@ -75,6 +75,9 @@ type Step struct {
 	Key    string
 	Char   uint16
 	Pause  time.Duration
+	// Typed marks the Enter and Tab presses that stand for "\n" and "\t" in
+	// typed text, so a platform that pastes text can keep them in the text.
+	Typed bool
 }
 
 // platform is the operating-system side. Every method may block briefly and

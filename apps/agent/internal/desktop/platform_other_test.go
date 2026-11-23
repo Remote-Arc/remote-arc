@@ -1,4 +1,4 @@
-//go:build !(windows && (amd64 || arm64)) && !linux
+//go:build !(windows && (amd64 || arm64)) && !linux && !darwin
 
 package desktop
 

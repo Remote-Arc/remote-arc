@@ -46,6 +46,13 @@ export default defineConfig(
     },
   },
   {
+    // JavaScript for Automation run by osascript on macOS: ObjC and $ are the
+    // bridge, and osascript calls run().
+    files: ["apps/agent/internal/desktop/mac_scripts/*.js"],
+    languageOptions: { globals: { ObjC: "readonly", $: "readonly" } },
+    rules: { "no-unused-vars": ["error", { ...unused, varsIgnorePattern: "^(_|run$)" }] },
+  },
+  {
     files: ["**/*.{ts,tsx}"],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: { globals: runtimeGlobals },

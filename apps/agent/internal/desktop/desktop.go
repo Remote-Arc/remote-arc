@@ -92,6 +92,20 @@ var blockedApps = map[string]bool{
 	"xsecurelock":                         true,
 	"xscreensaver":                        true,
 	"light-locker":                        true,
+	// macOS: window owner names. The system's password, Touch ID and login
+	// prompts, the screen saver, and password managers.
+	"securityagent":     true,
+	"coreautha":         true,
+	"loginwindow":       true,
+	"screensaverengine": true,
+	"keychain access":   true,
+	"passwords":         true,
+	"1password 7":       true,
+	"dashlane":          true,
+	"lastpass":          true,
+	"nordpass":          true,
+	"proton pass":       true,
+	"roboform":          true,
 }
 
 // Error codes start the error message so the Relay and the AI can branch on them.

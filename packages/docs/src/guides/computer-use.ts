@@ -40,8 +40,12 @@ export const computerUseSections: DocSection[] = [
       ordered: true,
       items: [
         {
-          en: "Update the Remote Arc Agent on a Windows 10 (version 1607 or later) or Windows 11 computer, or on Linux signed in to an X11 (Xorg) session. Wayland sessions are not supported yet.",
-          zh: "在 Windows 10（1607 或更高版本）、Windows 11，或登录在 X11（Xorg）会话下的 Linux 电脑上，把 Remote Arc Agent 更新到最新版本。暂不支持 Wayland 会话。",
+          en: "Update the Remote Arc Agent on a Windows 10 (version 1607 or later) or Windows 11 computer, on a Mac, or on Linux signed in to an X11 (Xorg) session. Wayland sessions are not supported yet.",
+          zh: "在 Windows 10（1607 或更高版本）、Windows 11、Mac，或登录在 X11（Xorg）会话下的 Linux 电脑上，把 Remote Arc Agent 更新到最新版本。暂不支持 Wayland 会话。",
+        },
+        {
+          en: "On a Mac, the first time the AI looks at the screen macOS asks to allow the Agent. In System Settings, Privacy & Security, turn on remote-arc-agent under Screen & System Audio Recording and under Accessibility. Until both are on, the AI is told which one is missing.",
+          zh: "在 Mac 上，AI 第一次查看屏幕时，macOS 会请求允许 Agent。在“系统设置”>“隐私与安全性”中，在“屏幕与系统录音”和“辅助功能”下打开 remote-arc-agent。两项都打开之前，AI 会收到缺少哪一项的提示。",
         },
         {
           en: "In the Dashboard, open Devices, choose the computer and turn on Desktop control. The Developer and Full presets also turn it on; Safe turns it off.",
@@ -133,8 +137,8 @@ export const computerUseSections: DocSection[] = [
           zh: "网页更适合交给 Browser Runner，它直接读取网页内容，并且不会重复提交表单。",
         },
         {
-          en: "A screenshot shows one display; the AI can ask for another. On Linux the AI works from the screenshot and the window list, without the controls of the window in front. macOS support is planned.",
-          zh: "一张截图只包含一个显示器，AI 可以指定其他显示器。在 Linux 上，AI 依靠截图和窗口列表操作，不读取前台窗口的控件。macOS 支持正在计划中。",
+          en: "A screenshot shows one display; the AI can ask for another. On macOS and Linux the AI works from the screenshot and the window list, without the controls of the window in front. On a Mac, key combinations use Command: the AI presses cmd+s to save.",
+          zh: "一张截图只包含一个显示器，AI 可以指定其他显示器。在 macOS 和 Linux 上，AI 依靠截图和窗口列表操作，不读取前台窗口的控件。在 Mac 上，快捷键使用 Command：保存是 cmd+s。",
         },
       ],
     },

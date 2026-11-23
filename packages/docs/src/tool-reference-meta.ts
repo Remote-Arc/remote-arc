@@ -239,9 +239,9 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
     summary: "Perform a supported action in a shared browser tab.",
   },
   desktop_snapshot: {
-    zh: "截取已开启桌面控制的 Windows 或 Linux（X11）电脑屏幕，并读取前台窗口的控件与可见窗口。",
+    zh: "截取已开启桌面控制的 Windows、macOS 或 Linux（X11）电脑屏幕，并读取前台窗口的控件与可见窗口。",
     summary:
-      "Screenshot a Windows or Linux (X11) computer with desktop control on, with the foreground window's controls and the visible windows.",
+      "Screenshot a Windows, macOS or Linux (X11) computer with desktop control on, with the foreground window's controls and the visible windows.",
   },
   desktop_act: {
     zh: "按最近的截图点击、输入、按键、滚动或拖动；用户一动鼠标或键盘就会停下。",

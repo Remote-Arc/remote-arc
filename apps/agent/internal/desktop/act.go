@@ -72,9 +72,9 @@ func textSteps(text string) []Step {
 		case '\r':
 			continue
 		case '\n':
-			steps = append(steps, keySteps([]string{"enter"})...)
+			steps = append(steps, typedKey("enter")...)
 		case '\t':
-			steps = append(steps, keySteps([]string{"tab"})...)
+			steps = append(steps, typedKey("tab")...)
 		default:
 			for _, unit := range utf16.Encode([]rune{r}) {
 				steps = append(steps, Step{Kind: StepChar, Char: unit})
@@ -82,6 +82,15 @@ func textSteps(text string) []Step {
 		}
 		// A short pause keeps slow editors and IMEs from dropping characters.
 		steps = append(steps, Step{Kind: StepPause, Pause: 4 * time.Millisecond})
+	}
+	return steps
+}
+
+// typedKey is Enter or Tab standing for a line break or tab in typed text.
+func typedKey(key string) []Step {
+	steps := keySteps([]string{key})
+	for i := range steps {
+		steps[i].Typed = true
 	}
 	return steps
 }

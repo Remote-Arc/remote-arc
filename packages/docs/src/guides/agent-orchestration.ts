@@ -34,8 +34,8 @@ export const agentOrchestrationSections: DocSection[] = [
           zh: "查看 Claude Code 和 Codex 报告的 5 小时和 7 天用量，以及每次回复的 token 和费用。",
         },
         {
-          en: "Get a notification on Slack or a webhook when an agent replies, fails, or waits for your approval.",
-          zh: "Agent 回复、失败或等待你批准时，通过 Slack 或 Webhook 收到通知。",
+          en: "Get a notification on Slack or a webhook when an agent replies, fails, or waits for your approval. Coding agents have their own switch in Settings, Notifications, apart from routine notices.",
+          zh: "Agent 回复、失败或等待你批准时，通过 Slack 或 Webhook 收到通知。编程 Agent 在设置的通知里有单独的开关，和 routine 通知分开。",
         },
       ],
     },
@@ -88,8 +88,8 @@ export const agentOrchestrationSections: DocSection[] = [
   {
     heading: { en: "Model and reasoning effort", zh: "模型与推理程度" },
     text: {
-      en: "Beside the mode, choose the model and the reasoning effort, when you start an agent or for any message. Pick an alias from the list (Claude Code: fable, opus, sonnet; Gemini CLI: auto, pro, flash, flash-lite) or type any model name the agent knows. Claude Code takes low, medium, high, extra high or max effort, and Codex low to extra high, as its model allows; Gemini CLI has no effort setting. Leave them empty to use the agent's own default.",
-      zh: "在模式旁边可以选择模型和推理程度，启动 Agent 时或每条消息都可以设置。可以从列表中选择别名（Claude Code：fable、opus、sonnet；Gemini CLI：auto、pro、flash、flash-lite），也可以输入该 Agent 支持的任意模型名。Claude Code 支持低、中、高、超高和最大推理，Codex 支持低到超高（取决于模型）；Gemini CLI 没有推理程度设置。留空则使用 Agent 自己的默认值。",
+      en: "Beside the mode, choose the model and the reasoning effort, when you start an agent or for any message. Claude Code lists its aliases (fable, opus, sonnet). Codex lists the models its account offers, read from the Codex on that computer once it has run there, each with the effort levels it takes. Gemini CLI lists its aliases (auto, pro, flash, flash-lite), then Google's current Gemini models. You can also type any model name the agent knows. Claude Code takes low, medium, high, extra high or max effort, and Codex low to ultra as its model allows; Gemini CLI has no effort setting. Leave them empty to use the agent's own default.",
+      zh: "在模式旁边可以选择模型和推理程度，启动 Agent 时或每条消息都可以设置。Claude Code 列出它的别名（fable、opus、sonnet）。Codex 列出它的账号可用的模型，从那台电脑上的 Codex 读取（需在那里运行过一次），并带有每个模型支持的推理程度。Gemini CLI 先列出它的别名（auto、pro、flash、flash-lite），再列出 Google 当前的 Gemini 模型。也可以输入该 Agent 支持的任意模型名。Claude Code 支持低、中、高、超高和最大推理，Codex 支持低到极致（取决于模型）；Gemini CLI 没有推理程度设置。留空则使用 Agent 自己的默认值。",
     },
   },
   {

@@ -10,8 +10,8 @@ export const agentOrchestrationSections: DocSection[] = [
     list: {
       items: [
         {
-          en: "Every agent you open is a tab, marked with its agent. Show one at a time, or up to four side by side. The list on the left groups your agents by computer and repository.",
-          zh: "每个打开的 Agent 都是一个标签页，并标着是哪个 Agent。可以一次看一个，也可以最多四个并排。左侧列表按电脑和仓库分组列出所有 Agent。",
+          en: "Every agent you open is a tab, marked with its agent. Choose a layout: Single, Split (two side by side, with a divider you can drag), Focus (one large, two beside it) or Grid (up to four). Choosing a tab puts that agent first in view, and any pane can be maximised. The list on the left groups your agents by computer and repository, and can be collapsed or resized; Expand workspace turns the Dashboard menu into icons so the agents fill the screen.",
+          zh: "每个打开的 Agent 都是一个标签页，并标着是哪个 Agent。可以选择布局：单个、左右（两个并排，中间的分隔线可以拖动）、主次（一个大的，旁边两个）或四宫格（最多四个）。点击标签页会把那个 Agent 放到视图的第一位，任何一个窗格都可以最大化。左侧列表按电脑和仓库分组列出所有 Agent，可以收起或调整宽度；“展开工作区”会把 Dashboard 菜单收成图标，让 Agent 铺满屏幕。",
         },
         {
           en: "Each conversation reads like Claude Code: the agent's replies, each tool it used with what it returned, and its to-do list, as it works.",
@@ -58,12 +58,12 @@ export const agentOrchestrationSections: DocSection[] = [
           zh: "确认仓库位于这台电脑的可信写入位置之内（Dashboard >“设备”）。",
         },
         {
-          en: "In the Dashboard, open Agent Orchestration and choose + (New agent). Pick the agent and its mode, write what it should do, and choose the computer and repository. Add more rows to start several at once.",
-          zh: "在 Dashboard 中打开“Agent 编排”，点击 +（新建 Agent）。选择 Agent 和模式，写下要做的事，再选择电脑和仓库。添加更多行即可同时启动多个。",
+          en: "In the Dashboard, open Agent Orchestration and choose + (New agent) to open the Launchpad. Under New agent, pick the agent and its mode, write what it should do, and choose the computer and repository. Under Parallel, give several agents a shared objective and each its own task, computer and model; they start together, each in its own worktree.",
+          zh: "在 Dashboard 中打开“Agent 编排”，点击 +（新建 Agent）打开启动台。在“新建 Agent”中选择 Agent 和模式，写下要做的事，再选择电脑和仓库。在“并行”中给多个 Agent 一个共同目标，并为每个 Agent 设置各自的任务、电脑和模型；它们会一起启动，各自在独立的 worktree 中工作。",
         },
         {
-          en: "Before you start, the form checks each computer: that the folder is a Git repository with a commit (or that the agent may work in the folder itself), and that the agent is installed and signed in there. The folder field suggests the repositories inside the computer's trusted folders. An agent that is missing can be installed from the form (Codex and Gemini CLI need Node.js 18 or later), and Claude Code can be signed in from it: open its sign-in page in any browser, even on your phone, and paste the code back. Codex and Gemini CLI are signed in on the computer itself.",
-          zh: "启动前，表单会检查每台电脑：文件夹是否为有提交的 Git 仓库（或允许 Agent 直接在文件夹中工作），以及 Agent 是否已在那台电脑上安装并登录。文件夹一栏会列出这台电脑可信文件夹中的仓库。缺少的 Agent 可以直接在表单里安装（Codex 和 Gemini CLI 需要 Node.js 18 或更高版本）；Claude Code 也可以在表单里登录：在任意浏览器（手机也可以）打开它的登录页，再把代码粘贴回来。Codex 和 Gemini CLI 需要在那台电脑上登录。",
+          en: "Before you start, the workspace preflight checks each computer: that the folder is a Git repository with a commit (or that the agent may work in the folder itself), and that the agent is installed and signed in there. The folder field suggests the repositories inside the computer's trusted folders. An agent that is missing can be installed from the form (Codex and Gemini CLI need Node.js 18 or later), and Claude Code can be signed in from it: open its sign-in page in any browser, even on your phone, and paste the code back. Codex and Gemini CLI are signed in on the computer itself.",
+          zh: "启动前，工作区预检会检查每台电脑：文件夹是否为有提交的 Git 仓库（或允许 Agent 直接在文件夹中工作），以及 Agent 是否已在那台电脑上安装并登录。文件夹一栏会列出这台电脑可信文件夹中的仓库。缺少的 Agent 可以直接在表单里安装（Codex 和 Gemini CLI 需要 Node.js 18 或更高版本）；Claude Code 也可以在表单里登录：在任意浏览器（手机也可以）打开它的登录页，再把代码粘贴回来。Codex 和 Gemini CLI 需要在那台电脑上登录。",
         },
       ],
     },
@@ -71,8 +71,8 @@ export const agentOrchestrationSections: DocSection[] = [
   {
     heading: { en: "Continue a session from the computer", zh: "继续电脑上的会话" },
     text: {
-      en: "The new-agent tab lists the Claude Code and Codex sessions you started on a computer yourself, newest first. Continue one and it opens in its own folder with its earlier conversation; your next message resumes that same session. Its folder must be one of the computer's trusted folders.",
-      zh: "新建 Agent 的标签页会列出你自己在电脑上开始的 Claude Code 和 Codex 会话，最新的在前。继续某个会话后，它会在原来的文件夹里打开并显示之前的对话；你的下一条消息会接着这个会话。它所在的文件夹必须是这台电脑的可信文件夹。",
+      en: "The Launchpad's Resume entry lists the Claude Code and Codex sessions you started on a computer yourself, newest first. Continue one and it opens in its own folder with its earlier conversation; your next message resumes that same session. Its folder must be one of the computer's trusted folders.",
+      zh: "启动台的“继续会话”会列出你自己在电脑上开始的 Claude Code 和 Codex 会话，最新的在前。继续某个会话后，它会在原来的文件夹里打开并显示之前的对话；你的下一条消息会接着这个会话。它所在的文件夹必须是这台电脑的可信文件夹。",
     },
   },
   {

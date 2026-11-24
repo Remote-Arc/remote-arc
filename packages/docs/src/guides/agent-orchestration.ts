@@ -4,8 +4,8 @@ export const agentOrchestrationSections: DocSection[] = [
   {
     heading: { en: "What Agent Orchestration does", zh: "Agent 编排能做什么" },
     text: {
-      en: "Agent Orchestration runs the coding agents you already use, Claude Code, Codex and Gemini CLI, on any of your paired computers, from the Dashboard. Each agent works in its own Git worktree and branch, so several can work on the same repository at once without touching your checkout or each other.",
-      zh: "Agent 编排在 Dashboard 里，把你已经在用的编程 Agent（Claude Code、Codex 和 Gemini CLI）运行在任意一台已配对的电脑上。每个 Agent 都在独立的 Git worktree 和分支中工作，所以多个 Agent 可以同时处理同一个仓库，既不影响你的工作目录，也不会互相干扰。",
+      en: "Agent Orchestration runs the coding agents you already use, Claude Code, Codex and Gemini CLI, on any of your paired computers, from the Dashboard. Each agent works in its own Git worktree and branch, so several can work on the same repository at once without touching your checkout or each other. Agent Orchestration is in beta.",
+      zh: "Agent 编排在 Dashboard 里，把你已经在用的编程 Agent（Claude Code、Codex 和 Gemini CLI）运行在任意一台已配对的电脑上。每个 Agent 都在独立的 Git worktree 和分支中工作，所以多个 Agent 可以同时处理同一个仓库，既不影响你的工作目录，也不会互相干扰。Agent 编排目前处于 Beta 阶段。",
     },
     list: {
       items: [
@@ -61,6 +61,10 @@ export const agentOrchestrationSections: DocSection[] = [
           en: "In the Dashboard, open Agent Orchestration and choose + (New agent). Pick the agent and its mode, write what it should do, and choose the computer and repository. Add more rows to start several at once.",
           zh: "在 Dashboard 中打开“Agent 编排”，点击 +（新建 Agent）。选择 Agent 和模式，写下要做的事，再选择电脑和仓库。添加更多行即可同时启动多个。",
         },
+        {
+          en: "Before you start, the form checks each computer: that the folder is a Git repository with a commit (or that the agent may work in the folder itself), and that the agent is installed and signed in there. The folder field suggests the repositories inside the computer's trusted folders. An agent that is missing can be installed from the form (Codex and Gemini CLI need Node.js 18 or later), and Claude Code can be signed in from it: open its sign-in page in any browser, even on your phone, and paste the code back. Codex and Gemini CLI are signed in on the computer itself.",
+          zh: "启动前，表单会检查每台电脑：文件夹是否为有提交的 Git 仓库（或允许 Agent 直接在文件夹中工作），以及 Agent 是否已在那台电脑上安装并登录。文件夹一栏会列出这台电脑可信文件夹中的仓库。缺少的 Agent 可以直接在表单里安装（Codex 和 Gemini CLI 需要 Node.js 18 或更高版本）；Claude Code 也可以在表单里登录：在任意浏览器（手机也可以）打开它的登录页，再把代码粘贴回来。Codex 和 Gemini CLI 需要在那台电脑上登录。",
+        },
       ],
     },
   },
@@ -79,6 +83,13 @@ export const agentOrchestrationSections: DocSection[] = [
     text: {
       en: "By default each agent gets its own worktree and branch. Turn that off to let it work in the folder itself, editing your checkout directly: one agent per folder, and with no branch of its own there is nothing to merge or turn into a pull request.",
       zh: "默认情况下每个 Agent 都有自己的 worktree 和分支。关闭后，Agent 直接在文件夹里工作，会修改你的工作目录：每个文件夹只能有一个 Agent；因为没有自己的分支，所以也没有需要合并或创建 Pull Request 的内容。",
+    },
+  },
+  {
+    heading: { en: "Model and reasoning effort", zh: "模型与推理程度" },
+    text: {
+      en: "Beside the mode, choose the model and the reasoning effort, when you start an agent or for any message. Pick an alias from the list (Claude Code: fable, opus, sonnet; Gemini CLI: auto, pro, flash, flash-lite) or type any model name the agent knows. Claude Code takes low, medium, high, extra high or max effort, and Codex low to extra high, as its model allows; Gemini CLI has no effort setting. Leave them empty to use the agent's own default.",
+      zh: "在模式旁边可以选择模型和推理程度，启动 Agent 时或每条消息都可以设置。可以从列表中选择别名（Claude Code：fable、opus、sonnet；Gemini CLI：auto、pro、flash、flash-lite），也可以输入该 Agent 支持的任意模型名。Claude Code 支持低、中、高、超高和最大推理，Codex 支持低到超高（取决于模型）；Gemini CLI 没有推理程度设置。留空则使用 Agent 自己的默认值。",
     },
   },
   {
@@ -105,6 +116,13 @@ export const agentOrchestrationSections: DocSection[] = [
     },
   },
   {
+    heading: { en: "When an agent stops and needs you", zh: "Agent 停下来需要你处理时" },
+    text: {
+      en: "An agent stops with a clear reason, never a bare failure, when it is signed out, when its own subscription reaches its usage limit, when its account has no credits left, or when its plan does not include it. These limits belong to your Claude, ChatGPT or Google account, not to Remote Arc: wait for the limit to reset, add credits, or start another agent.",
+      zh: "当 Agent 未登录、它自己的订阅达到用量上限、账户没有余额，或它的套餐不包含该 Agent 时，它会停下来并说明原因，而不是只显示失败。这些限制属于你的 Claude、ChatGPT 或 Google 账户，而不是 Remote Arc：等待额度重置、充值，或换一个 Agent。",
+    },
+  },
+  {
     heading: { en: "How it stays safe", zh: "如何保证安全" },
     text: {
       en: "Each agent keeps its own safety checks, and Remote Arc adds the computer's.",
@@ -119,6 +137,10 @@ export const agentOrchestrationSections: DocSection[] = [
         {
           en: "The agent works in its worktree. Your own checkout is untouched until you merge, and a merge happens only while your checkout is on the branch it started from with nothing uncommitted. A merge that conflicts is undone.",
           zh: "Agent 只在自己的 worktree 中工作，在你合并之前你的工作目录不受影响。只有当你的工作目录仍在起始分支上且没有未提交的改动时才能合并；有冲突的合并会被撤销。",
+        },
+        {
+          en: "Agents start only inside the computer's trusted folders, which you choose under Devices. To use a folder outside them, add it there first: Agent Orchestration never widens them for you.",
+          zh: "Agent 只会在这台电脑的可信文件夹中启动，可信文件夹由你在“设备”中选择。要使用其他文件夹，请先在那里添加；Agent 编排不会替你扩大范围。",
         },
         {
           en: "Removing a worktree asks you first, and deletes only that worktree and its branch.",

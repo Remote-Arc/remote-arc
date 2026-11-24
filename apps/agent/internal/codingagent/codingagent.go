@@ -64,6 +64,9 @@ var (
 	sessionRef = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	runTag     = regexp.MustCompile(`^ar_[0-9a-f]{12}$`)
 	modes      = map[string]bool{"acceptEdits": true, "manual": true, "plan": true, "auto": true}
+	// A model alias or name, and Claude Code's --effort levels (checked against 2.1.330).
+	modelName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$`)
+	efforts   = map[string]bool{"low": true, "medium": true, "high": true, "xhigh": true, "max": true}
 )
 
 type session struct {
@@ -179,14 +182,24 @@ func (m *Manager) start(args map[string]any, p protocol.Policy) (any, error) {
 		return nil, fmt.Errorf("BACKGROUND_TASK_LIMIT: this computer already runs %d agent sessions, the most its plan allows at once", limit)
 	}
 	m.mu.Unlock()
+	model, effort := str(args, "model"), str(args, "effort")
+	if (model != "" && !modelName.MatchString(model)) || (effort != "" && !efforts[effort]) {
+		return nil, errors.New("agent_session_start needs a model name of letters, digits and . _ : - and a known effort level")
+	}
 	argv := []string{"-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
 		"--permission-prompt-tool=stdio", "--permission-mode", mode, "--settings", string(settings)}
+	if model != "" {
+		argv = append(argv, "--model", model)
+	}
+	if effort != "" {
+		argv = append(argv, "--effort", effort)
+	}
 	if args["resume"] == true {
 		argv = append(argv, "--resume", ref)
 	} else {
 		argv = append(argv, "--session-id", ref)
 	}
-	cmd := m.Command("claude", argv...)
+	cmd := m.Command(findAgent("claude"), argv...)
 	cmd.Dir = cwd
 	prepare(cmd)
 	stdin, err := cmd.StdinPipe()

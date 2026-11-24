@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -24,6 +26,12 @@ func TestHelperClaude(t *testing.T) {
 	out := json.NewEncoder(os.Stdout)
 	dir, _ := os.Getwd()
 	args := os.Args[len(os.Args)-14:]
+	for i, arg := range os.Args {
+		if arg == "--" {
+			args = os.Args[i:]
+			break
+		}
+	}
 	out.Encode(map[string]any{"type": "system", "subtype": "init", "args": args, "cwd": dir})
 	in := bufio.NewScanner(os.Stdin)
 	for in.Scan() {
@@ -64,7 +72,7 @@ func TestHelperClaude(t *testing.T) {
 func fake(t *testing.T) *Manager {
 	m := New()
 	m.Command = func(name string, args ...string) *exec.Cmd {
-		if name != "claude" {
+		if base := strings.TrimSuffix(filepath.Base(name), ".exe"); base != "claude" {
 			t.Fatalf("started %q", name)
 		}
 		cmd := exec.Command(os.Args[0], append([]string{"-test.run=TestHelperClaude", "--"}, args...)...)
@@ -189,6 +197,8 @@ func TestSessionStartRefusesWhatItShouldNot(t *testing.T) {
 		"an unknown mode": {"mode": "bypassPermissions"},
 		"a run tag":       {"tag": "anything"},
 		"an empty prompt": {"prompt": "  "},
+		"a model":         {"model": "opus; rm -rf ~"},
+		"an effort":       {"effort": "ultra"},
 		"a folder":        {"cwd": t.TempDir()},
 	} {
 		args := map[string]any{}
@@ -341,4 +351,48 @@ func TestSessionInputRefusesWhatItShouldNot(t *testing.T) {
 	if _, err := m.Call("agent_session_start", base, p); err == nil || !strings.Contains(err.Error(), "is it installed") {
 		t.Fatalf("missing Claude Code: %v", err)
 	}
+}
+
+func TestFindAgentLooksInTheInstallersFolders(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
+	t.Setenv("PATH", t.TempDir())
+	name := "ra-test-agent"
+	if got := findAgent(name); got != name {
+		t.Fatalf("an agent installed nowhere resolved to %q", got)
+	}
+	file := filepath.Join(home, ".local", "bin", name)
+	if runtime.GOOS == "windows" {
+		file += ".exe"
+	}
+	if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got := findAgent(name); got != file {
+		t.Fatalf("found %q, want the installer's own folder %q", got, file)
+	}
+}
+
+func TestSessionStartsWithTheChosenModelAndEffort(t *testing.T) {
+	root := t.TempDir()
+	m := fake(t)
+	p := protocol.Policy{WorkspaceRoots: []string{root}}
+	started, err := m.Call("agent_session_start", map[string]any{
+		"agent": "claude", "tag": "ar_0123456789ab", "session_ref": ref, "mode": "acceptEdits",
+		"cwd": root, "prompt": "hello", "model": "opus", "effort": "high",
+	}, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := events(t, m, func(l []string, _ Event) bool { return contains(l, `"result":"echo: hello"`) })
+	if !contains(lines[:1], `"--model","opus","--effort","high"`) {
+		t.Fatalf("model and effort missing: %s", lines[0])
+	}
+	m.Call("agent_session_stop", map[string]any{"session": started.(map[string]any)["session"]}, p)
+	events(t, m, func(_ []string, e Event) bool { return e.Exited })
 }

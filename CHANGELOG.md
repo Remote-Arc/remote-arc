@@ -2,6 +2,28 @@
 
 All notable changes to Remote Arc are documented here.
 
+## 0.8.1 - 2026-11-25
+
+### Agent
+
+- On a Mac, the Agent's background service runs as Remote Arc.app, signed with Remote Arc's Developer ID and notarized by Apple. System Settings (Screen Recording, Accessibility, Login Items) shows it as Remote Arc with its icon instead of `remotelink`, and permissions given to one release carry over to the next.
+- Agents installed with Homebrew, npm or the curl installer fetch the signed Remote Arc.app of their own version on a Mac and run their background service and updates from it. The app is used only when its archive matches the checksum published on GitHub, its signature is Remote Arc's and it reports the same version; otherwise the Agent runs as before.
+- The Agent records why it stopped (the operating system, a Dashboard stop, pause or update, a local stop, or another process taking over), so a computer that went offline can be explained without the system log.
+
+### Desktop app
+
+- Remote Arc for Mac: the desktop app, now for macOS, signed and notarized. `Remote-Arc-macos-universal.dmg` is attached to this release and runs on Apple silicon and Intel Macs. The Agent inside it is the signed Remote Arc.app.
+
+### Cloud service
+
+- Agent Orchestration (Beta): choose the model and reasoning effort for Claude Code, Codex and Gemini CLI. Before an agent starts, each computer and folder is checked (Git repository and branch, agent installed, version, signed in), with what to fix.
+- The desktop and mobile apps report their version when they sign in, and Admin shows them beside each person's Agent version.
+- Website downloads are counted per day and download, with nothing stored about the visitor, and Admin's overview shows the last 30 days.
+
+### Website
+
+- `/downloads` offers the Mac app first on macOS, with the curl installer for the Agent alone.
+
 ## 0.8.0 - 2026-11-23
 
 ### Agent

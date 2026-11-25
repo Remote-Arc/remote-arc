@@ -64,16 +64,16 @@ download), see [Downloads](https://remotearc.app/downloads).
 <!-- latest-release:start -->
 ## Latest release
 
-**remotelink 0.8.0 — Agent**
+**remotelink 0.8.1 — Agent**
 
-Published 2026-11-23
+Published 2026-11-25
 
-- Computer use: with the owner's per-computer switch on, an AI client can see the screen and use the mouse and keyboard through `desktop_snapshot` and `desktop_act`, on Windows, on Linux in an X11 session, and on macOS. The person always wins: moving the mouse or typing stops the AI, a locked screen or screen saver is refused, and an "AI is using this computer" notice stays on screen and out of screenshots. Password managers and system sign-in prompts are protected.
-- On a Mac, computer use needs Screen Recording and Accessibility for the Agent; the first call asks macOS to show both in System Settings. Text is pasted and the clipboard put back, so Chinese, emoji, line breaks and tabs type correctly with any keyboard layout or input method.
-- Agent Orchestration: the Agent runs Claude Code, Codex and Gemini CLI conversations for the Dashboard, in a worktree of their own or in a trusted folder itself, answers their permission questions as you decide, continues sessions already on the computer, and stops a session after two idle hours or when the Agent stops.
-- Background commands report separately from foreground ones, and the Agent keeps to the plan's limit on background commands running at once, refusing more with `BACKGROUND_TASK_LIMIT` before anything starts.
-- An Agent started by the desktop app prints its pairing code for the app to approve with its own sign-in, instead of opening a browser.
-- The background connection is on by default for every way of starting the Agent (npx, the native binary and the desktop apps), so a computer stays online after its terminal closes. Turning it off in Dashboard → Devices or with `--no-background` is kept; `--foreground` never turns it on. Before, a Mac paired from the browser could finish setup with it off.
+- On a Mac, the Agent's background service runs as Remote Arc.app, signed with Remote Arc's Developer ID and notarized by Apple. System Settings (Screen Recording, Accessibility, Login Items) shows it as Remote Arc with its icon instead of `remotelink`, and permissions given to one release carry over to the next.
+- Agents installed with Homebrew, npm or the curl installer fetch the signed Remote Arc.app of their own version on a Mac and run their background service and updates from it. The app is used only when its archive matches the checksum published on GitHub, its signature is Remote Arc's and it reports the same version; otherwise the Agent runs as before.
+- The Agent records why it stopped (the operating system, a Dashboard stop, pause or update, a local stop, or another process taking over), so a computer that went offline can be explained without the system log.
+- Remote Arc for Mac: the desktop app, now for macOS, signed and notarized. `Remote-Arc-macos-universal.dmg` is attached to this release and runs on Apple silicon and Intel Macs. The Agent inside it is the signed Remote Arc.app.
+- Agent Orchestration (Beta): choose the model and reasoning effort for Claude Code, Codex and Gemini CLI. Before an agent starts, each computer and folder is checked (Git repository and branch, agent installed, version, signed in), with what to fix.
+- The desktop and mobile apps report their version when they sign in, and Admin shows them beside each person's Agent version.
 
 See the [full Remote Arc release history](https://remotearc.app/releases) or the [GitHub changelog](https://github.com/Remote-Arc/remote-arc/blob/master/CHANGELOG.md).
 <!-- latest-release:end -->

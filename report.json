@@ -2,17 +2,17 @@
   "version": 1,
   "repository": "Remote-Arc/remote-arc",
   "source": {
-    "runId": 45385425922,
-    "sha": "8218f756bd5f590e4f0d956fb1f032c1a27b5abf",
-    "url": "https://github.com/Remote-Arc/remote-arc/actions/runs/45385425922",
-    "measuredAt": "2026-11-24T11:49:02Z"
+    "runId": 45574787478,
+    "sha": "b8a3a22b0c235040846c8c50e9e6d71ea988ff45",
+    "url": "https://github.com/Remote-Arc/remote-arc/actions/runs/45574787478",
+    "measuredAt": "2026-11-25T08:30:55Z"
   },
   "scope": "Linux Go module statements of the device Agent and Execution Core.",
   "target": 90,
   "overall": {
-    "covered": 10424,
+    "covered": 10423,
     "total": 11445,
-    "pct": 91.08
+    "pct": 91.07
   },
   "scopes": {
     "agent": {
@@ -24,9 +24,9 @@
     },
     "core": {
       "statements": {
-        "covered": 2211,
+        "covered": 2210,
         "total": 2369,
-        "pct": 93.33
+        "pct": 93.29
       }
     }
   }

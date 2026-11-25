@@ -28,7 +28,9 @@ test("task manifest validates names, definitions and repository-owned working di
 });
 
 test("commands preserve literal arguments, order, cwd and last-step argument forwarding", () => {
-  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "ra task arguments "));
+  // realpath: on macOS the temporary folder is under /var, a link to /private/var,
+  // and the child's process.cwd() reports the resolved path.
+  const cwd = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "ra task arguments ")));
   try {
     const capture =
       "require('node:fs').appendFileSync('result.jsonl', JSON.stringify({cwd:process.cwd(),args:process.argv.slice(1)})+'\\n')";

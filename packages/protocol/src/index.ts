@@ -514,3 +514,86 @@ export type ArcAppConnectionRequest = {
   dataPolicy?: { version: string; retentionDays: number };
   permissions?: ("read" | "write")[];
 };
+
+/**
+ * What a coding agent's model menu may say about a model beyond its name: a
+ * preview model only some accounts can use, or one some plans bill to usage
+ * credits.
+ */
+export type AgentModelNote = "preview" | "credits";
+
+// <agent-models>
+// Written by `pnpm models:sync` (scripts/agent-models-sync.mjs): do not edit by hand.
+/**
+ * Each Claude Code alias's model on the Anthropic API, newest first, with the first
+ * Claude Code version that runs it (Claude Code's model docs, Version history).
+ */
+export const CLAUDE_CODE_ALIAS_MODELS: readonly {
+  id: string;
+  versions: readonly { since: string; name: string }[];
+}[] = [
+  {
+    id: "fable",
+    versions: [
+      { since: "2.1.321", name: "Fable 5.2" },
+      { since: "2.1.257", name: "Fable 5.1" },
+    ],
+  },
+  {
+    id: "opus",
+    versions: [
+      { since: "2.1.280", name: "Opus 5.5" },
+      { since: "2.1.219", name: "Opus 5" },
+      { since: "2.1.154", name: "Opus 4.8" },
+    ],
+  },
+  {
+    id: "sonnet",
+    versions: [
+      { since: "2.1.284", name: "Sonnet 5.5" },
+      { since: "2.1.197", name: "Sonnet 5" },
+    ],
+  },
+  {
+    id: "haiku",
+    versions: [{ since: "2.1.293", name: "Haiku 5.5" }],
+  },
+];
+/**
+ * Gemini CLI's model menu, in its order: Auto, then its models, preview ones first
+ * (its published core package, config/models.js).
+ */
+export const GEMINI_CLI_MODELS: readonly {
+  id: string;
+  name: string;
+  notes?: readonly AgentModelNote[];
+}[] = [
+  { id: "auto", name: "Auto" },
+  { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro Preview", notes: ["preview"] },
+  { id: "gemini-3-flash-preview", name: "Gemini 3 Flash Preview", notes: ["preview"] },
+  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+  { id: "gemini-3.1-flash-lite", name: "Gemini 3.1 Flash Lite" },
+  { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash" },
+];
+// </agent-models>
+
+/** What Claude Code's own menu says beside an alias. */
+const CLAUDE_CODE_NOTES: Partial<Record<string, readonly AgentModelNote[]>> = {
+  fable: ["credits"],
+};
+
+/**
+ * Claude Code's aliases with the model each runs, newest first, for an account
+ * signed in to Anthropic directly. A Claude Code older than every entry, or one
+ * signed in through another cloud, may run another model, so the menu then shows
+ * the alias alone. The alias is what runs, so Claude Code still applies the
+ * account's own plan and any model its organization allows.
+ */
+export const CLAUDE_CODE_MODELS: readonly {
+  id: string;
+  versions: readonly { since: string; name: string }[];
+  notes?: readonly AgentModelNote[];
+}[] = CLAUDE_CODE_ALIAS_MODELS.map((model) => ({
+  ...model,
+  ...(CLAUDE_CODE_NOTES[model.id] ? { notes: CLAUDE_CODE_NOTES[model.id] } : {}),
+}));

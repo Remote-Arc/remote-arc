@@ -166,8 +166,13 @@ func TestE2EWaitConditionsAndLiveView(t *testing.T) {
 	if r := waiting("url_contains", map[string]any{"url_contains": "stage=ready"}); r["state"] != "met" {
 		t.Fatal(r)
 	}
-	evaluate(`setTimeout(()=>document.getElementById('result').textContent='Changed',200)`)
-	if r := waiting("page_change", nil); r["state"] != "met" {
+	// page_change compares against the page as the wait finds it, so one change
+	// scheduled before the call can land before that baseline on a slow runner.
+	// Keep changing the page until the wait returns, then stop.
+	evaluate(`window.__changes=setInterval(()=>{const r=document.getElementById('result');r.textContent='Changed '+(Number(r.dataset.n||0)+1);r.dataset.n=Number(r.dataset.n||0)+1},200)`)
+	r := waiting("page_change", nil)
+	evaluate(`clearInterval(window.__changes)`)
+	if r["state"] != "met" {
 		t.Fatal(r)
 	}
 	if r := waiting("upload_done", map[string]any{"timeout_ms": 1000}); r["state"] != "timeout" {

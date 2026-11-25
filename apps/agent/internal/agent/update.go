@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/macapp"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/release"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/service"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/config"
@@ -56,6 +57,12 @@ type Updater struct {
 	// URLs take the version, and the binary URLs also the asset name.
 	ManifestURL string
 	BinaryURLs  []string
+	// App is true for a macOS Agent run from its signed app, which updates to
+	// the new release's app instead of its bare binary (update_macapp.go).
+	App            bool
+	AppManifestURL string
+	// VerifyApp checks the downloaded app's code signature.
+	VerifyApp func(ctx context.Context, app string) error
 	// Background reports whether this worker runs as the enabled, active service.
 	Background func(ctx context.Context) bool
 	// Busy names work a restart would interrupt, or "" when idle.
@@ -73,14 +80,18 @@ func newUpdater(a *Agent) *Updater { return newUpdaterFor(a, runtime.GOOS) }
 
 // newUpdaterFor wires the update for one platform; tests pick the platform.
 func newUpdaterFor(a *Agent, platform string) *Updater {
+	executable, _ := os.Executable()
 	u := &Updater{
-		Version:     a.Version,
-		Platform:    platform,
-		Arch:        runtime.GOARCH,
-		Home:        config.Home(),
-		HTTP:        &http.Client{Timeout: 2 * time.Minute},
-		ManifestURL: releaseManifestURL,
-		BinaryURLs:  []string{releaseMirrorURL, releaseGitHubURL},
+		App:            platform == "darwin" && macapp.EnclosingApp(executable) != "",
+		Version:        a.Version,
+		Platform:       platform,
+		Arch:           runtime.GOARCH,
+		Home:           config.Home(),
+		HTTP:           &http.Client{Timeout: 2 * time.Minute},
+		ManifestURL:    releaseManifestURL,
+		BinaryURLs:     []string{releaseMirrorURL, releaseGitHubURL},
+		AppManifestURL: macapp.ManifestURL,
+		VerifyApp:      macapp.VerifySignature,
 		Background: func(ctx context.Context) bool {
 			if !a.BackgroundProcess || a.Background == nil {
 				return false
@@ -158,20 +169,9 @@ func (u *Updater) Update(ctx context.Context, version string) (map[string]any, e
 	if busy := u.Busy(); busy != "" {
 		return nil, fmt.Errorf("AGENT_UPDATE_BUSY: the Agent has active work (%s); update when it finishes", busy)
 	}
-	asset, err := u.asset(version)
+	binary, checksum, err := u.prepare(ctx, version)
 	if err != nil {
 		return nil, err
-	}
-	checksum, err := u.manifestChecksum(ctx, version, asset)
-	if err != nil {
-		return nil, err
-	}
-	binary, err := u.download(ctx, version, asset, checksum)
-	if err != nil {
-		return nil, err
-	}
-	if got, err := u.Probe(ctx, binary); err != nil || got != version {
-		return nil, fmt.Errorf("AGENT_UPDATE_VERIFY_FAILED: the downloaded Agent did not report v%s", version)
 	}
 	if err := u.Install(ctx, binary, version); err != nil {
 		return nil, fmt.Errorf("AGENT_UPDATE_INSTALL_FAILED: %v", err)
@@ -179,6 +179,40 @@ func (u *Updater) Update(ctx context.Context, version string) (map[string]any, e
 	// Reply first: the Relay sees this result, then the Agent hands over to v<version>.
 	go func() { time.Sleep(750 * time.Millisecond); u.Restart(binary) }()
 	return map[string]any{"accepted": true, "from": u.Version, "version": version, "sha256": checksum}, nil
+}
+
+// prepare downloads and checks the new release. A macOS Agent moves to the
+// release's signed Agent app (macapp), so macOS names it Remote Arc: one that
+// already runs from the app needs it, and a bare binary (Homebrew, npm, curl)
+// takes it when the release has one and otherwise updates as a bare binary.
+func (u *Updater) prepare(ctx context.Context, version string) (string, string, error) {
+	if u.Platform == "darwin" {
+		fetcher := macapp.Fetcher{HTTP: u.HTTP, Home: u.Home, ManifestURL: u.AppManifestURL,
+			ArchiveURLs: u.BinaryURLs, Verify: u.VerifyApp, Probe: u.Probe}
+		program, checksum, err := fetcher.Fetch(ctx, version)
+		if err == nil {
+			return program, checksum, nil
+		}
+		if u.App {
+			return "", "", fmt.Errorf("AGENT_UPDATE_DOWNLOAD_FAILED: %v", err)
+		}
+	}
+	asset, err := u.asset(version)
+	if err != nil {
+		return "", "", err
+	}
+	checksum, err := u.manifestChecksum(ctx, version, asset)
+	if err != nil {
+		return "", "", err
+	}
+	binary, err := u.download(ctx, version, asset, checksum)
+	if err != nil {
+		return "", "", err
+	}
+	if got, err := u.Probe(ctx, binary); err != nil || got != version {
+		return "", "", fmt.Errorf("AGENT_UPDATE_VERIFY_FAILED: the downloaded Agent did not report v%s", version)
+	}
+	return binary, checksum, nil
 }
 
 func (u *Updater) fetch(ctx context.Context, url string, limit int64) ([]byte, error) {

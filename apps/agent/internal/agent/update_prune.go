@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/macapp"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/release"
 )
 
@@ -112,19 +113,28 @@ func pruneOneAgentRelease(dir, kind, version string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	var downloadName = regexp.MustCompile(`^remotelink-v` + regexp.QuoteMeta(version) + `-(?:linux|darwin|windows)-(?:amd64|arm64)(?:\.exe)?$`)
+	var downloadName = regexp.MustCompile(`^remotelink-v` + regexp.QuoteMeta(version) + `-(?:(?:linux|darwin|windows)-(?:amd64|arm64)(?:\.exe)?|darwin-universal\.app\.zip)$`)
 	for _, entry := range entries {
 		name := entry.Name()
-		recognized := kind == "bin" && (name == "remotelink" || name == "remotelink.exe") ||
-			kind == "downloads" && downloadName.MatchString(name)
-		if !recognized || !entry.Type().IsRegular() {
+		// The macOS Agent app (macapp.Bundle) is the one recognized folder.
+		app := name == macapp.Bundle && entry.IsDir() && entry.Type()&os.ModeSymlink == 0
+		recognized := app ||
+			entry.Type().IsRegular() && (kind == "bin" && (name == "remotelink" || name == "remotelink.exe") ||
+				kind == "downloads" && downloadName.MatchString(name))
+		if !recognized {
 			return false, nil // Preserve directories with unexpected files or links.
 		}
 	}
-	// Remove only the recognized direct files, not a recursively traversed tree.
-	// If something else appears in the directory meanwhile, rmdir fails closed.
+	// Remove only the recognized direct files and the Agent app, not any other
+	// tree. If something else appears in the directory meanwhile, rmdir fails
+	// closed.
 	for _, entry := range entries {
-		if err := os.Remove(filepath.Join(dir, entry.Name())); err != nil {
+		path := filepath.Join(dir, entry.Name())
+		remove := os.Remove
+		if entry.IsDir() {
+			remove = os.RemoveAll // never follows links inside the app
+		}
+		if err := remove(path); err != nil {
 			return false, err
 		}
 	}

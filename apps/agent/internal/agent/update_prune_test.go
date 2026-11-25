@@ -188,3 +188,52 @@ func TestReleasePruneLeavesOldVersionsWhenServiceIsNotConfirmed(t *testing.T) {
 		})
 	}
 }
+
+func TestPruneAgentReleasesRemovesOldMacAgentApps(t *testing.T) {
+	home := t.TempDir()
+	oldApp := testReleaseFile(t, home, "bin", "go-0.6.0", filepath.Join("Remote Arc.app", "Contents", "MacOS", "remotelink"))
+	oldZip := testReleaseFile(t, home, "downloads", "0.6.0", "remotelink-v0.6.0-darwin-universal.app.zip")
+	oldUnpacked := testReleaseFile(t, home, "downloads", "0.6.0", filepath.Join("Remote Arc.app", "Contents", "Info.plist"))
+	rollbackApp := testReleaseFile(t, home, "bin", "go-0.6.6", filepath.Join("Remote Arc.app", "Contents", "MacOS", "remotelink"))
+	// Any other folder beside the app keeps the whole release directory.
+	other := testReleaseFile(t, home, "bin", "go-0.6.1", filepath.Join("Other.app", "Contents", "MacOS", "remotelink"))
+	if n, err := pruneAgentReleases(home, "0.7.0"); n != 2 || err != nil {
+		t.Fatalf("removed %d, error %v; want the two old app release directories", n, err)
+	}
+	for _, path := range []string{oldApp, oldZip, oldUnpacked} {
+		if _, err := os.Lstat(path); !os.IsNotExist(err) {
+			t.Errorf("old app file was retained: %s", path)
+		}
+	}
+	for _, dir := range []string{filepath.Join(home, ".remotearc", "agent", "bin", "go-0.6.0"), filepath.Join(home, ".remotearc", "agent", "downloads", "0.6.0")} {
+		if _, err := os.Lstat(dir); !os.IsNotExist(err) {
+			t.Errorf("old release directory was retained: %s", dir)
+		}
+	}
+	for _, path := range []string{rollbackApp, other} {
+		if _, err := os.Lstat(path); err != nil {
+			t.Errorf("unexpected deletion of %s: %v", path, err)
+		}
+	}
+}
+
+func TestPruneAgentReleasesKeepsALinkNamedLikeTheApp(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows requires optional symlink privileges")
+	}
+	home := t.TempDir()
+	outside := t.TempDir()
+	target := filepath.Join(outside, "important.txt")
+	os.WriteFile(target, []byte("private"), 0o600)
+	dir := filepath.Join(home, ".remotearc", "agent", "bin", "go-0.6.0")
+	os.MkdirAll(dir, 0o700)
+	if err := os.Symlink(outside, filepath.Join(dir, "Remote Arc.app")); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := pruneAgentReleases(home, "0.7.0"); n != 0 || err != nil {
+		t.Fatalf("removed %d %v", n, err)
+	}
+	if _, err := os.Stat(target); err != nil {
+		t.Fatalf("followed a link named like the app: %v", err)
+	}
+}

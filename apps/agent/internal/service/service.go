@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/lease"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/macapp"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/config"
 )
 
@@ -30,6 +31,10 @@ type Controller struct {
 	User string
 	Run  Runner
 	Wait func(time.Duration)
+	// FetchApp gets the signed Agent app of version and returns its program.
+	// On macOS a bare binary (Homebrew, npm, curl) uses it to run its service
+	// from Remote Arc.app; when it fails the binary is installed as before.
+	FetchApp func(ctx context.Context, version string) (string, error)
 }
 type Registration struct {
 	Engine  string `json:"engine"`
@@ -69,7 +74,15 @@ func New(version string) *Controller {
 	if u, e := user.Current(); e == nil {
 		uid, name = u.Uid, u.Username
 	}
-	return &Controller{Home: config.Home(), Platform: runtime.GOOS, Executable: exe, Version: version, UID: uid, User: name, Run: RunCommand, Wait: time.Sleep}
+	c := &Controller{Home: config.Home(), Platform: runtime.GOOS, Executable: exe, Version: version, UID: uid, User: name, Run: RunCommand, Wait: time.Sleep}
+	if c.Platform == "darwin" {
+		fetcher := macapp.NewFetcher(c.Home)
+		c.FetchApp = func(ctx context.Context, version string) (string, error) {
+			program, _, err := fetcher.Fetch(ctx, version)
+			return program, err
+		}
+	}
+	return c
 }
 func RunCommand(ctx context.Context, name string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
@@ -261,6 +274,20 @@ func (c *Controller) Status(ctx context.Context) Status {
 	}
 	return s
 }
+
+// preferApp points a bare macOS Agent at the signed Agent app of its version,
+// when one is published, so the service runs as Remote Arc.
+func (c *Controller) preferApp(ctx context.Context) {
+	if c.Platform != "darwin" || c.FetchApp == nil || macapp.EnclosingApp(c.Executable) != "" {
+		return
+	}
+	fetch, cancel := context.WithTimeout(ctx, 3*time.Minute)
+	defer cancel()
+	if program, err := c.FetchApp(fetch, c.Version); err == nil {
+		c.Executable = program
+	}
+}
+
 func (c *Controller) installBinary() (Registration, error) {
 	if !regexp.MustCompile(`^[A-Za-z0-9_.-]+$`).MatchString(c.Version) {
 		return Registration{}, errors.New("Invalid device binary version.")
@@ -274,7 +301,13 @@ func (c *Controller) installBinary() (Registration, error) {
 	if e != nil {
 		return Registration{}, e
 	}
-	if source != binary {
+	if c.Platform == "darwin" && macapp.EnclosingApp(source) != "" {
+		// A signed Agent app (from the desktop app or a macOS update) is kept
+		// whole, so launchd runs it as Remote Arc rather than as a bare binary.
+		if binary, e = macapp.Install(filepath.Dir(binary), source); e != nil {
+			return Registration{}, e
+		}
+	} else if source != binary {
 		b, e := os.ReadFile(source)
 		if e != nil {
 			return Registration{}, e
@@ -357,6 +390,7 @@ func (c *Controller) Enable(ctx context.Context) (Status, error) {
 	if !current.Supported {
 		return current, nil
 	}
+	c.preferApp(ctx)
 	reg, e := c.installBinary()
 	if e != nil {
 		return current, e
@@ -376,7 +410,13 @@ func (c *Controller) Enable(ctx context.Context) (Status, error) {
 				return current, fmt.Errorf("Could not unload stale launchd job before updating: %w", e)
 			}
 		}
-		plist := `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>Label</key><string>` + Label + `</string><key>ProgramArguments</key><array><string>` + xml(reg.Binary) + `</string><string>--agent</string></array><key>RunAtLoad</key><true/><key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict><key>ThrottleInterval</key><integer>5</integer><key>StandardOutPath</key><string>` + xml(filepath.Join(logs, "agent.log")) + `</string><key>StandardErrorPath</key><string>` + xml(filepath.Join(logs, "agent-error.log")) + `</string></dict></plist>`
+		// Login Items in System Settings shows the job under the app it is
+		// associated with, so the Agent app lists it as Remote Arc.
+		associated := ""
+		if macapp.EnclosingApp(reg.Binary) != "" {
+			associated = `<key>AssociatedBundleIdentifiers</key><array><string>` + Label + `</string></array>`
+		}
+		plist := `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>Label</key><string>` + Label + `</string>` + associated + `<key>ProgramArguments</key><array><string>` + xml(reg.Binary) + `</string><string>--agent</string></array><key>RunAtLoad</key><true/><key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict><key>ThrottleInterval</key><integer>5</integer><key>StandardOutPath</key><string>` + xml(filepath.Join(logs, "agent.log")) + `</string><key>StandardErrorPath</key><string>` + xml(filepath.Join(logs, "agent-error.log")) + `</string></dict></plist>`
 		if current.Active {
 			_, _ = c.Run(ctx, "launchctl", "bootout", "gui/"+c.UID+"/"+Label)
 		}

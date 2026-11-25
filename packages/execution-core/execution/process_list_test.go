@@ -2,6 +2,7 @@ package execution
 
 import (
 	"encoding/json"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -27,6 +28,8 @@ func TestRedactCommandLine(t *testing.T) {
 	}
 }
 
+var allSummary = regexp.MustCompile(`\n\n\[\d+ of \d+ processes(; raise limit or narrow filter for the rest)?\]$`)
+
 func TestListProcessesFilterAndLimit(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("covered by the Windows CI matrix through tasklist")
@@ -35,8 +38,10 @@ func TestListProcessesFilterAndLimit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(all, "PID") || !strings.Contains(all, "processes]") {
-		t.Fatalf("missing header or summary: %q", all[:min(200, len(all))])
+	// A busy computer (a CI host running several runners) can have more
+	// than 1000 processes, so the summary may end with the raise-limit hint.
+	if !strings.Contains(all, "PID") || !allSummary.MatchString(all) {
+		t.Fatalf("missing header or summary: %q ... %q", all[:min(200, len(all))], all[max(0, len(all)-200):])
 	}
 	one, err := listProcesses("", 1, false)
 	if err != nil {

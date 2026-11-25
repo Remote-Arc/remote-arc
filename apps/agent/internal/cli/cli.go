@@ -21,6 +21,7 @@ import (
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/localmcp"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/onboarding"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/service"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/stopreason"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/takeover"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/vault"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/config"
@@ -468,6 +469,9 @@ func Main(ctx context.Context, args []string, version string, input *os.File, ou
 			continue
 		}
 		if o.Agent && enabled() {
+			if reason := stopreason.Describe(ctx); reason != "" {
+				return errors.New("Go worker ended while recovery is enabled: " + reason + ".")
+			}
 			return errors.New("Go worker ended while recovery is enabled.")
 		}
 		return err
@@ -483,13 +487,13 @@ func runOwned(parent context.Context, o Options, cfg config.Config, version stri
 		return err
 	}
 	cfg = latest
-	ctx, cancel := context.WithCancel(parent)
-	defer cancel()
+	ctx, cancelCause := context.WithCancelCause(parent)
+	defer cancelCause(nil)
 	go func() {
 		select {
 		case <-owned.Lost():
 			log.Log("error", "Execution lease lost; stopping the Go agent.")
-			cancel()
+			cancelCause(stopreason.LeaseLost)
 		case <-ctx.Done():
 		}
 	}()
@@ -524,13 +528,13 @@ func runOwned(parent context.Context, o Options, cfg config.Config, version stri
 		log.Log("info", fmt.Sprintf("File writes: %s · Undo: %s · device state: durable", config.FileDurability(), config.UndoDurability()))
 		log.Log("info", fmt.Sprintf("Local tools ready: %d execution tools and 5 device tools.", len(a.Core.ListTools())))
 	}
-	a.Stop = cancel
+	a.Stop = func() { cancelCause(stopreason.RemoteRequest) }
 	a.Client = client
 	a.ApprovalPending = approvalPending
 	if cfg.BackgroundEnabled == nil {
 		log.Log("info", "Background connection is not configured yet · finish setup in Dashboard → Devices.")
 	}
-	local, e := control.Start(filepath.Join(config.Dir(), "agent"), version, func() any { return a.Status() }, cancel)
+	local, e := control.Start(filepath.Join(config.Dir(), "agent"), version, func() any { return a.Status() }, func() { cancelCause(stopreason.LocalRequest) })
 	if e != nil {
 		if a.Core != nil {
 			a.Core.Close()

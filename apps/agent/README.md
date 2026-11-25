@@ -87,6 +87,7 @@ does not replay previous writes or process launches.
 | Owned goal worktrees and frozen checkpoints                 | `internal/workspace`                                 | Real Git tests, receipts, candidate rejection and unchanged user checkout |
 | Expiring keep-awake leases                                  | `internal/power`                                     | Three-OS helpers, renewal, expiry and disconnect cleanup                  |
 | One-way machine hash in the hello (trial once per computer) | `internal/machineid`                                 | Normalisation, placeholder IDs, macOS ioreg parsing, Linux fallbacks      |
+| Why the Agent stopped, written to the log                   | `internal/stopreason`                                | Each cause, signal delivery, Agent and local-stop log lines               |
 
 The journal retains the TS `tool.call`, `tool.done` and `tool.error` event names,
 timestamps and durations. It records request IDs and safe failure categories;

@@ -24,6 +24,7 @@ import (
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/machineid"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/power"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/service"
+	"github.com/yaohuangguan/remote-arc/apps/agent/internal/stopreason"
 	"github.com/yaohuangguan/remote-arc/apps/agent/internal/workspace"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/config"
 	"github.com/yaohuangguan/remote-arc/packages/execution-core/execution"
@@ -519,7 +520,11 @@ func (a *Agent) Run(ctx context.Context) error {
 			delay = 30 * time.Second
 		}
 	}
-	a.log("info", "Go agent stopped.")
+	stopped := "Go agent stopped."
+	if reason := stopreason.Describe(ctx); reason != "" {
+		stopped = "Go agent stopped: " + reason + "."
+	}
+	a.log("info", stopped)
 	return ctx.Err()
 }
 func (a *Agent) session(parent context.Context, conn *websocket.Conn) error {

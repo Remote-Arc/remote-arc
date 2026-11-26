@@ -1,12 +1,12 @@
 # Latest measured coverage
 
-Source: [b8a3a22](https://github.com/Remote-Arc/remote-arc/commit/b8a3a22b0c235040846c8c50e9e6d71ea988ff45) · [CI run](https://github.com/Remote-Arc/remote-arc/actions/runs/45574787478) · 2026-11-25T08:30:55Z
+Source: [ae3bbe8](https://github.com/Remote-Arc/remote-arc/commit/ae3bbe8fb77604fdb4d557324fe5c1ac1ecf801f) · [CI run](https://github.com/Remote-Arc/remote-arc/actions/runs/45755547636) · 2026-11-26T04:40:24Z
 
-**Go statement coverage: 91.07% (10423/11445). Target: ≥90%.**
+**Go statement coverage: 90.79% (10652/11732). Target: ≥90%.**
 
 | Scope | Statements |
 | --- | ---: |
-| Go Agent | 90.49% |
-| Go Execution Core | 93.29% |
+| Go Agent | 90.15% |
+| Go Execution Core | 93.33% |
 
 Measured on Linux by the go-coverage job of this repository's CI on master.

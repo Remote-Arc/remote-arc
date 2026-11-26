@@ -56,22 +56,22 @@ export const arcSections: DocSection[] = [
   {
     heading: { en: "Your 7-day trial", zh: "7 天试用" },
     text: {
-      en: "Activate the trial yourself in Arc Chat. It includes 200 Credits and Apps, and starts only when you confirm. No card is needed and nothing is charged automatically.",
-      zh: "在 Arc Chat 中主动开启试用，包含 200 Credits 和 Apps，只有你确认后才开始。无需信用卡，也不会自动扣费。",
+      en: "Start a 7-day trial of Pro or Max, monthly or yearly, from the pricing page or Settings → Plan & usage. It includes 300 Credits and saves a payment method at checkout. When the trial ends it becomes the plan you chose and the card is charged, unless you cancel renewal in Settings → Plan & usage first.",
+      zh: "在价格页或设置 → 套餐与用量中开始 Pro 或 Max（月付或年付）的 7 天试用。试用含 300 Credits，结账时需保存付款方式。试用结束后会转为所选套餐并扣费，除非你提前在设置 → 套餐与用量中取消续费。",
     },
     list: {
       items: [
         {
-          en: "Refreshing the page or activating again does not extend the trial.",
-          zh: "刷新页面或再次开启都不会延长试用。",
+          en: "There is one trial per account. Accounts that have paid for a subscription before cannot start one.",
+          zh: "每个账号只能试用一次；曾经付费订阅过的账号不能再开始试用。",
         },
         {
-          en: "Daily, model and per-run limits still apply during the trial.",
-          zh: "试用期间，每日、模型和单次运行上限仍然适用。",
+          en: "During the trial you have the chosen plan, with its computers, Apps, routines and hosted models. Daily, model and per-run limits still apply.",
+          zh: "试用期间你拥有所选套餐的电脑、应用、Routine 和托管模型。每日、模型和单次运行上限仍然适用。",
         },
         {
-          en: "When the trial ends, new hosted model runs stop. Existing results and connections stay.",
-          zh: "试用结束后，新的托管模型运行会停止，已有结果和连接保留。",
+          en: "Trial Credits end with the trial. No reminder email is sent before the first charge, so cancel in time if you do not want to continue.",
+          zh: "试用 Credits 随试用结束而失效。首次扣费前不会发送提醒邮件，如不想继续请及时取消。",
         },
         {
           en: "Connect keeps its own allowance throughout.",
@@ -97,8 +97,8 @@ export const arcSections: DocSection[] = [
           zh: "充值的额度不设到期日，但使用时需要有效的 Arc 付费订阅。",
         },
         {
-          en: "Plan changes take effect at the next billing cycle.",
-          zh: "套餐变更从下一个账期生效。",
+          en: "An upgrade takes effect at once, prorated. A downgrade, or a switch from yearly to monthly, takes effect at the end of the current period. Monthly and yearly plans both renew.",
+          zh: "升级立即生效并按比例计费；降级或从年付改为月付在当期结束时生效。月付和年付套餐都会自动续费。",
         },
         {
           en: "Credits are granted only after the payment is verified, not when the checkout page returns.",

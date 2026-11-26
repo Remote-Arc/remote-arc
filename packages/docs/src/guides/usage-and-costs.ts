@@ -50,8 +50,8 @@ export const usageAndCostsSections: DocSection[] = [
     },
     paragraphs: [
       {
-        en: "Free includes 10,000 Connect tool calls a month. When they run out, a one-time 7-day trial of unlimited calls starts automatically; after it, calls continue at 2 per minute until the monthly reset. Accounts that have subscribed before do not get the trial.",
-        zh: "Free 每月包含 10,000 次 Connect 工具调用。用完后自动开始一次性的 7 天无限调用试用；试用结束后，调用以每分钟 2 次的速度继续，直到每月额度重置。曾经订阅过的账号不提供这次试用。",
+        en: "Free includes 10,000 Connect tool calls a month, of which up to 5,000 may change something: file edits, commands and App actions (the write limit starts December 1, 2026). When the calls run out, Free moves to a read-only slow lane until the monthly reset: reads, process status, stopping a process and Undo continue at 2 calls a minute, and changes are refused with SLOW_LANE_READ_ONLY. Pro and Max have no monthly call cap.",
+        zh: "Free 每月包含 10,000 次 Connect 工具调用，其中最多 5,000 次可以做出改动：编辑文件、执行命令和应用操作（写操作上限自 2026 年 12 月 1 日起生效）。调用用完后，Free 进入只读慢速通道直到每月重置：读取、查看进程状态、停止进程和撤销以每分钟 2 次继续，改动会以 SLOW_LANE_READ_ONLY 拒绝。Pro 和 Max 没有每月调用上限。",
       },
       {
         en: "Trial and paid balances, pending reservations and model rates are in Settings → Plan & usage. A paid plan does not remove per-run limits or prevent a third-party provider outage. If something fails, keep the Run ID and error code when you ask for help.",

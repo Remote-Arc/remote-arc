@@ -23,8 +23,8 @@ export const installAppSections: DocSection[] = [
           zh: "打开安装好的应用。使用 Arc Chat 和个人智能体对话，或切换到 Connect 查看设备、应用连接和活动。",
         },
         {
-          en: "To use Arc, activate the Auto trial or choose Pro / Max in Plan & usage.",
-          zh: "要使用 Arc，在“套餐与用量”中开启 Auto 试用或选择 Pro / Max。",
+          en: "To use Arc, start a 7-day Pro or Max trial or subscribe in Plan & usage.",
+          zh: "要使用 Arc，在“套餐与用量”中开始 Pro 或 Max 的 7 天试用，或直接订阅。",
         },
       ],
     },

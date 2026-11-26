@@ -20,3 +20,11 @@ export const FOLLOWUP_TRIAL_ENDING_DAYS = 3;
 export const FOLLOWUP_CHECKOUT_DAYS = 30;
 /** A search shorter than this never matches user IDs by prefix. */
 export const FOLLOWUP_ID_PREFIX_MIN = 6;
+
+/** No follow-up to the same person within this time of the last one sent. */
+export const FOLLOWUP_COOLDOWN_MS = 72 * 3600000;
+/** A one-to-one personal email may skip the cooldown with a reason, but never
+ * this soon after the last email, so a double click cannot send twice. */
+export const FOLLOWUP_OVERRIDE_MIN_GAP_MS = 10 * 60000;
+/** Shortest and longest reason for skipping the cooldown. */
+export const FOLLOWUP_OVERRIDE_REASON = { min: 8, max: 300 } as const;

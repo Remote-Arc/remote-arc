@@ -44,8 +44,8 @@ export const computerUseSections: DocSection[] = [
           zh: "在 Windows 10（1607 或更高版本）、Windows 11、Mac，或登录在 X11（Xorg）会话下的 Linux 电脑上，把 Remote Arc Agent 更新到最新版本。暂不支持 Wayland 会话。",
         },
         {
-          en: "On a Mac, the first time the AI looks at the screen macOS asks to allow the Agent. In System Settings, Privacy & Security, turn on remote-arc-agent under Screen & System Audio Recording and under Accessibility. Until both are on, the AI is told which one is missing.",
-          zh: "在 Mac 上，AI 第一次查看屏幕时，macOS 会请求允许 Agent。在“系统设置”>“隐私与安全性”中，在“屏幕与系统录音”和“辅助功能”下打开 remote-arc-agent。两项都打开之前，AI 会收到缺少哪一项的提示。",
+          en: "On a Mac, the first time the AI looks at the screen macOS asks to allow the Agent. In System Settings, Privacy & Security, turn on Remote Arc under Screen & System Audio Recording and under Accessibility; Agents before 0.8.1 appear there as remotelink. Until both are on, the AI is told which one is missing.",
+          zh: "在 Mac 上，AI 第一次查看屏幕时，macOS 会请求允许 Agent。在“系统设置”>“隐私与安全性”中，在“屏幕与系统录音”和“辅助功能”下打开 Remote Arc（0.8.1 之前的 Agent 显示为 remotelink）。两项都打开之前，AI 会收到缺少哪一项的提示。",
         },
         {
           en: "In the Dashboard, open Devices, choose the computer and turn on Desktop control. The Developer and Full presets also turn it on; Safe turns it off.",
@@ -58,8 +58,8 @@ export const computerUseSections: DocSection[] = [
       ],
     },
     note: {
-      en: "Computer use reaches as far as terminal access: the AI could open a terminal and type a command. Turn it on only for computers where you would allow that.",
-      zh: "Computer Use 的权限和终端一样大：AI 可以打开终端并输入命令。只在你允许这样做的电脑上开启。",
+      en: "Computer use can do what a person at the keyboard can do in an unlocked session, apart from the blocked windows below: it can open any app, including a terminal, and act in apps you are signed in to. Turn it on only for computers where you would allow that.",
+      zh: "Computer Use 能做坐在键盘前的人在未锁定会话中能做的事（下文列出的受保护窗口除外）：它可以打开任何应用，包括终端，并在你已登录的应用里操作。只在你允许这样做的电脑上开启。",
     },
   },
   {
@@ -154,6 +154,10 @@ export const computerUseSections: DocSection[] = [
         {
           en: "TOOL_DISABLED: computer use is off for that computer. Turn it on in the Dashboard.",
           zh: "TOOL_DISABLED：这台电脑没有开启 Computer Use，请在 Dashboard 中开启。",
+        },
+        {
+          en: "PLAN_UPGRADE_REQUIRED: the account's plan does not include computer use. It is part of Pro and Max; the refusal carries an upgrade link.",
+          zh: "PLAN_UPGRADE_REQUIRED：账号当前套餐不包含 Computer Use。它属于 Pro 和 Max 套餐，拒绝信息中附有升级链接。",
         },
         {
           en: "DESKTOP_USER_ACTIVE and DESKTOP_USER_TOOK_OVER: the person is using the computer. The AI waits, then takes a new screenshot.",

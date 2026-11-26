@@ -44,7 +44,6 @@ export const SKILL_USE_CASES = [
     art: "research",
     format: "REPORT",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "video-creation",
@@ -99,7 +98,6 @@ export const SKILL_USE_CASES = [
     art: "video",
     format: "MP4",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "audio-transcription",
@@ -145,7 +143,6 @@ export const SKILL_USE_CASES = [
     art: "audio",
     format: "TXT · SRT",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "word-documents",
@@ -191,7 +188,6 @@ export const SKILL_USE_CASES = [
     art: "document",
     format: "DOCX",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "pdf-workflows",
@@ -237,7 +233,6 @@ export const SKILL_USE_CASES = [
     art: "pdf",
     format: "PDF",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "image-studio",
@@ -288,7 +283,6 @@ export const SKILL_USE_CASES = [
     art: "image",
     format: "PNG",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "website-building",
@@ -338,7 +332,6 @@ export const SKILL_USE_CASES = [
     art: "design",
     format: "WEB",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "data-visualization",
@@ -384,7 +377,6 @@ export const SKILL_USE_CASES = [
     art: "chart",
     format: "SVG · PNG",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "statistical-analysis",
@@ -430,7 +422,6 @@ export const SKILL_USE_CASES = [
     art: "statistics",
     format: "ANALYSIS",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "machine-learning",
@@ -476,7 +467,6 @@ export const SKILL_USE_CASES = [
     art: "model",
     format: "MODEL",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "network-analysis",
@@ -522,7 +512,6 @@ export const SKILL_USE_CASES = [
     art: "network",
     format: "GRAPH",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "research-reports",
@@ -586,7 +575,6 @@ export const SKILL_USE_CASES = [
     art: "research",
     format: "REPORT",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "webapp-testing",
@@ -636,7 +624,6 @@ export const SKILL_USE_CASES = [
     art: "browser",
     format: "TEST",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "mcp-integrations",
@@ -682,7 +669,6 @@ export const SKILL_USE_CASES = [
     art: "mcp",
     format: "MCP",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "ui-inspection",
@@ -728,7 +714,6 @@ export const SKILL_USE_CASES = [
     art: "inspect",
     format: "REVIEW",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "browser-workflows",
@@ -745,16 +730,16 @@ export const SKILL_USE_CASES = [
       zh: "让已有 AI 在获授权网页中推进步骤、收集结果，并在登录或最终确认时交还给你。",
     },
     prompt: {
-      en: "From my AI connected through Remote Arc Connect, prepare the browser workflow I specify. Limit sites to those I name, reuse the authorized task profile, inspect each page and preserve checkpoints. Ask for sign-in/CAPTCHA and final submission where needed. If a separate browser-use reasoning engine is necessary, agree on its model budget first.",
-      zh: "通过 Remote Arc Connect，让我的 AI 准备所指定的网页流程。只允许我指定的网站，复用已授权任务资料，逐页检查并保存检查点。需要登录、CAPTCHA 或最终提交时找我确认；确需独立 browser-use 推理引擎时，先约定模型预算。",
+      en: "Prepare the browser workflow I specify with Browser Runner. Limit sites to those I name, reuse the authorized task profile, inspect each page and preserve checkpoints. Ask for sign-in/CAPTCHA and final submission where needed. If a separate browser-use reasoning engine is necessary, agree on its model budget first.",
+      zh: "用 Browser Runner 准备我所指定的网页流程。只允许我指定的网站，复用已授权任务资料，逐页检查并保存检查点。需要登录、CAPTCHA 或最终提交时找我确认；确需独立 browser-use 推理引擎时，先约定模型预算。",
     },
     requires: {
-      en: "Connect in a compatible AI client, Browser Runner on the computer, and the named sites.",
-      zh: "在兼容 AI 客户端中接入 Connect，电脑开启 Browser Runner，并指定允许网站。",
+      en: "Browser Runner on the computer, the named sites, and Connect in a compatible AI client or Arc.",
+      zh: "电脑开启 Browser Runner 并指定允许网站，通过兼容 AI 客户端中的 Connect 或 Arc 使用。",
     },
     boundary: {
-      en: "This path uses Connect; Arc does not drive Browser Runner yet. It does not bypass sign-in, CAPTCHAs or site restrictions, and a separate reasoning engine may incur model costs.",
-      zh: "此路径使用 Connect，Arc 暂不支持驱动 Browser Runner。不绕过登录、CAPTCHA 或站点限制；独立推理引擎可能产生模型费用。",
+      en: "It does not bypass sign-in, CAPTCHAs or site restrictions, and a separate reasoning engine may incur model costs.",
+      zh: "不绕过登录、CAPTCHA 或站点限制；独立推理引擎可能产生模型费用。",
     },
     steps: [
       {
@@ -774,7 +759,6 @@ export const SKILL_USE_CASES = [
     art: "browser",
     format: "BROWSER",
     tools: "read_skill · read_file · write_file · start_process",
-    connectOnly: true,
   },
   {
     slug: "mathematical-animation",
@@ -820,7 +804,6 @@ export const SKILL_USE_CASES = [
     art: "math-motion",
     format: "MP4 · PY",
     tools: "read_skill · write_file · start_process",
-    connectOnly: false,
   },
   {
     slug: "blender-3d",
@@ -866,7 +849,6 @@ export const SKILL_USE_CASES = [
     art: "product-3d",
     format: "BLEND · PNG",
     tools: "read_skill · write_file · start_process",
-    connectOnly: false,
   },
 ] as const;
 export type SkillUseCaseSlug = (typeof SKILL_USE_CASES)[number]["slug"];

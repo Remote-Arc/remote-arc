@@ -21,6 +21,12 @@ export const appsSections: DocSection[] = [
         },
       ],
     },
+    paragraphs: [
+      {
+        en: "Google Apps are a beta, by application: Gmail, Google Drive, Google Calendar, Google Docs and Google Sheets connect once your application in Apps is approved. Other Google Apps are not available yet.",
+        zh: "Google 应用目前为 Beta，需要申请：Gmail、Google Drive、Google Calendar、Google Docs 和 Google Sheets 在你于 Apps 中提交的申请获批后即可连接。其他 Google 应用暂不可用。",
+      },
+    ],
   },
   {
     heading: { en: "Ask your AI to use an App", zh: "让 AI 使用应用" },

@@ -4,7 +4,7 @@ All notable changes to Remote Arc are documented here.
 
 ## 0.8.1 - 2026-11-25
 
-### Agent
+### Agent: a signed Remote Arc.app on the Mac
 
 - On a Mac, the Agent's background service runs as Remote Arc.app, signed with Remote Arc's Developer ID and notarized by Apple. System Settings (Screen Recording, Accessibility, Login Items) shows it as Remote Arc with its icon instead of `remotelink`, and permissions given to one release carry over to the next.
 - Agents installed with Homebrew, npm or the curl installer fetch the signed Remote Arc.app of their own version on a Mac and run their background service and updates from it. The app is used only when its archive matches the checksum published on GitHub, its signature is Remote Arc's and it reports the same version; otherwise the Agent runs as before.
@@ -26,7 +26,7 @@ All notable changes to Remote Arc are documented here.
 
 ## 0.8.0 - 2026-11-23
 
-### Agent
+### Agent: computer use on Windows, macOS and Linux
 
 - Computer use: with the owner's per-computer switch on, an AI client can see the screen and use the mouse and keyboard through `desktop_snapshot` and `desktop_act`, on Windows, on Linux in an X11 session, and on macOS. The person always wins: moving the mouse or typing stops the AI, a locked screen or screen saver is refused, and an "AI is using this computer" notice stays on screen and out of screenshots. Password managers and system sign-in prompts are protected.
 - On a Mac, computer use needs Screen Recording and Accessibility for the Agent; the first call asks macOS to show both in System Settings. Text is pasted and the clipboard put back, so Chinese, emoji, line breaks and tabs type correctly with any keyboard layout or input method.
@@ -57,7 +57,7 @@ All notable changes to Remote Arc are documented here.
 
 ## 0.7.3 - 2026-11-16
 
-### Agent
+### Agent: calls run on a wrong clock, and clearer path errors
 
 - A computer whose clock is wrong no longer refuses every call with `DEVICE_CALL_EXPIRED`. The Agent reads call deadlines against the Relay's time, so a clock that is minutes or hours off (for example a wrong time zone with automatic time turned off) still runs calls; a call past its deadline is still refused.
 - A file tool that fails because the path does not exist, access is denied or the path is the wrong kind now starts its error with `PATH_NOT_FOUND`, `FILE_PERMISSION_DENIED` or `PATH_TYPE_MISMATCH`, the same on macOS, Linux and Windows. The system's own message, path included, follows the code.
@@ -74,7 +74,7 @@ All notable changes to Remote Arc are documented here.
 ### Website, Dashboard and billing
 
 - Free: after the 10,000 monthly calls, the slow lane keeps reads, process status, stopping processes and Undo available, and pauses file changes, commands and App actions until the reset. Routines stop before changing anything on a Free account past its allowance.
-- A 7-day trial of Pro or Max, monthly or yearly, with 300 Arc Credits, starts at checkout with a saved payment method and becomes the chosen plan unless it is cancelled in Billing settings. A reminder email is sent two days before the first charge.
+- A 7-day trial of Pro or Max, monthly or yearly, with 300 Arc Credits, starts at checkout with a saved payment method and becomes the chosen plan unless it is cancelled in Billing settings. A reminder email is sent two days before the first charge. (Since retired: no reminder email is sent before the first charge.)
 - Pro to Max takes effect at once, with Pro's unused time credited, after you confirm the amount. Downgrades and yearly to monthly take effect at the end of the paid period.
 - Slack and webhook notifications for routines: decisions waiting, automatic repairs, failed runs and notify steps. Plans without notifications show what they do and one way to Pro.
 - Pricing names the hosted model families that are live, says "data transfer" instead of "file transfer", and shows Free's write limit under its calls.
@@ -134,7 +134,7 @@ All notable changes to Remote Arc are documented here.
 ### Free, Pro and Max plans with computer limits
 
 - Offer Free, Pro and Max plans, with Connect Unlimited now sold as Pro. Each plan publishes how many computers it covers; computers beyond the current plan's limit are paused, never unpaired, and the owner chooses in the Dashboard which ones stay active. Paused computers return on their own when the account subscribes again. Existing Connect-only subscribers can switch to the current Pro offer.
-- When a Free account uses its monthly Connect calls, it gets a one-time 7-day trial of unlimited Connect calls, then a slow lane of 2 calls a minute until the monthly reset, instead of a hard stop. Accounts that have subscribed before do not get the trial. MCP answers an exhausted quota with an upgrade link.
+- When a Free account uses its monthly Connect calls, it gets a one-time 7-day trial of unlimited Connect calls, then a slow lane of 2 calls a minute until the monthly reset, instead of a hard stop. Accounts that have subscribed before do not get the trial. MCP answers an exhausted quota with an upgrade link. (Since retired: the card-backed Pro or Max trial replaced this automatic trial, and Free past its allowance keeps only the read-only slow lane.)
 - Offer Pro at US$149/year with monthly Arc Credits, and resume or replace an unfinished checkout instead of failing.
 
 ### Agent: pushed approvals, own download mirror and Linux recovery

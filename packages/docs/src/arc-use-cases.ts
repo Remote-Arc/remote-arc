@@ -24,15 +24,12 @@ export const useCaseSlugs = [
 ] as const;
 export type UseCaseSlug = (typeof useCaseSlugs)[number];
 type Copy = { en: string; zh: string };
-// connectOnly: the workflow needs a capability Arc cannot drive yet, so the
-// public pages offer only the Connect path and say so.
 type ArcCase = {
   intro: Copy;
   prompt: Copy;
   requires: Copy;
   boundary: Copy;
   kind: "direct" | "task" | "routine";
-  connectOnly?: true;
 };
 const copy = (en: string, zh: string): Copy => ({ en, zh });
 export const ARC_DELEGATED_WORK = [
@@ -122,18 +119,10 @@ const skillArcCases = Object.fromEntries(
     item.slug,
     {
       kind: "direct",
-      intro: item.connectOnly
-        ? copy("Available through Connect. " + item.intro.en, "通过 Connect 使用。" + item.intro.zh)
-        : item.intro,
-      prompt: item.connectOnly
-        ? copy(
-            "Arc does not drive Browser Runner yet. " + item.prompt.en,
-            "Arc 暂不支持驱动 Browser Runner。" + item.prompt.zh,
-          )
-        : item.prompt,
+      intro: item.intro,
+      prompt: item.prompt,
       requires: item.requires,
       boundary: item.boundary,
-      ...(item.connectOnly ? { connectOnly: true } : {}),
     },
   ]),
 ) as Record<(typeof SKILL_USE_CASES)[number]["slug"], ArcCase>;
@@ -483,22 +472,21 @@ export const ARC_USE_CASES: Record<UseCaseSlug, ArcCase> = {
   },
   "job-applications": {
     kind: "direct",
-    connectOnly: true,
     intro: copy(
-      "Browser Runner is available through Connect: your own AI drives the task browser on your computer. Arc will reuse the same runner later.",
-      "Browser Runner 目前通过 Connect 使用：由你自己的 AI 驱动你电脑上的任务浏览器。Arc 之后会复用同一个 Runner。",
+      "Let Arc drive Browser Runner's task browser on your computer, limited to the job sites you name, while you handle sign-in, CAPTCHAs and the final submit.",
+      "让 Arc 驱动你电脑上 Browser Runner 的任务浏览器，只访问你指定的招聘网站；登录、验证码和最终提交由你完成。",
     ),
     prompt: copy(
-      "Arc does not drive Browser Runner yet. Use this workflow from ChatGPT, Claude, Cursor or another MCP client connected through Remote Arc Connect.",
-      "Arc 暂不支持驱动 Browser Runner。请在通过 Remote Arc Connect 连接的 ChatGPT、Claude、Cursor 或其他 MCP 客户端中使用此场景。",
+      "Help me fill in a job application on my connected computer with Browser Runner. Confirm the employer's site and the documents to upload, start a task browser limited to that site, fill ordinary fields from my CV, and hand over to me for sign-in, CAPTCHAs and the final submit. Report what you filled and anything left for me.",
+      "请用 Browser Runner 在我已连接的电脑上帮我填写一份工作申请。先确认招聘网站和要上传的文件，启动只访问该网站的任务浏览器，按我的简历填写普通字段，登录、验证码和最终提交交给我完成。最后告诉我填了哪些内容、还有什么需要我处理。",
     ),
     requires: copy(
-      "Remote Arc Connect in your AI client and Browser Runner enabled for the computer in Dashboard.",
-      "在 AI 客户端中接入 Remote Arc Connect，并在 Dashboard 为该电脑开启 Browser Runner。",
+      "Browser Runner enabled for the computer in the Dashboard, and the computer online.",
+      "在 Dashboard 为该电脑开启 Browser Runner，并保持电脑在线。",
     ),
     boundary: copy(
-      "Browser tools are not part of the current Arc action set.",
-      "浏览器工具目前不属于 Arc 的动作集合。",
+      "Arc stays on the sites the task names and never completes sign-in, CAPTCHAs or the final submit for you.",
+      "Arc 只访问任务指定的网站，不会替你完成登录、验证码或最终提交。",
     ),
   },
 };

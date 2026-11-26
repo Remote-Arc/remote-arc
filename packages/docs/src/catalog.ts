@@ -183,8 +183,8 @@ export const DOC_TOPICS: DocTopic[] = [
           zh: "Agent 编排",
         },
         description: {
-          en: "Run Claude Code and Codex on your computers from the Dashboard, several at once, each in its own Git worktree.",
-          zh: "在 Dashboard 中把 Claude Code 和 Codex 运行在你的电脑上，可以同时运行多个，每个都在独立的 Git worktree 中。",
+          en: "Run Claude Code, Codex and Gemini CLI on your computers from the Dashboard, several at once, each in its own Git worktree or in the folder itself.",
+          zh: "在 Dashboard 中把 Claude Code、Codex 和 Gemini CLI 运行在你的电脑上，可以同时运行多个，每个都在独立的 Git worktree 中，或直接在文件夹中工作。",
         },
         sections: agentOrchestrationSections,
         links: [

@@ -92,8 +92,8 @@ export const agentOrchestrationSections: DocSection[] = [
   {
     heading: { en: "Model and reasoning effort", zh: "模型与推理程度" },
     text: {
-      en: "Beside the mode, choose the model and the reasoning effort, when you start an agent or for any message. Claude Code lists its aliases (fable, opus, sonnet). Codex lists the models its account offers, read from the Codex on that computer once it has run there, each with the effort levels it takes. Gemini CLI lists its aliases (auto, pro, flash, flash-lite), then Google's current Gemini models. You can also type any model name the agent knows. Claude Code takes low, medium, high, extra high or max effort, and Codex low to ultra as its model allows; Gemini CLI has no effort setting. Leave them empty to use the agent's own default.",
-      zh: "在模式旁边可以选择模型和推理程度，启动 Agent 时或每条消息都可以设置。Claude Code 列出它的别名（fable、opus、sonnet）。Codex 列出它的账号可用的模型，从那台电脑上的 Codex 读取（需在那里运行过一次），并带有每个模型支持的推理程度。Gemini CLI 先列出它的别名（auto、pro、flash、flash-lite），再列出 Google 当前的 Gemini 模型。也可以输入该 Agent 支持的任意模型名。Claude Code 支持低、中、高、超高和最大推理，Codex 支持低到极致（取决于模型）；Gemini CLI 没有推理程度设置。留空则使用 Agent 自己的默认值。",
+      en: "Beside the mode, choose the model and the reasoning effort, when you start an agent or for any message. Claude Code lists its aliases (fable, opus, sonnet, haiku), each named for its newest model. Codex lists the models its account offers, read from the Codex on that computer once it has run there, each with the effort levels it takes. Gemini CLI lists Auto, then Google's current Gemini models, preview models first. You can also type any model name the agent knows. Claude Code takes low, medium, high, extra high or max effort, and Codex low to ultra as its model allows; Gemini CLI has no effort setting. Leave them empty to use the agent's own default.",
+      zh: "在模式旁边可以选择模型和推理程度，启动 Agent 时或每条消息都可以设置。Claude Code 列出它的别名（fable、opus、sonnet、haiku），每个都以其最新模型命名。Codex 列出它的账号可用的模型，从那台电脑上的 Codex 读取（需在那里运行过一次），并带有每个模型支持的推理程度。Gemini CLI 先列出 Auto，再列出 Google 当前的 Gemini 模型，预览版排在前面。也可以输入该 Agent 支持的任意模型名。Claude Code 支持低、中、高、超高和最大推理，Codex 支持低到极致（取决于模型）；Gemini CLI 没有推理程度设置。留空则使用 Agent 自己的默认值。",
     },
   },
   {

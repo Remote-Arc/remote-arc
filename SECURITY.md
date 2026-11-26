@@ -4,7 +4,7 @@ Remote Arc gives AI clients access to real computers. Treat the relay, OAuth ser
 
 ## Current trust boundaries
 
-1. **Dashboard session** (Google or passwordless email sign-in) authenticates the dashboard user.
+1. **Dashboard session** (Google, Sign in with Apple or passwordless email sign-in) authenticates the dashboard user.
 2. **OAuth 2.1 access token** authenticates an MCP client such as ChatGPT.
 3. **Per-device credential** authenticates one paired computer.
 4. **Cloudflare Worker + D1** verifies account/device ownership.
@@ -20,19 +20,20 @@ Remote Arc gives AI clients access to real computers. Treat the relay, OAuth ser
 - Browser sessions use secure, HTTP-only, SameSite=Lax cookies. Cookie-authenticated mutations must also carry an `Origin` that matches the first-party dashboard host.
 - MCP authorization codes are short-lived and single-use.
 - MCP access tokens are short-lived; refresh tokens rotate on use.
-- Google OAuth client secrets, email sign-in secrets and Stripe keys must be Wrangler secrets, never Git-tracked values.
+- Google and Apple sign-in secrets, email sign-in secrets and Stripe keys must be Wrangler secrets, never Git-tracked values.
 - A revoked device is rejected before each MCP call even if an old WebSocket has not closed yet.
 
 ## Local permissions
 
 Newly paired devices start with read-oriented skills only.
 
-The **Developer** preset adds file mutation plus conflict-safe Local Undo. The
-**Full** preset additionally enables terminal execution. Presets are shortcuts;
+The **Developer** preset adds file mutation plus conflict-safe Local Undo, and on
+Pro and Max also desktop control (screen, mouse and keyboard) where the computer
+offers it. The **Full** preset additionally enables terminal execution. Presets are shortcuts;
 the underlying policy remains a per-device list of individually controllable
 skills.
 
-Both execution cores enforce a local Safety Guard before terminal commands run.
+The Go execution core enforces a local Safety Guard before terminal commands run (the TypeScript runtime is retired).
 Safety Guard 2.0 resolves where a delete would actually land, following the real
 shell's quoting, nested shells, scripts, `cd`, variables, wildcards and pipelines
 from the command's working directory. It inspects text that runs, such as a
@@ -40,8 +41,9 @@ heredoc fed to a shell or a script the command executes, and not text that is
 only written or read, such as a quoted heredoc saved to a file. It refuses deletes of drive and share
 roots, home and personal folders, system folders, credential stores and the
 Undo store. It also refuses delete targets it cannot resolve unambiguously.
-Disk formatting, raw-disk overwrite, fork bombs and machine shutdown/reboot stay
-blocked. Narrow cleanup such as `node_modules` or temp folders stays allowed, and
+Disk formatting, raw-disk overwrite and fork bombs stay blocked. Machine
+shutdown and restart are blocked unless the computer's owner allows them for
+that computer in the Dashboard; that switch is off by default. Narrow cleanup such as `node_modules` or temp folders stays allowed, and
 normal development commands do not become an approval workflow. Like the other
 local checks, it is defense in depth, not a sandbox.
 
@@ -120,7 +122,8 @@ The project still needs:
 
 - continued audit that every cookie-authenticated mutation enforces the dashboard `Origin` check (there are no separate CSRF tokens)
 - finer-grained command/network policy for Full terminal mode
-- signed and notarized installers
+- a signed Windows installer (the Mac app and the Agent's Remote Arc.app are
+  signed with Remote Arc's Developer ID and notarized by Apple)
 - automatic security updates (upgrades are currently user-initiated)
 - continued abuse monitoring and security review of public OAuth/DCR endpoints
 

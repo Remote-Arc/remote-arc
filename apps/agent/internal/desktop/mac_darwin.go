@@ -89,7 +89,7 @@ func (p *macPlatform) Start() error {
 		missing = append(missing, "Accessibility")
 	}
 	if len(missing) > 0 {
-		return fmt.Errorf("macOS has not allowed the Remote Arc Agent to use %s. Ask the user to open System Settings, Privacy & Security, turn on remote-arc-agent under each, then try again", joinAnd(missing))
+		return fmt.Errorf("macOS has not allowed the Remote Arc Agent to use %s. Ask the user to open System Settings, Privacy & Security, turn on Remote Arc under each (Agents before 0.8.1 appear as remotelink), then try again", joinAnd(missing))
 	}
 	p.checked = time.Now()
 	return nil

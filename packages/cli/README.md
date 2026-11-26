@@ -64,7 +64,7 @@ download), see [Downloads](https://remotearc.app/downloads).
 <!-- latest-release:start -->
 ## Latest release
 
-**remotelink 0.8.1 — Agent**
+**remotelink 0.8.1 — Agent: a signed Remote Arc.app on the Mac**
 
 Published 2026-11-25
 

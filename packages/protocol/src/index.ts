@@ -142,7 +142,7 @@ export const ARC_ENTERPRISE = {
   allHostedModels: true,
 } as const;
 
-/** Standard tier, USD microdollars per million tokens. Reviewed 2026-10-19.
+/** Standard tier, USD microdollars per million tokens. Reviewed 2026-11-26.
  * This is shared by the gateway, billing UI and SaaS economics tools.
  * maxOutputTokens leaves room for a whole file in one write decision plus the
  * model's reasoning, which every provider counts as output. */
@@ -177,27 +177,44 @@ export const ARC_PREMIUM_MODELS = [
       cacheWriteMicrosPerMillion: 2500000,
     },
   },
+  // GPT-6.2 Standard rates reviewed 2026-11-26: https://developers.openai.com/api/docs/models/gpt-6.2-sol
+  // and .../gpt-6.2-astra. Over 272K input tokens, input and cache rates double and
+  // output is 1.5x for the whole request.
   {
-    id: "gpt-6.1-sol",
-    label: "GPT-6.1 Sol",
+    id: "gpt-6.2-sol",
+    label: "GPT-6.2 Sol",
     provider: "openai",
-    model: "gpt-6.1-sol",
+    model: "gpt-6.2-sol",
     maxOutputTokens: 16384,
     inputMicrosPerMillion: 2000000,
     outputMicrosPerMillion: 10000000,
     cachedInputMicrosPerMillion: 100000,
     cacheWriteMicrosPerMillion: 2500000,
+    longContext: {
+      thresholdTokens: 272000,
+      inputMicrosPerMillion: 4000000,
+      outputMicrosPerMillion: 15000000,
+      cachedInputMicrosPerMillion: 200000,
+      cacheWriteMicrosPerMillion: 5000000,
+    },
   },
   {
-    id: "gpt-6-astra",
-    label: "GPT-6 Astra",
+    id: "gpt-6.2-astra",
+    label: "GPT-6.2 Astra",
     provider: "openai",
-    model: "gpt-6-astra",
+    model: "gpt-6.2-astra",
     maxOutputTokens: 16384,
-    inputMicrosPerMillion: 10000000,
-    outputMicrosPerMillion: 50000000,
-    cachedInputMicrosPerMillion: 1000000,
-    cacheWriteMicrosPerMillion: 12500000,
+    inputMicrosPerMillion: 8000000,
+    outputMicrosPerMillion: 40000000,
+    cachedInputMicrosPerMillion: 400000,
+    cacheWriteMicrosPerMillion: 10000000,
+    longContext: {
+      thresholdTokens: 272000,
+      inputMicrosPerMillion: 16000000,
+      outputMicrosPerMillion: 60000000,
+      cachedInputMicrosPerMillion: 800000,
+      cacheWriteMicrosPerMillion: 20000000,
+    },
   },
   {
     id: "claude-sonnet-5-5",
@@ -242,6 +259,27 @@ export const ARC_PREMIUM_MODELS = [
   // Output stays at 4096 until each route's output limit is checked: a request
   // above a route's limit would find no eligible endpoint.
   // Uncached rates also apply to cache hits, conservatively covering every eligible route.
+  // Gemini runs through OpenRouter on Google's own endpoints. Standard rates reviewed
+  // 2026-11-26 (ai.google.dev/gemini-api/docs/pricing): one rate for the whole 1M
+  // context, so the ceiling never undercharges a long request.
+  {
+    id: "gemini-4-neon",
+    label: "Gemini 4 Neon",
+    provider: "openrouter",
+    model: "google/gemini-4-neon",
+    maxOutputTokens: 4096,
+    inputMicrosPerMillion: 3000000,
+    outputMicrosPerMillion: 15000000,
+  },
+  {
+    id: "gemini-4-hydrogen",
+    label: "Gemini 4 Hydrogen",
+    provider: "openrouter",
+    model: "google/gemini-4-hydrogen",
+    maxOutputTokens: 4096,
+    inputMicrosPerMillion: 1500000,
+    outputMicrosPerMillion: 7500000,
+  },
   {
     id: "minimax-m3",
     label: "MiniMax M3",
@@ -270,15 +308,27 @@ export const ARC_PREMIUM_MODELS = [
     outputMicrosPerMillion: 500000,
   },
   {
-    id: "kimi-k3",
-    label: "Kimi K3",
+    id: "kimi-k3.1-pro",
+    label: "Kimi K3.1 Pro",
     provider: "openrouter",
-    model: "moonshotai/kimi-k3",
+    model: "moonshotai/kimi-k3.1-pro",
     maxOutputTokens: 4096,
-    inputMicrosPerMillion: 3000000,
-    outputMicrosPerMillion: 15000000,
+    inputMicrosPerMillion: 2000000,
+    outputMicrosPerMillion: 10000000,
   },
 ] as const;
+
+/** Named models Arc no longer offers, each with the model that replaced it. A chat,
+ * Slack setting or team member saved with a retired ID runs on its successor. */
+const ARC_MODEL_SUCCESSORS: Readonly<Record<string, string>> = {
+  "gpt-6.1-sol": "gpt-6.2-sol",
+  "gpt-6-astra": "gpt-6.2-astra",
+  "kimi-k3": "kimi-k3.1-pro",
+};
+/** The ID to run for a saved model choice: its successor when Arc retired it. */
+export function currentArcModelId(id: string): string {
+  return Object.hasOwn(ARC_MODEL_SUCCESSORS, id) ? ARC_MODEL_SUCCESSORS[id]! : id;
+}
 
 /** Internal gateway defaults. Customer UI imports the named-model list above. */
 export const ARC_HOSTED_MODELS = [

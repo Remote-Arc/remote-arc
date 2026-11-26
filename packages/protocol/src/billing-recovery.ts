@@ -75,8 +75,8 @@ const rules: readonly [readonly string[], BillingRecovery][] = [
     ["APP_CONNECTION_LIMIT"],
     recovery(
       [
-        "Your plan’s connected-account limit has been reached. Disconnect an account you no longer use, or review a plan with more connections. Reconnecting does not free a slot.",
-        "已达到当前套餐的应用账号连接上限。请断开不再使用的账号，或查看支持更多连接的套餐；反复授权不会释放名额。",
+        "Your plan’s connected-account limit has been reached, so this app was not connected. Each connected account counts, and each Google app (Gmail, Drive, Calendar, Docs, Sheets) counts separately. Disconnect an account you no longer use, or review a plan with more connections, then connect again. Reconnecting does not free a slot.",
+        "已达到当前套餐的应用账号连接上限，这个应用没有连接成功。每个已连接账号都占一个名额，每个 Google 应用（Gmail、Drive、Calendar、Docs、Sheets）各占一个。请断开不再使用的账号，或查看支持更多连接的套餐，然后重新连接；反复授权不会释放名额。",
       ],
       [apps, billing],
     ),

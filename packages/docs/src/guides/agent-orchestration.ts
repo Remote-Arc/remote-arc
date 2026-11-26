@@ -43,8 +43,8 @@ export const agentOrchestrationSections: DocSection[] = [
   {
     heading: { en: "Start an agent", zh: "启动一个 Agent" },
     text: {
-      en: "An agent needs the agent installed and signed in on the computer, and a repository the computer lets Remote Arc write to.",
-      zh: "启动 Agent 需要电脑上已安装并登录该 Agent，并且仓库位于电脑允许 Remote Arc 写入的位置。",
+      en: "An agent needs the agent installed and signed in on the computer, the Full preset for that computer in Devices, and a repository the computer lets Remote Arc write to.",
+      zh: "启动 Agent 需要电脑上已安装并登录该 Agent、在“设备”中为这台电脑选择“含终端”预设，并且仓库位于电脑允许 Remote Arc 写入的位置。",
     },
     list: {
       ordered: true,
@@ -56,6 +56,10 @@ export const agentOrchestrationSections: DocSection[] = [
         {
           en: "Make sure the repository is inside one of the computer's trusted write locations (Dashboard, Devices).",
           zh: "确认仓库位于这台电脑的可信写入位置之内（Dashboard >“设备”）。",
+        },
+        {
+          en: "In Devices, choose the Full preset (Terminal) for the computer. Agent Orchestration starts and runs each agent with terminal commands, which the Safe (Read only) and Developer (Read + edit) presets leave off. With either of them, the workspace preflight says a tool the agent needs is turned off, and the agent cannot start.",
+          zh: "在“设备”中为这台电脑选择“含终端”预设。启动和运行都要用到终端命令，而“只读”和“读写文件”预设都没有开启终端；选了其中任何一个，工作区预检都会提示缺少需要的工具，也无法启动。",
         },
         {
           en: "In the Dashboard, open Agent Orchestration and choose + (New agent) to open the Launchpad. Under New agent, pick the agent and its mode, write what it should do, and choose the computer and repository. Under Parallel, give several agents a shared objective and each its own task, computer and model; they start together, each in its own worktree.",

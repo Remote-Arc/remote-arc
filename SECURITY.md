@@ -35,7 +35,9 @@ skills.
 Both execution cores enforce a local Safety Guard before terminal commands run.
 Safety Guard 2.0 resolves where a delete would actually land, following the real
 shell's quoting, nested shells, scripts, `cd`, variables, wildcards and pipelines
-from the command's working directory. It refuses deletes of drive and share
+from the command's working directory. It inspects text that runs, such as a
+heredoc fed to a shell or a script the command executes, and not text that is
+only written or read, such as a quoted heredoc saved to a file. It refuses deletes of drive and share
 roots, home and personal folders, system folders, credential stores and the
 Undo store. It also refuses delete targets it cannot resolve unambiguously.
 Disk formatting, raw-disk overwrite, fork bombs and machine shutdown/reboot stay

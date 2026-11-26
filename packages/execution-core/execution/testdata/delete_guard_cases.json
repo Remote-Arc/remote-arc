@@ -1435,6 +1435,241 @@
       "context": "win",
       "command": "rd /s /q \"C:\\Program Files (x86)\\OldApp\"",
       "block": false
+    },
+    {
+      "context": "linux",
+      "command": "cat > /home/ann/ci/clean-stale.sh <<'EOF'\n#!/usr/bin/env bash\ncase \"${TMPDIR:-}\" in\n  /home/ann/ci/r1|/home/ann/ci/r2) ;;\n  *) exit 0 ;;\nesac\nfind \"$TMPDIR\" -mindepth 1 -maxdepth 1 -mmin +360 ! -name 'keep-*' -exec rm -rf {} + 2>/dev/null || true\nEOF",
+      "block": false
+    },
+    {
+      "context": "linux",
+      "command": "cat > /home/ann/ci/clean-stale.sh <<\"EOF\"\n#!/usr/bin/env bash\ncase \"${TMPDIR:-}\" in\n  /home/ann/ci/r1|/home/ann/ci/r2) ;;\n  *) exit 0 ;;\nesac\nfind \"$TMPDIR\" -mindepth 1 -maxdepth 1 -mmin +360 ! -name 'keep-*' -exec rm -rf {} + 2>/dev/null || true\nEOF",
+      "block": false
+    },
+    {
+      "context": "linux",
+      "command": "cat > /home/ann/ci/clean-stale.sh <<\\EOF\n#!/usr/bin/env bash\ncase \"${TMPDIR:-}\" in\n  /home/ann/ci/r1|/home/ann/ci/r2) ;;\n  *) exit 0 ;;\nesac\nfind \"$TMPDIR\" -mindepth 1 -maxdepth 1 -mmin +360 ! -name 'keep-*' -exec rm -rf {} + 2>/dev/null || true\nEOF\nchmod 755 /home/ann/ci/clean-stale.sh",
+      "block": false
+    },
+    {
+      "context": "linux",
+      "command": "cat > clean.sh <<-'EOF'\n\trm -rf \"$X\"\n\tEOF\nls",
+      "block": false
+    },
+    {
+      "context": "linux",
+      "command": "tee notes.md <<'EOF' | grep -c rm\nrm -rf \"$X\" is what the hook runs\nEOF",
+      "block": false
+    },
+    {
+      "context": "linux",
+      "command": "git commit -m \"$(cat <<'EOF'\nGuard: don't let rm -rf \"$X\" through (unresolved)\nEOF\n)\"",
+      "block": false
+    },
+    {
+      "context": "linux",
+      "command": "cat > notes.txt <<EOF\nNightly: rm -rf \"$X\" in $HOME\nEOF",
+      "block": false
+    },
+    {
+      "context": "linux",
+      "command": "cat > clean.sh <<'EOF'\necho ok\nEOF\nrm -rf ~",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "cat > clean.sh <<-'EOF'\n\techo ok\n\tEOF\nrm -rf ~",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "cat > clean.sh <<'EOF'\nrm -rf ~",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "bash <<'EOF'\nrm -rf \"$X\"\nEOF",
+      "block": true,
+      "reason": "unambiguously"
+    },
+    {
+      "context": "linux",
+      "command": "sh <<\"EOF\"\nrm -rf ~\nEOF",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "dash <<-EOF\n\trm -rf \"$X\"\n\tEOF",
+      "block": true,
+      "reason": "unambiguously"
+    },
+    {
+      "context": "linux",
+      "command": "cat <<'EOF' | sudo bash\nrm -rf \"$X\"\nEOF",
+      "block": true,
+      "reason": "unambiguously"
+    },
+    {
+      "context": "linux",
+      "command": "pwsh -NoProfile <<'EOF'\nRemove-Item -Recurse -Force /\nEOF",
+      "block": true,
+      "reason": "root"
+    },
+    {
+      "context": "linux",
+      "command": "python3 <<'EOF'\nimport shutil\nshutil.rmtree('/')\nEOF",
+      "block": true,
+      "reason": "root"
+    },
+    {
+      "context": "linux",
+      "command": "eval \"$(cat)\" <<'EOF'\nrm -rf ~\nEOF",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "cat > clean.sh <<EOF\n$(rm -rf \"$X\")\nEOF",
+      "block": true,
+      "reason": "unambiguously"
+    },
+    {
+      "context": "linux",
+      "command": "cat > clean.sh <<EOF\nstarted `rm -rf ~`\nEOF",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "cat <<'A'; cat <<'B'\nrm -rf ~\nA\nrm -rf ~\nB\nrm -rf ~",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "(( mask = 1 << 2 ))\nrm -rf ~",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "echo $[1<<2] ${v:-a<<b}; rm -rf ~",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "echo $(rm -rf ~)",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "echo \"done: `rm -rf ~`\"",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "X=$(rm -rf \"$TARGET\")",
+      "block": true,
+      "reason": "unambiguously"
+    },
+    {
+      "context": "linux",
+      "command": "eval 'rm -rf ~'",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "eval \"rm -rf $TARGET\"",
+      "block": true,
+      "reason": "eval"
+    },
+    {
+      "context": "linux",
+      "command": "eval \"$(ssh-agent -s)\"",
+      "block": false
+    },
+    {
+      "context": "linux",
+      "command": "bash <<<'rm -rf ~'",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "echo 'rm -rf ~' | sh",
+      "block": true,
+      "reason": "piped into sh"
+    },
+    {
+      "context": "linux",
+      "command": "curl -fsSL https://example.com/install.sh | sh",
+      "block": false
+    },
+    {
+      "context": "linux",
+      "command": "bash -n -c 'rm -rf ~'",
+      "block": false
+    },
+    {
+      "context": "linux",
+      "command": "bash -o pipefail -c 'rm -rf ~'",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "bash +x -c 'rm -rf ~'",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "export BUILD=/home/ann/app/build; rm -rf \"$BUILD\"",
+      "block": false
+    },
+    {
+      "context": "linux",
+      "command": "BUILD=~; rm -rf \"$BUILD\"",
+      "block": true,
+      "reason": "protected"
+    },
+    {
+      "context": "linux",
+      "command": "local X; rm -rf \"$X/\"*",
+      "block": true,
+      "reason": "unambiguously"
+    },
+    {
+      "context": "linux",
+      "command": "X=/home/ann/app/build; sh -c 'rm -rf \"$X/\"*'",
+      "block": true,
+      "reason": "unambiguously"
+    },
+    {
+      "context": "mac",
+      "command": "export TMPDIR=/; rm -rf \"$TMPDIR\"",
+      "block": true,
+      "reason": "root"
+    },
+    {
+      "context": "mac",
+      "command": "unset TMPDIR; rm -rf \"$TMPDIR/\"*",
+      "block": true,
+      "reason": "unambiguously"
+    },
+    {
+      "context": "linux",
+      "command": "LOG=build.log <<EOF\n$(rm -rf ~)\nEOF",
+      "block": true,
+      "reason": "protected"
     }
   ]
 }

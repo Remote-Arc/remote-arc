@@ -33,7 +33,10 @@ const (
 	shellSh
 )
 
-type guardSegment struct{ raw, sep string }
+type guardSegment struct {
+	raw, sep string
+	heredocs []heredoc
+}
 type guardWord struct {
 	text, raw                    string
 	start, end                   int
@@ -44,7 +47,10 @@ type guardState struct {
 	cwd      string
 	cwdKnown bool
 	vars     map[string]*string
+	exported map[string]bool
 	depth    int
+	// sourced: inside a file read by source or `.`, see narrowUnresolved.
+	sourced bool
 }
 type segInfo struct {
 	words    []guardWord
@@ -384,8 +390,19 @@ func ProtectedDeleteReason(ctx DeleteGuardContext, abs string) string {
 
 func matchParen(src string, open int, shell shellKind) int {
 	depth := 0
+	pending := []heredoc{}
 	for i := open; i < len(src); i++ {
+		if shell == shellSh {
+			if next := skipHeredocs(src, i, &pending); next != i {
+				i = next - 1
+				continue
+			}
+		}
 		switch c := src[i]; c {
+		case '\\':
+			if shell == shellSh {
+				i++
+			}
 		case '(':
 			depth++
 		case ')':
@@ -431,6 +448,11 @@ func splitSegments(src string, shell shellKind) ([]guardSegment, bool) {
 	segments := []guardSegment{}
 	start, sep, unbalanced := 0, "", false
 	clean := []byte(src)
+	// Heredocs whose operator was read on the current line; their bodies start
+	// after its newline. docs maps a segment index to the bodies it reads.
+	pending := []heredoc{}
+	docs := map[int][]heredoc{}
+	arithmetic := false
 	cut := func(end int, next string, width int) {
 		segments = append(segments, guardSegment{raw: string(clean[start:end]), sep: sep})
 		sep = next
@@ -515,6 +537,35 @@ loop:
 				i = end
 				continue
 			}
+			if shell == shellSh && c == '$' && (n == '{' || n == '[') {
+				end := matchBrace(src, i+1)
+				if end < 0 {
+					unbalanced = true
+					break loop
+				}
+				i = end
+				continue
+			}
+			if shell == shellSh && c == '(' && n == '(' && wordStart {
+				arithmetic = true
+			}
+			if shell == shellSh && arithmetic && c == ')' && n == ')' {
+				arithmetic = false
+			}
+			if shell == shellSh && c == '<' && n == '<' && !arithmetic {
+				if charAt(src, i+2) == '<' {
+					i += 2
+					continue
+				}
+				doc, end := parseHeredocOperator(src, i)
+				if end > i {
+					doc.owner = len(segments)
+					pending = append(pending, doc)
+					blank(i, end)
+					i = end - 1
+					continue
+				}
+			}
 			if c == '$' && n == '(' {
 				end := matchParen(src, i+1, shell)
 				if end < 0 {
@@ -539,6 +590,17 @@ loop:
 			}
 		}
 		switch {
+		case c == '\n' && len(pending) > 0:
+			cut(i, ";", 1)
+			next, complete := readHeredocBodies(src, i+1, pending)
+			if complete {
+				for _, d := range pending {
+					docs[d.owner] = append(docs[d.owner], d)
+				}
+				blank(i+1, next)
+				i = next - 1
+			}
+			pending = pending[:0]
 		case c == '\n':
 			cut(i, ";", 1)
 		case (c == '&' && n == '&') || (c == '|' && n == '|'):
@@ -564,6 +626,11 @@ loop:
 		start = len(src)
 	}
 	segments = append(segments, guardSegment{raw: string(clean[start:]), sep: sep})
+	for owner, list := range docs {
+		if owner < len(segments) {
+			segments[owner].heredocs = list
+		}
+	}
 	return segments, unbalanced
 }
 
@@ -590,6 +657,24 @@ func isGuardSpace(c byte, shell shellKind) bool {
 }
 
 func guardWords(seg guardSegment, shell shellKind, st *guardState) []guardWord {
+	out := allGuardWords(seg, shell, st)
+	kept := []guardWord{}
+	for j := 0; j < len(out); j++ {
+		w := out[j]
+		if !w.quoted && (redirectOnlyRe.MatchString(w.raw) || w.raw == "<<<") {
+			j++
+			continue
+		}
+		if strings.HasPrefix(w.raw, "<<<") || (!w.quoted && redirectRe.MatchString(w.raw)) {
+			continue
+		}
+		kept = append(kept, w)
+	}
+	return kept
+}
+
+// allGuardWords splits a segment into words, redirections included.
+func allGuardWords(seg guardSegment, shell shellKind, st *guardState) []guardWord {
 	raw := seg.raw
 	out := []guardWord{}
 	i := 0
@@ -921,19 +1006,7 @@ func guardWords(seg guardSegment, shell shellKind, st *guardState) []guardWord {
 		i = clampLen(raw, i)
 		out = append(out, guardWord{text: text.String(), raw: raw[start:i], start: start, end: i, quoted: quoted, unresolved: unresolved, pipeItem: pipeItem})
 	}
-	kept := []guardWord{}
-	for j := 0; j < len(out); j++ {
-		w := out[j]
-		if !w.quoted && redirectOnlyRe.MatchString(w.raw) {
-			j++
-			continue
-		}
-		if !w.quoted && redirectRe.MatchString(w.raw) {
-			continue
-		}
-		kept = append(kept, w)
-	}
-	return kept
+	return out
 }
 
 func isAlnum(c byte) bool {
@@ -1390,6 +1463,9 @@ func resolveTarget(w guardWord, st *guardState, shell shellKind) (string, bool) 
 
 func checkTargets(targets []guardWord, st *guardState, shell shellKind) {
 	for _, w := range targets {
+		if st.sourced && narrowUnresolved(w, st.ctx) {
+			continue
+		}
 		abs, ok := resolveTarget(w, st, shell)
 		if !ok {
 			continue
@@ -1467,7 +1543,13 @@ func (st *guardState) child(freshVars bool) *guardState {
 			vars[k] = v
 		}
 	}
-	return &guardState{ctx: st.ctx, cwd: st.cwd, cwdKnown: st.cwdKnown, vars: vars, depth: st.depth + 1}
+	exported := map[string]bool{}
+	if !freshVars {
+		for k, v := range st.exported {
+			exported[k] = v
+		}
+	}
+	return &guardState{ctx: st.ctx, cwd: st.cwd, cwdKnown: st.cwdKnown, vars: vars, exported: exported, depth: st.depth + 1, sourced: st.sourced}
 }
 
 func analyzeShell(src string, shell shellKind, st *guardState) {
@@ -1482,13 +1564,27 @@ func analyzeShell(src string, shell shellKind, st *guardState) {
 		ambiguousTarget("unbalanced quotes")
 	}
 	var last *segInfo
-	for _, seg := range segments {
+	pipeline := ""
+	for si, seg := range segments {
 		ws := guardWords(seg, shell, st)
+		if seg.sep != "|" {
+			pipeline = ""
+		}
+		pipeline += seg.raw + "\n"
+		// $(...) and `...` run before the command they appear in.
+		if shell == shellSh {
+			for _, sub := range commandSubstitutions(seg.raw, false) {
+				analyzeShell(sub, shellSh, st.child(false))
+			}
+		}
 		var upstream *segInfo
 		if seg.sep == "|" {
 			upstream = last
 		} else if seg.sep == "{" && last != nil {
 			upstream = last.upstream
+		}
+		if shell == shellSh {
+			checkHeredocs(segments, si, ws, skipPrefixes(ws, shellSh), st)
 		}
 		if shell == shellPS {
 			checkInline(seg.raw, st, dotnetDelete)
@@ -1504,15 +1600,9 @@ func analyzeShell(src string, shell shellKind, st *guardState) {
 			}
 			if all {
 				for _, w := range ws {
-					eq := strings.Index(w.text, "=")
-					if w.unresolved || eq < 0 {
-						if eq >= 0 {
-							st.vars[w.text[:eq]] = nil
-						}
-						continue
+					if name, value, ok := assignment(w, true, st); ok {
+						st.vars[name] = value
 					}
-					v := w.text[eq+1:]
-					st.vars[w.text[:eq]] = &v
 				}
 				last = &segInfo{words: ws, k: len(ws), shell: shell, upstream: upstream}
 				continue
@@ -1539,6 +1629,33 @@ func analyzeShell(src string, shell shellKind, st *guardState) {
 			continue
 		}
 		name := commandName(ws[k].text)
+		if shell == shellSh && !ws[k].quoted {
+			if trackShVariables(name, ws[k+1:], st) {
+				continue
+			}
+			if name == "eval" {
+				// eval joins its arguments with spaces and runs the result.
+				parts, known := []string{}, true
+				for _, w := range ws[k+1:] {
+					parts = append(parts, w.text)
+					known = known && !w.unresolved
+				}
+				code := strings.Join(parts, " ")
+				if !known && deleteMention.MatchString(seg.raw) {
+					ambiguousTarget("deletion inside eval of a computed string")
+				}
+				analyzeShell(code, shellSh, st.child(false))
+				continue
+			}
+			if inList(name, "source", ".") {
+				if script, found := readGuardScript(wordText(ws, k+1), st, shell); found {
+					sourced := st.child(false)
+					sourced.sourced = true
+					analyzeShell(script, shellSh, sourced)
+				}
+				continue
+			}
+		}
 		piped := upstream != nil
 		viaXargs := false
 		// cmd.exe accepts switches glued to the builtin name: rd/s/q, del/q.
@@ -1568,8 +1685,34 @@ func analyzeShell(src string, shell shellKind, st *guardState) {
 			info.k = k
 		}
 		if innerShell, ok := nestedShellOf(name); ok {
-			inner := nestedScript(ws, k, seg, shell, innerShell)
+			var inner *nested
+			if innerShell == shellSh {
+				var noexec bool
+				if inner, noexec = shScriptArgs(ws, k); noexec {
+					// -n reads the script without running it.
+					continue
+				}
+			} else {
+				inner = nestedScript(ws, k, seg, shell, innerShell)
+			}
+			if inner == nil && shell == shellSh {
+				if w, hereString, ok := stdinSource(seg, st); ok && hereString {
+					if w.unresolved && deleteMention.MatchString(w.raw) {
+						ambiguousTarget("deletion inside a computed here-string")
+					}
+					inner = &nested{shell: innerShell, script: w.text}
+				} else if ok {
+					inner = &nested{shell: innerShell, hasFile: true, file: w.text}
+				}
+			}
+			if inner == nil && shell == shellSh {
+				inner = catIntoShell(upstream, innerShell, st)
+			}
 			if inner == nil {
+				// The shell runs its stdin; a delete written upstream cannot be followed.
+				if seg.sep == "|" && deleteMention.MatchString(pipeline) {
+					ambiguousTarget("commands piped into " + name)
+				}
 				continue
 			}
 			script := inner.script
@@ -1582,12 +1725,17 @@ func analyzeShell(src string, shell shellKind, st *guardState) {
 			if shell != shellSh && strings.Contains(seg.raw[ws[k].start:], `\"`) && deleteMention.MatchString(script) {
 				ambiguousTarget(`\" escaped quotes inside a nested ` + name + ` command; cmd.exe and PowerShell do not treat \" as an escape`)
 			}
-			analyzeShell(script, inner.shell, st.child(false))
+			analyzeNestedShell(script, inner.shell, st, ws[:k])
 			continue
 		}
 		if fileShell, ok := scriptShellFor(strings.ToLower(ws[k].text)); ok {
 			if script, found := readGuardScript(ws[k].text, st, shell); found {
-				analyzeShell(script, fileShell, st.child(true))
+				// A POSIX script sees what it inherits; others start from the device's environment.
+				child := st.child(true)
+				if shell == shellSh && fileShell == shellSh {
+					child = st.process(ws[:k])
+				}
+				analyzeShell(script, fileShell, child)
 			}
 			continue
 		}
@@ -1731,7 +1879,7 @@ func resolveCwd(w guardWord, st *guardState, shell shellKind) (cwd string, known
 // is judged here; the other catastrophic-command rules live in guards.json.
 func FindDangerousDelete(command string, ctx DeleteGuardContext) (reason string) {
 	win := ctx.Platform == "win32"
-	st := &guardState{ctx: ctx, vars: map[string]*string{}}
+	st := &guardState{ctx: ctx, vars: map[string]*string{}, exported: map[string]bool{}}
 	if ctx.Cwd != "" {
 		st.cwdKnown = true
 		if win {

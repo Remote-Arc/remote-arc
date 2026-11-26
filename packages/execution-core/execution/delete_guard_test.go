@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -60,6 +61,114 @@ func TestDeleteGuardReadsScriptFiles(t *testing.T) {
 	for _, command := range []string{"bash tidy.sh", "bash missing.sh", "bash big.sh", "bash folder.sh", "pwsh -File"} {
 		if reason := FindDangerousDelete(command, ctx); reason != "" {
 			t.Errorf("%s should be allowed, got %q", command, reason)
+		}
+	}
+}
+
+// A script is read only when it runs. Mentioning it, checking its syntax or
+// writing it is not running it, and NAME=value before the command is part of
+// the environment the script sees.
+func TestDeleteGuardReadsScriptsOnlyWhenRun(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX shell semantics; the Windows shells have no heredocs or prefix assignments")
+	}
+	dir := t.TempDir()
+	script := filepath.Join(dir, "clean-stale.sh")
+	body := "#!/usr/bin/env bash\ncase \"${TMPDIR:-}\" in\n  " + dir + "/r1|" + dir + "/r2) ;;\n  *) exit 0 ;;\nesac\n" +
+		"find \"$TMPDIR\" -mindepth 1 -maxdepth 1 -mmin +360 ! -name 'keep-*' -exec rm -rf {} + 2>/dev/null || true\n"
+	if err := os.WriteFile(script, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ctx := DeleteGuardContext{Platform: "linux", Cwd: dir, Home: "/home/ann", Env: map[string]string{"HOME": "/home/ann"}}
+	allowed := []string{
+		"cat > " + script + " <<'EOF'\n" + body + "EOF",
+		"chmod 755 " + script,
+		"bash -n " + script,
+		"sh -n " + script + " && bash -o noexec " + script,
+		"printf 'HOOK_STARTED=" + script + "\\n' >> " + dir + "/.env",
+		"cp " + script + " " + script + ".bak && grep -n TMPDIR " + script + " && cat " + script,
+		"TMPDIR=" + dir + "/r1 " + script,
+		"TMPDIR=" + dir + "/r1 bash " + script,
+		"env TMPDIR=" + dir + "/r1 " + script,
+		"export TMPDIR=" + dir + "/r1; " + script,
+	}
+	for _, command := range allowed {
+		if reason := FindDangerousDelete(command, ctx); reason != "" {
+			t.Errorf("%s\n    should be allowed, got %q", command, reason)
+		}
+	}
+	refused := map[string]string{
+		script:                                   "unambiguously",
+		"bash " + script:                         "unambiguously",
+		"bash -o pipefail " + script:             "unambiguously",
+		"source " + script:                       "unambiguously",
+		". " + script:                            "unambiguously",
+		"bash < " + script:                       "unambiguously",
+		"cat " + script + " | sh":                "unambiguously",
+		"TMPDIR=" + dir + "/r1; " + script:       "unambiguously",
+		"TMPDIR=$(mktemp -d) " + script:          "unambiguously",
+		"TMPDIR=/ " + script:                     "root",
+		"TMPDIR=~ " + script:                     "protected",
+		"TMPDIR=/home/ann bash " + script:        "protected",
+		"TMPDIR=/home/bob " + script:             "home folder",
+		"TMPDIR=/usr " + script:                  "protected",
+		"env TMPDIR=/etc " + script:              "protected",
+		"export TMPDIR=/; " + script:             "root",
+		"bash -n " + script + "; bash " + script: "unambiguously",
+	}
+	for command, want := range refused {
+		if reason := FindDangerousDelete(command, ctx); !strings.Contains(reason, want) {
+			t.Errorf("%s\n    should be refused mentioning %q, got %q", command, want, reason)
+		}
+	}
+}
+
+// A sourced file is mostly function definitions, so an unresolved target is let
+// through only when a fixed, unprotected folder name follows the variable.
+// Anything whose reach is unknown or protected is still refused.
+func TestDeleteGuardSourcedFilesJudgeReach(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX shell semantics")
+	}
+	dir := t.TempDir()
+	ctx := DeleteGuardContext{Platform: "linux", Cwd: dir, Home: "/home/ann", Env: map[string]string{"HOME": "/home/ann"}}
+	write := func(body string) string {
+		f, err := os.CreateTemp(dir, "lib-*.sh")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.WriteString(body); err != nil {
+			t.Fatal(err)
+		}
+		f.Close()
+		return f.Name()
+	}
+	lib := write("lib_clear_cache() {\n  command rm -rf \"${LIB_DIR}/.cache\" \"$LIB_DIR\"/tmp-build\n}\n")
+	for _, command := range []string{"source " + lib + " && lib_use 20", ". " + lib} {
+		if reason := FindDangerousDelete(command, ctx); reason != "" {
+			t.Errorf("%s\n    should be allowed, got %q", command, reason)
+		}
+	}
+	// The same file run as a script is judged strictly.
+	if reason := FindDangerousDelete("bash "+lib, ctx); !strings.Contains(reason, "unambiguously") {
+		t.Errorf("running the library should stay strict, got %q", reason)
+	}
+	refused := map[string]string{
+		"cd ~\nrm -rf *\n":                         "protected",
+		"rm -rf ~\n":                               "protected",
+		"rm -rf /\n":                               "root",
+		"f() { rm -rf \"$(cache_dir)\"; }\n":       "unambiguously",
+		"rm -rf \"$X\"\n":                          "unambiguously",
+		"rm -rf \"$X\"/*\n":                        "unambiguously",
+		"cd \"$X\" && rm -rf *\n":                  "unambiguously",
+		"rm -rf \"$X/.ssh\"\n":                     "unambiguously",
+		"rm -rf \"$X/Documents\"\n":                "unambiguously",
+		"rm -rf \"$X/.cache\"\nrm -rf ~/Desktop\n": "protected",
+	}
+	for body, want := range refused {
+		file := write(body)
+		if reason := FindDangerousDelete("source "+file, ctx); !strings.Contains(reason, want) {
+			t.Errorf("source of %q should be refused mentioning %q, got %q", body, want, reason)
 		}
 	}
 }

@@ -235,6 +235,21 @@ func TestUnattendedPairingStopsOnDenialInvalidStartAndCancellation(t *testing.T)
 	if _, err := NewClient().PairUnattended(ctx, server.URL, "managed", &bytes.Buffer{}, nil); !errors.Is(err, context.Canceled) || time.Since(began) > 5*time.Second {
 		t.Fatalf("cancellation did not end the retry wait: %v after %s", err, time.Since(began))
 	}
+	// Cancelled while a request is still on its way, as on a slow machine:
+	// the person stopped pairing, so that is what the caller hears.
+	release := make(chan struct{})
+	slow := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-release
+		w.WriteHeader(503)
+	}))
+	defer slow.Close()
+	defer close(release)
+	ctx, cancel = context.WithCancel(context.Background())
+	time.AfterFunc(50*time.Millisecond, cancel)
+	began = time.Now()
+	if _, err := NewClient().PairUnattended(ctx, slow.URL, "managed", &bytes.Buffer{}, nil); !errors.Is(err, context.Canceled) || time.Since(began) > 5*time.Second {
+		t.Fatalf("cancellation during a request was reported as: %v after %s", err, time.Since(began))
+	}
 }
 
 func TestPairingSlowsPollingWhenTheRelayRateLimits(t *testing.T) {

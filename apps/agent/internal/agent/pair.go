@@ -73,8 +73,12 @@ func (c *Client) PairUnattended(ctx context.Context, origin, mode string, output
 	wait := unattendedRetryFirst
 	for {
 		saved, e := c.pairOnce(ctx, origin, mode, output, open)
+		if e != nil && ctx.Err() != nil {
+			// Stopped mid-request: the request's own error only says it was cut off.
+			return saved, ctx.Err()
+		}
 		var retry retryablePairing
-		if e == nil || ctx.Err() != nil || !errors.As(e, &retry) {
+		if e == nil || !errors.As(e, &retry) {
 			return saved, e
 		}
 		fmt.Fprintf(output, "Pairing was not completed (%s). A new pairing code will be shown in %s.\n", strings.TrimSuffix(e.Error(), "."), retryLabel(wait))

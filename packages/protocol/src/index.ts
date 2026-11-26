@@ -143,14 +143,16 @@ export const ARC_ENTERPRISE = {
 } as const;
 
 /** Standard tier, USD microdollars per million tokens. Reviewed 2026-10-19.
- * This is shared by the gateway, billing UI and SaaS economics tools. */
+ * This is shared by the gateway, billing UI and SaaS economics tools.
+ * maxOutputTokens leaves room for a whole file in one write decision plus the
+ * model's reasoning, which every provider counts as output. */
 export const ARC_PREMIUM_MODELS = [
   {
     id: "gpt-6-luna",
     label: "GPT-6 Luna",
     provider: "openai",
     model: "gpt-6-luna",
-    maxOutputTokens: 4096,
+    maxOutputTokens: 16384,
     inputMicrosPerMillion: 100000,
     outputMicrosPerMillion: 500000,
     cachedInputMicrosPerMillion: 10000,
@@ -162,7 +164,7 @@ export const ARC_PREMIUM_MODELS = [
     label: "GPT-6.1 Terra",
     provider: "openai",
     model: "gpt-6.1-terra",
-    maxOutputTokens: 4096,
+    maxOutputTokens: 16384,
     inputMicrosPerMillion: 1000000,
     outputMicrosPerMillion: 5000000,
     cachedInputMicrosPerMillion: 50000,
@@ -180,7 +182,7 @@ export const ARC_PREMIUM_MODELS = [
     label: "GPT-6.1 Sol",
     provider: "openai",
     model: "gpt-6.1-sol",
-    maxOutputTokens: 4096,
+    maxOutputTokens: 16384,
     inputMicrosPerMillion: 2000000,
     outputMicrosPerMillion: 10000000,
     cachedInputMicrosPerMillion: 100000,
@@ -191,7 +193,7 @@ export const ARC_PREMIUM_MODELS = [
     label: "GPT-6 Astra",
     provider: "openai",
     model: "gpt-6-astra",
-    maxOutputTokens: 4096,
+    maxOutputTokens: 16384,
     inputMicrosPerMillion: 10000000,
     outputMicrosPerMillion: 50000000,
     cachedInputMicrosPerMillion: 1000000,
@@ -202,7 +204,7 @@ export const ARC_PREMIUM_MODELS = [
     label: "Claude Sonnet 5.5",
     provider: "anthropic",
     model: "claude-sonnet-5-5",
-    maxOutputTokens: 4096,
+    maxOutputTokens: 16384,
     inputMicrosPerMillion: 2000000,
     outputMicrosPerMillion: 10000000,
     cachedInputMicrosPerMillion: 100000,
@@ -215,7 +217,7 @@ export const ARC_PREMIUM_MODELS = [
     label: "Claude Haiku 5.5",
     provider: "anthropic",
     model: "claude-haiku-5-5",
-    maxOutputTokens: 4096,
+    maxOutputTokens: 16384,
     inputMicrosPerMillion: 100000,
     outputMicrosPerMillion: 500000,
     cachedInputMicrosPerMillion: 10000,
@@ -228,7 +230,7 @@ export const ARC_PREMIUM_MODELS = [
     label: "Claude Opus 5.5",
     provider: "anthropic",
     model: "claude-opus-5-5",
-    maxOutputTokens: 4096,
+    maxOutputTokens: 16384,
     inputMicrosPerMillion: 4000000,
     outputMicrosPerMillion: 20000000,
     cachedInputMicrosPerMillion: 200000,
@@ -237,6 +239,8 @@ export const ARC_PREMIUM_MODELS = [
     structuredOutput: true,
   },
   // OpenRouter rates are explicit routing ceilings, not a promise of the cheapest endpoint.
+  // Output stays at 4096 until each route's output limit is checked: a request
+  // above a route's limit would find no eligible endpoint.
   // Uncached rates also apply to cache hits, conservatively covering every eligible route.
   {
     id: "minimax-m3",
@@ -283,7 +287,7 @@ export const ARC_HOSTED_MODELS = [
     label: "Auto",
     provider: "openai",
     model: "gpt-6-luna",
-    maxOutputTokens: 4096,
+    maxOutputTokens: 16384,
     inputMicrosPerMillion: 100000,
     outputMicrosPerMillion: 500000,
     cachedInputMicrosPerMillion: 10000,

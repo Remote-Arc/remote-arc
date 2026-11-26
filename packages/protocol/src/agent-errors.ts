@@ -3,7 +3,14 @@
 // the person's language; anything unrecognised is shown as it came.
 
 export type AgentErrorCause =
-  "notGitRepo" | "usageLimit" | "noCredits" | "noAccess" | "signedOut" | "notInstalled";
+  | "notGitRepo"
+  | "toolDisabled"
+  | "noOutput"
+  | "usageLimit"
+  | "noCredits"
+  | "noAccess"
+  | "signedOut"
+  | "notInstalled";
 
 /** Causes whose explanation is followed by the agent's own first line (it says when a limit resets). */
 export const AGENT_ERROR_WITH_DETAIL: readonly AgentErrorCause[] = [
@@ -14,6 +21,10 @@ export const AGENT_ERROR_WITH_DETAIL: readonly AgentErrorCause[] = [
 
 export function agentErrorCause(error: string): AgentErrorCause | null {
   if (error.startsWith("AGENT_NOT_GIT_REPO:")) return "notGitRepo";
+  // The computer's Devices settings turn off a tool every run needs.
+  if (error.startsWith("AGENT_TOOL_DISABLED:")) return "toolDisabled";
+  // The agent failed and printed nothing, so the Relay can only say so.
+  if (error.startsWith("AGENT_NO_OUTPUT:")) return "noOutput";
   if (/usage limit|limit reached|hit your (usage )?limit|out of (extra )?usage/i.test(error))
     return "usageLimit";
   if (

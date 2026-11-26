@@ -60,6 +60,12 @@ export type Device = {
   background_agent_version?: string | null;
   background_connected_at?: string | null;
   agent_version?: string | null;
+  /**
+   * The newer Agent release this computer can update to (the Relay's own), or
+   * null when it runs the latest or its version is unknown. Whether the update
+   * can start remotely is agent_update_available.
+   */
+  agent_update_version?: string | null;
   agent_pid?: number | null;
   connected_at?: string | null;
   automation_permissions?: DeviceTaskPermissions;

@@ -22,6 +22,8 @@ export type DocSection = {
   list?: { ordered?: boolean; items: DocCopy[] };
   paragraphs?: DocCopy[];
   note?: DocCopy;
+  /** A drawn figure after the opening paragraph, rendered by the website. */
+  figure?: "agent-permissions";
 };
 export type DocTopic = {
   slug: string;

@@ -85,8 +85,8 @@ export const agentOrchestrationSections: DocSection[] = [
       zh: "独立 worktree，或直接在文件夹中",
     },
     text: {
-      en: "By default each agent gets its own worktree and branch. Turn that off to let it work in the folder itself, editing your checkout directly: one agent per folder, and with no branch of its own there is nothing to merge or turn into a pull request.",
-      zh: "默认情况下每个 Agent 都有自己的 worktree 和分支。关闭后，Agent 直接在文件夹里工作，会修改你的工作目录：每个文件夹只能有一个 Agent；因为没有自己的分支，所以也没有需要合并或创建 Pull Request 的内容。",
+      en: "By default each agent gets its own worktree and branch. To let it work in the folder itself, choose In the folder itself in the work mode menu beside the computer and folder. It then edits your checkout directly: one agent per folder, and with no branch of its own there is nothing to merge or turn into a pull request.",
+      zh: "默认情况下每个 Agent 都有自己的 worktree 和分支。要让它直接在文件夹里工作，在电脑和文件夹旁边的工作方式菜单里选择“直接在文件夹中”。这样它会直接修改你的工作目录：每个文件夹只能有一个 Agent；因为没有自己的分支，所以也没有需要合并或创建 Pull Request 的内容。",
     },
   },
   {
@@ -151,6 +151,57 @@ export const agentOrchestrationSections: DocSection[] = [
           zh: "删除 worktree 前会先征求你的确认，并且只删除该 worktree 及其分支。",
         },
       ],
+    },
+  },
+  {
+    heading: { en: "Permissions, layer by layer", zh: "权限，逐层说明" },
+    text: {
+      en: "Each of these layers is checked on its own, and an agent can do only what all of them allow. Agent Orchestration needs the terminal on the computer, so check the layers below it before you trust an agent with a folder.",
+      zh: "下面每一层都会单独检查，Agent 只能做所有层都允许的事。Agent 编排需要电脑开启终端，所以在把文件夹交给 Agent 之前，先看看后面几层。",
+    },
+    figure: "agent-permissions",
+    list: {
+      ordered: true,
+      items: [
+        {
+          en: "Account and computer: only clients you authorized reach your computers, and you can revoke any client or computer under Devices.",
+          zh: "账户和电脑：只有你授权的客户端才能访问你的电脑；你可以在“设备”中撤销任何客户端或电脑。",
+        },
+        {
+          en: "Tools on the computer: Safe (read only), Developer (read + edit) or Full access (terminal), and each tool can be switched on its own. A tool that is off is refused before the request reaches the computer, and the computer checks again before it acts. Agent Orchestration starts each agent as a terminal command, so it needs Full access; with the terminal off, the preflight says so and the agent cannot start.",
+          zh: "电脑上的工具：只读、读写文件或含终端，每个工具也可以单独开关。关闭的工具在请求到达电脑之前就会被拒绝，电脑在执行前也会再检查一次。Agent 编排用终端命令启动每个 Agent，所以需要“含终端”；终端关闭时，预检会提示，Agent 也无法启动。",
+        },
+        {
+          en: "Trusted folders: agents start only inside the computer's trusted write locations, and a terminal command's working directory must be inside one. File tools that write outside them ask you first.",
+          zh: "可信文件夹：Agent 只会在这台电脑的可信写入位置中启动，终端命令的工作目录也必须在其中。文件工具要写到范围之外时会先询问你。",
+        },
+        {
+          en: "Protected paths and the safety guard: credential locations such as .ssh, .aws, browser profiles and .env files are protected from file tools, and commands that would wipe a drive or the system are refused.",
+          zh: "受保护路径和安全防护：.ssh、.aws、浏览器配置和 .env 等凭据位置不允许文件工具访问；会清空磁盘或系统的命令会被拒绝。",
+        },
+        {
+          en: "The agent's mode, chosen per agent and per message: Plan for Claude Code and Gemini CLI, or Read only for Codex, to only read and propose. The agent enforces its own mode; Remote Arc never skips its checks.",
+          zh: "Agent 的模式，按 Agent、按消息选择：Claude Code 和 Gemini CLI 选“计划”，Codex 选“只读”，就只阅读和提出方案。模式由 Agent 自己执行；Remote Arc 从不跳过它的检查。",
+        },
+        {
+          en: "Review before it counts: in its own worktree, an agent's work is a branch you review against the commit it started from. Nothing reaches your checkout until you merge it or open a pull request.",
+          zh: "先审阅再生效：在独立 worktree 中，Agent 的工作是一个分支，你可以对照它的起始提交审阅。在你合并或创建 Pull Request 之前，你的工作目录不会有任何变化。",
+        },
+      ],
+    },
+    paragraphs: [
+      {
+        en: "Whose rights an agent has: the Remote Arc Agent runs as the user who installed and signed it in on that computer (on Windows it starts at login for that user and needs no administrator rights), and the agents it starts run as that same user.",
+        zh: "Agent 拥有谁的权限：Remote Arc Agent 以在那台电脑上安装并登录它的用户身份运行（在 Windows 上，它在该用户登录时启动，不需要管理员权限），它启动的 Agent 也以同一个用户身份运行。",
+      },
+      {
+        en: "What this is not: trusted folders are not an operating-system sandbox. Once the terminal is on, a command runs with that user's rights and could still reach paths outside the trusted folders. For a hard boundary, run the Remote Arc Agent as a separate, restricted user that can see only the project folders, or on a machine of its own.",
+        zh: "这不是什么：可信文件夹不是操作系统级沙箱。终端开启后，命令以该用户的权限运行，仍可能访问可信文件夹之外的路径。需要硬性边界时，用一个只能看到项目文件夹的独立受限用户运行 Remote Arc Agent，或者给它一台单独的机器。",
+      },
+    ],
+    note: {
+      en: "To try it safely, start read-only: trust one small test folder, start Claude Code in Plan (or Codex in Read only), ask it to describe the project, and check that git status is clean afterwards. Then start a second agent in its own worktree, ask for a one-line change, and review that diff before you merge anything.",
+      zh: "想安全地试用，先从只读开始：只信任一个小的测试文件夹，用“计划”模式启动 Claude Code（或用“只读”启动 Codex），让它介绍这个项目，之后确认 git status 没有变化。然后在独立 worktree 中再启动一个 Agent，让它只改一行，合并前先审阅这个改动。",
     },
   },
   {

@@ -60,7 +60,16 @@ export const FREE_BINARY_BYTES_PER_MONTH = 2 * 1024 ** 3;
  * ARC_PLANS); a newly published version sets its own number. */
 export const FREE_BACKGROUND_TASKS = 1;
 /** Ordered by precedence: a later entry wins when several assignments are active.
- * `null` limits are explicit unlimited entitlements, never magic large numbers. */
+ * `null` limits are explicit unlimited entitlements, never magic large numbers.
+ *
+ * The ids and their order are authoritative. The terms and labels are not: they are
+ * the first seed versions' values (migrations 0044 and 0068), kept because those
+ * seeds must not change. Production sells the versions published since then in D1
+ * (`arc_commercial_versions`, current one per product in `arc_commercial_heads`),
+ * with other prices, Credits and computer limits. Customers see
+ * `connect-unlimited-v1` as "Pro" and `arc-pro-v1` as "Max"; `arc-plus-v1` (Plus)
+ * is no longer sold. Read current terms from `GET /api/billing/catalog` or Admin >
+ * Payments, never from this list. */
 export const ARC_PLANS = [
   {
     id: "free",

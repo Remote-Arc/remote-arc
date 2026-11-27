@@ -557,6 +557,8 @@ export const ARC_INPUT_LIMITS = {
   imageEdge: 2048,
   textChars: 16000,
 } as const;
+/** A chat title, whether taken from the first message or chosen by its owner (UTF-16 units). */
+export const ARC_CHAT_TITLE_MAX_LENGTH = 64;
 export type ArcAppConnectionRequest = {
   id: string;
   sourceRunId: string;

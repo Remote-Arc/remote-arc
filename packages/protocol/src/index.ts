@@ -21,6 +21,9 @@ export const ARC_TRIAL_CREDITS = 200;
  * an approximate task count. Rounded up from the production average per run,
  * reviewed 2026-11-14; named models and long tasks spend more. */
 export const ARC_TYPICAL_TASK_CREDITS = 3;
+/** Credits for a new account's one free Arc task, before any trial or card:
+ * several typical tasks' worth, so a first task nearly always finishes. */
+export const ARC_FREE_RUN_CREDITS = 20;
 export const ARC_MEMORY_LIMITS = {
   facts: 100,
   work: 40,

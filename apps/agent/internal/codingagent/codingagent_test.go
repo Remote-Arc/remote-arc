@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -395,4 +396,17 @@ func TestSessionStartsWithTheChosenModelAndEffort(t *testing.T) {
 	}
 	m.Call("agent_session_stop", map[string]any{"session": started.(map[string]any)["session"]}, p)
 	events(t, m, func(_ []string, e Event) bool { return e.Exited })
+}
+
+// The Relay accepts a session only in this form (AGENT_SESSION in
+// apps/relay/src/agents/agent-live.ts). Changing one side alone made every
+// Agent Orchestration turn fail with "The agent did not start." while Claude
+// Code was in fact running.
+func TestSessionIDMatchesTheRelay(t *testing.T) {
+	relay := regexp.MustCompile(`^as_[0-9a-f]{16}$`)
+	for i := 0; i < 50; i++ {
+		if id := newID(); !relay.MatchString(id) {
+			t.Fatalf("session id %q is not one the Relay accepts", id)
+		}
+	}
 }

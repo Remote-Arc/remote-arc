@@ -90,3 +90,36 @@ export const productFilm = (language: string) =>
 
 export const promoFilm = (language: string) =>
   PROMO_FILMS.find((film) => film.language === language) ?? PROMO_FILMS[0]!;
+
+/**
+ * Films on YouTube, embedded from youtube-nocookie.com only after the viewer presses
+ * play; until then the page shows our own poster from the site's /films/. Both are
+ * the English editions: computer use operating a demo invoicing app through the Agent's
+ * own desktop input, and the Agent Orchestration Dashboard with scripted agents.
+ */
+export type YouTubeFilm = {
+  id: string;
+  youtubeId: string;
+  /** The title on YouTube, which the regression check compares. */
+  title: string;
+  poster: string;
+  duration: number;
+};
+
+export const COMPUTER_USE_FILM: YouTubeFilm = {
+  id: "computer-use-film",
+  youtubeId: "qRRHeOuFg_U",
+  title: "Let your AI use the apps that have no API | Remote Arc Computer Use",
+  poster: "/films/computer-use.webp",
+  duration: 30.0,
+};
+
+export const ORCHESTRATION_FILM: YouTubeFilm = {
+  id: "orchestration-film",
+  youtubeId: "ltoBWMI-lJc",
+  title: "Claude Code, Codex and Gemini CLI, side by side | Remote Arc Agent Orchestration",
+  poster: "/films/orchestration.webp",
+  duration: 53.7,
+};
+
+export const YOUTUBE_FILMS: YouTubeFilm[] = [COMPUTER_USE_FILM, ORCHESTRATION_FILM];

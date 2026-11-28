@@ -41,6 +41,7 @@ export type AgentRequestCause =
   | "outsideTrustedFolders"
   | "folderNotTrustable"
   | "tooManyTrustedFolders"
+  | "safetyGuard"
   | "computerGone"
   | "nothingToApprove"
   | "upgradeRequired"
@@ -83,6 +84,7 @@ const REQUEST_CAUSES: Record<string, AgentRequestCause> = {
   SESSION_OUTSIDE_TRUSTED_FOLDERS: "outsideTrustedFolders",
   SESSION_FOLDER_NOT_TRUSTABLE: "folderNotTrustable",
   TOO_MANY_TRUSTED_FOLDERS: "tooManyTrustedFolders",
+  SAFETY_GUARD_BLOCKED: "safetyGuard",
   DEVICE_NOT_FOUND: "computerGone",
   NO_APPROVAL_PENDING: "nothingToApprove",
   PLAN_UPGRADE_REQUIRED: "upgradeRequired",

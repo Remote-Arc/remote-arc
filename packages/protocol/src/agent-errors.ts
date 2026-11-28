@@ -42,6 +42,8 @@ export type AgentRequestCause =
   | "folderNotTrustable"
   | "tooManyTrustedFolders"
   | "safetyGuard"
+  | "groupGone"
+  | "messageFailed"
   | "computerGone"
   | "nothingToApprove"
   | "upgradeRequired"
@@ -85,6 +87,8 @@ const REQUEST_CAUSES: Record<string, AgentRequestCause> = {
   SESSION_FOLDER_NOT_TRUSTABLE: "folderNotTrustable",
   TOO_MANY_TRUSTED_FOLDERS: "tooManyTrustedFolders",
   SAFETY_GUARD_BLOCKED: "safetyGuard",
+  AGENT_GROUP_NOT_FOUND: "groupGone",
+  AGENT_MESSAGE_FAILED: "messageFailed",
   DEVICE_NOT_FOUND: "computerGone",
   NO_APPROVAL_PENDING: "nothingToApprove",
   PLAN_UPGRADE_REQUIRED: "upgradeRequired",

@@ -116,8 +116,9 @@ func TestNativeForegroundCLIHardCapAndLocalControl(t *testing.T) {
 	select {
 	case hello := <-hellos:
 		// Safe mode: read-only core tools plus agent controls, including the
-		// read-only list_agent_sessions metadata tool.
-		if len(hello["tools"].([]any)) != 14 {
+		// read-only list_agent_sessions metadata tool and send_file, which
+		// only reads a file to copy it to the owner's other computer.
+		if len(hello["tools"].([]any)) != 15 {
 			t.Fatal("native CLI did not apply the safe cap")
 		}
 	case <-time.After(15 * time.Second):

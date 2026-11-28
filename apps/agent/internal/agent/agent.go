@@ -74,7 +74,10 @@ func New(cfg config.Config, version string, background bool, log *journal.Journa
 	if cfg.Mode == "safe" {
 		mode = "safe"
 	}
-	return &Agent{Config: cfg, Version: version, BackgroundProcess: background, Client: NewClient(), Core: execution.New(mode), Browser: browserrunner.New(), Desktop: desktop.New(), Sessions: codingagent.New(), Journal: log, Background: service.New(version), Save: config.Save, Load: config.Load, capacity: &capacityProbe{}}
+	a := &Agent{Config: cfg, Version: version, BackgroundProcess: background, Client: NewClient(), Core: execution.New(mode), Browser: browserrunner.New(), Desktop: desktop.New(), Sessions: codingagent.New(), Journal: log, Background: service.New(version), Save: config.Save, Load: config.Load, capacity: &capacityProbe{}}
+	// receive_file and send_file move bytes over HTTPS with this device's credential.
+	a.Core.Transfers = newRelayTransfers(a)
+	return a
 }
 
 // NewWake connects to the same authenticated Relay using a minimal control
@@ -181,7 +184,7 @@ func (a *Agent) hello(ctx context.Context) map[string]any {
 	capabilities := []string{"device_policy_v1", "background_agent_v1", "background_recovery_v2", "device_stop_v1", "device_pause_v1", "go_agent_v1"}
 	if !a.WakeOnly {
 		// power_commands_v1: start_process honours the owner's allowPowerCommands setting.
-		capabilities = append(capabilities, "native_core_v1", "undo_history_v1", "power_commands_v1")
+		capabilities = append(capabilities, "native_core_v1", "undo_history_v1", "power_commands_v1", "file_transfer_v1")
 		if a.secretsReady() {
 			capabilities = append(capabilities, "one_time_secret_v1")
 		}

@@ -99,6 +99,35 @@
     }
   },
   {
+    "name": "send_file",
+    "description": "Upload a file into a Remote Arc file transfer in the background, in parts, and report its SHA-256 so the receiving computer can verify it. The Relay sends this.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "transfer_id": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 64
+        },
+        "path": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5368709120
+        },
+        "part_size": {
+          "type": "integer",
+          "minimum": 5242880,
+          "maximum": 67108864
+        }
+      },
+      "required": ["transfer_id", "path", "size"],
+      "additionalProperties": false
+    }
+  },
+  {
     "name": "list_processes",
     "description": "List processes on this computer with a header row. Use filter to find specific programs (e.g. \"claude\", \"codex\", \"node\"), limit to cap rows, and details:true on Windows to include command lines. Obvious secrets in command lines are redacted.",
     "inputSchema": {
@@ -141,6 +170,38 @@
         }
       },
       "required": ["path", "content"],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "receive_file",
+    "description": "Accept a Remote Arc file transfer: check the destination now, then download the staged file in the background, verify its size and SHA-256, and move it into place with a local-only Undo snapshot. The Relay sends this; it reports the outcome itself.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "transfer_id": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 64
+        },
+        "path": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5368709120
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$"
+        },
+        "overwrite": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": ["transfer_id", "path", "size"],
       "additionalProperties": false
     }
   },

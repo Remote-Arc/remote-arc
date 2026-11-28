@@ -6,7 +6,8 @@
     "read_binary_file",
     "get_file_info",
     "list_processes",
-    "list_undo_actions"
+    "list_undo_actions",
+    "send_file"
   ],
-  "developer": ["write_file", "edit_block", "undo_change", "undo_last_change"]
+  "developer": ["write_file", "edit_block", "undo_change", "undo_last_change", "receive_file"]
 }

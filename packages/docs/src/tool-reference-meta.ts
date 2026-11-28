@@ -160,6 +160,30 @@ export const TOOL_COPY: Record<string, { zh: string; summary: string }> = {
     zh: "撤销此前创建的文件下载链接。",
     summary: "Revoke a previously created file resource.",
   },
+  create_upload_url: {
+    zh: "把 AI 自己的大文件（视频、压缩包、安装包）传到电脑：先按信任位置和审批检查目标，再给出分片上传地址，电脑校验 SHA-256 后写入并保留 Undo。",
+    summary:
+      "Upload a large file from the AI's own sandbox to a computer: the destination is checked and approved first, then the computer verifies its SHA-256 and writes it with Undo.",
+  },
+  copy_file_between_devices: {
+    zh: "把一个文件从一台电脑复制到另一台：目标先通过信任位置与审批检查，源电脑计算 SHA-256，目标电脑校验后写入。",
+    summary:
+      "Copy one file between two linked computers; the target is approved first and verifies the source's SHA-256 before writing.",
+  },
+  get_file_transfer: {
+    zh: "查看文件传输的进度、校验结果、Undo 是否可用与错误，可等待下一次变化。",
+    summary: "Show a file transfer's progress, verified SHA-256, Undo availability and any error.",
+  },
+  receive_file: {
+    zh: "由 Relay 发送：先检查目标路径，再在后台下载暂存文件、校验大小与 SHA-256 并原子写入，保留本机 Undo。",
+    summary:
+      "Sent by the Relay: check the destination, then download a staged file in the background, verify it and move it into place with local Undo.",
+  },
+  send_file: {
+    zh: "由 Relay 发送：在后台分片上传本机文件并报告 SHA-256，供另一台电脑校验。",
+    summary:
+      "Sent by the Relay: upload a local file in parts in the background and report its SHA-256 for the receiving computer.",
+  },
   get_file_info: {
     zh: "查看文件大小、类型、时间及版本信息。",
     summary: "Inspect file metadata and revision information.",

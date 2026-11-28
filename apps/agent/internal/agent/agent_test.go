@@ -207,9 +207,10 @@ func TestAuthenticatedWebsocketToolCallsReconnectAndPrivateJournal(t *testing.T)
 				}
 				// browser_runner tools are advertised only where a browser exists,
 				// desktop tools only where the screen can be used;
-				// 23 core and Agent tools plus secret_prepare and secret_deliver; the
-				// Agent Orchestration sessions come with terminal mode, all or none.
-				if core != 25 || (runner != 0 && runner != len(browserrunner.Tools)) || (screen != 0 && screen != len(desktop.Tools)) || (sessions != 0 && sessions != len(codingagent.Tools)) {
+				// 25 core and Agent tools (receive_file and send_file included) plus
+				// secret_prepare and secret_deliver; the Agent Orchestration sessions
+				// come with terminal mode, all or none.
+				if core != 27 || (runner != 0 && runner != len(browserrunner.Tools)) || (screen != 0 && screen != len(desktop.Tools)) || (sessions != 0 && sessions != len(codingagent.Tools)) {
 					t.Fatalf("tool surface incomplete: core=%d runner=%d desktop=%d sessions=%d", core, runner, screen, sessions)
 				}
 			} else if reply["error"] != nil {

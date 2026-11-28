@@ -111,6 +111,9 @@ type Core struct {
 	// mutation is a one-slot semaphore that serializes file changes and Undo.
 	// A channel, unlike sync.Mutex, lets a queued call give up at its deadline.
 	mutation chan struct{}
+	// Transfers reaches the Relay's file transfer API; nil hides receive_file and send_file.
+	Transfers TransferClient
+	jobs      transferJobs
 }
 
 func New(mode string) *Core {
@@ -119,6 +122,9 @@ func New(mode string) *Core {
 func (c *Core) ListTools() []Definition {
 	result := []Definition{}
 	for _, d := range definitions {
+		if transferTools[d.Name] && c.Transfers == nil {
+			continue
+		}
 		if c.Mode == "safe" && !slices.Contains(toolModes.Safe, d.Name) {
 			continue
 		}
@@ -129,7 +135,7 @@ func (c *Core) ListTools() []Definition {
 	}
 	return result
 }
-func (c *Core) Close() { c.Processes.Close() }
+func (c *Core) Close() { c.stopTransfers(); c.Processes.Close() }
 
 // Call runs one tool. An os file error leaves with a fixed code in front of
 // its message, so the Relay does not have to read platform-specific text.
@@ -179,6 +185,18 @@ func (c *Core) call(ctx context.Context, name string, args map[string]any, p pro
 		case "get_file_info":
 			result, e = fileInfo(target)
 		}
+	case "send_file":
+		source, err := rawPath("path", false)
+		if err != nil {
+			return protocol.Result{}, err
+		}
+		result, e = c.sendFile(source, args)
+	case "receive_file":
+		target, err := rawPath("path", true)
+		if err != nil {
+			return protocol.Result{}, err
+		}
+		result, e = c.receiveFile(target, args, p)
 	case "list_processes":
 		result, e = listProcesses(protocol.OptionalString(args, "filter"), protocol.Number(args, "limit", 200), protocol.Bool(args, "details"))
 	case "list_undo_actions", "undo_change", "undo_last_change":

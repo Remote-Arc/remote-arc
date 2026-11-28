@@ -57,6 +57,14 @@
       ]
     },
     {
+      "name": "copy_file_between_devices",
+      "title": "Copy a file from one computer to another",
+      "group": "files",
+      "scopes": [
+        "computer:write"
+      ]
+    },
+    {
       "name": "create_agent_goal",
       "title": "Create a self-directed durable Agent Goal",
       "group": "goals",
@@ -79,6 +87,14 @@
       "group": "files",
       "scopes": [
         "computer:read"
+      ]
+    },
+    {
+      "name": "create_upload_url",
+      "title": "Upload a file to a remote computer",
+      "group": "files",
+      "scopes": [
+        "computer:write"
       ]
     },
     {
@@ -161,6 +177,14 @@
     {
       "name": "get_file_info",
       "title": "Get remote file info",
+      "group": "files",
+      "scopes": [
+        "computer:read"
+      ]
+    },
+    {
+      "name": "get_file_transfer",
+      "title": "Check a file transfer",
       "group": "files",
       "scopes": [
         "computer:read"
@@ -1092,6 +1116,14 @@
       "group": "files"
     },
     {
+      "name": "receive_file",
+      "modes": [
+        "developer",
+        "full"
+      ],
+      "group": "files"
+    },
+    {
       "name": "remote_arc_status",
       "modes": [
         "safe",
@@ -1099,6 +1131,15 @@
         "full"
       ],
       "group": "devices"
+    },
+    {
+      "name": "send_file",
+      "modes": [
+        "safe",
+        "developer",
+        "full"
+      ],
+      "group": "files"
     },
     {
       "name": "start_process",

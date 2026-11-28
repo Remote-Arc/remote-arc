@@ -163,15 +163,14 @@ func (m *Manager) start(args map[string]any, p protocol.Policy) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	allow := []string{}
-	if list, ok := args["allow"].([]any); ok {
-		for _, item := range list {
-			if rule, ok := item.(string); ok && rule != "" && len(rule) <= 1000 && len(allow) < 200 {
-				allow = append(allow, rule)
-			}
-		}
+	// What the person always allows, and the computer's protected paths that
+	// Claude Code refuses in every mode (Relay's agent-protected-paths.ts).
+	allow, deny := rules(args, "allow"), rules(args, "deny")
+	permissions := map[string]any{"allow": allow}
+	if len(deny) > 0 {
+		permissions["deny"] = deny
 	}
-	settings, _ := json.Marshal(map[string]any{"permissions": map[string]any{"allow": allow}})
+	settings, _ := json.Marshal(map[string]any{"permissions": permissions})
 	m.mu.Lock()
 	limit := maxSessions
 	if p.BackgroundTaskLimit > 0 && p.BackgroundTaskLimit < limit {
@@ -488,4 +487,18 @@ func (m *Manager) StopAll() {
 			terminateTree(s.cmd)
 		}
 	}
+}
+
+// rules reads a list of Claude Code permission rules, at most 200 of up to
+// 1000 characters each.
+func rules(args map[string]any, key string) []string {
+	out := []string{}
+	if list, ok := args[key].([]any); ok {
+		for _, item := range list {
+			if rule, ok := item.(string); ok && rule != "" && len(rule) <= 1000 && len(out) < 200 {
+				out = append(out, rule)
+			}
+		}
+	}
+	return out
 }

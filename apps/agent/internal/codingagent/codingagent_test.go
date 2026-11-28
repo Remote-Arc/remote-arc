@@ -112,6 +112,34 @@ func contains(lines []string, text string) bool {
 
 const ref = "6f1c2d3e-4a5b-4c6d-8e7f-90a1b2c3d4e5"
 
+// The computer's protected paths reach Claude Code as deny rules beside what
+// the person allows; with none, the settings carry no deny list at all.
+func TestSessionPassesProtectedPathDenyRules(t *testing.T) {
+	root := t.TempDir()
+	m := fake(t)
+	p := protocol.Policy{WorkspaceRoots: []string{root}}
+	started, err := m.Call("agent_session_start", map[string]any{
+		"agent": "claude", "tag": "ar_0123456789ac", "session_ref": ref, "mode": "acceptEdits",
+		"cwd": root, "prompt": "hello", "allow": []any{"Bash(npm test)"},
+		"deny": []any{"Read(//**/.ssh/**)", "Edit(//**/.ssh/**)", 7, ""},
+	}, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Stop it and wait, so Windows can remove the folder it ran in.
+	defer func() {
+		m.Call("agent_session_stop", map[string]any{"session": started.(map[string]any)["session"]}, p)
+		events(t, m, func(_ []string, e Event) bool { return e.Exited })
+	}()
+	lines := events(t, m, func(l []string, _ Event) bool { return contains(l, `"args"`) })
+	var init map[string]any
+	json.Unmarshal([]byte(lines[0]), &init)
+	want := `--settings {"permissions":{"allow":["Bash(npm test)"],"deny":["Read(//**/.ssh/**)","Edit(//**/.ssh/**)"]}}`
+	if args := fmt.Sprint(init["args"]); !strings.Contains(args, want) {
+		t.Fatalf("arguments %s lack %q", args, want)
+	}
+}
+
 func TestSessionRunsClaudeAsTheAgentSDKDoesAndPushesWhatItPrints(t *testing.T) {
 	root := t.TempDir()
 	m := fake(t)

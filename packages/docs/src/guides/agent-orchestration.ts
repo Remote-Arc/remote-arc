@@ -176,8 +176,8 @@ export const agentOrchestrationSections: DocSection[] = [
           zh: "可信文件夹：Agent 只会在这台电脑的可信写入位置中启动，终端命令的工作目录也必须在其中。文件工具要写到范围之外时会先询问你。",
         },
         {
-          en: "Protected paths and the safety guard: credential locations such as .ssh, .aws, browser profiles and .env files are protected from file tools, and commands that would wipe a drive or the system are refused.",
-          zh: "受保护路径和安全防护：.ssh、.aws、浏览器配置和 .env 等凭据位置不允许文件工具访问；会清空磁盘或系统的命令会被拒绝。",
+          en: "Protected paths and the safety guard: credential locations such as .ssh, .aws, browser profiles and .env files are protected from file tools, and Claude Code agents are told to refuse reading or editing them too, in every mode. Paths you allowed under Devices stay reachable. Commands that would wipe a drive or the system are refused.",
+          zh: "受保护路径和安全防护：.ssh、.aws、浏览器配置和 .env 等凭据位置不允许文件工具访问，Claude Code Agent 在任何模式下也会拒绝读取或修改它们；你在“设备”中允许的路径不受影响。会清空磁盘或系统的命令会被拒绝。",
         },
         {
           en: "The agent's mode, chosen per agent and per message: Plan for Claude Code and Gemini CLI, or Read only for Codex, to only read and propose. The agent enforces its own mode; Remote Arc never skips its checks.",

@@ -376,6 +376,36 @@ export type SecurityState = {
   grants: SecurityGrant[];
 };
 
+export type AiConnectionKind =
+  "claude" | "claude_code" | "chatgpt" | "codex" | "cursor" | "remote_arc_app" | "other";
+
+/** One AI connection (an OAuth grant) that can still be used. */
+export type AiConnection = {
+  grantId: string;
+  clientName: string;
+  kind: AiConnectionKind;
+  /** The name a person gave it; null shows a generated name. */
+  name: string | null;
+  /** The client's own name and version from MCP initialize, when it reported one. */
+  mcpClient: string | null;
+  authorizedAt: string;
+  /** "Mac · Chrome" summary of the browser that allowed it. */
+  authorizedUa: string | null;
+  authorizedCountry: string | null;
+  lastUsedAt: string | null;
+  lastDeviceId: string | null;
+  /** Computers this connection may not use. Empty: every computer, including new ones. */
+  excludedDeviceIds: string[];
+  /** Remote Arc's own phone or desktop app: signed in as the person, not an AI. */
+  firstParty: boolean;
+};
+
+export type AiConnectionsState = {
+  connections: AiConnection[];
+  /** Connections that can no longer be used, counted per client and not listed. */
+  retired: { clientName: string; count: number }[];
+};
+
 export type DeviceMetadata = {
   id: string;
   name: string;
